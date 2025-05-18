@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Forecast</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/static/global/global.css}" />
+    <link rel="stylesheet" th:href="@{/static/global/style.css}" />
+</head>
+<body>
+<div class="weather-container">
+    <div class="weather-header">
+        <p class="date" th:text="${weather.date}"></p>
+        <h1 th:text="${weather.location}"></h1>
+        <div class="weather-main">
+            <div class="current-temp">
+                <span class="moon-icon" th:classappend="${weather.hourlyForecast[0].icon}"></span>
+                <span th:text="${weather.currentTemperature}" class="temp-value"></span>
+                <div class="temp-range" th:text="${weather.highLowTemperature}"></div>
+            </div>
+            <div class="weather-info">
+                <div class="weather-condition" th:text="${weather.weatherCondition}"></div>
+                <div class="humidity" th:text="'습도 ' + ${weather.hourlyForecast[0].humidity}"></div>
+                <div class="pm-value" th:text="'미세조 ' + ${weather.airQuality.value}"></div>
+            </div>
+        </div>
+    </div>
+    <div class="weather-details">
+        <div class="air-quality">
+            <h3 th:text="${weather.airQuality.title}"></h3>
+            <span class="icon" th:classappend="${weather.airQuality.icon}"></span>
+            <p class="status" th:text="${weather.airQuality.status}"></p>
+            <p th:text="${weather.airQuality.value + ' ' + weather.airQuality.measurement}"></p>
+        </div>
+        <div class="uv-index">
+            <h3 th:text="${weather.uvIndex.title}"></h3>
+            <span class="icon" th:classappend="${weather.uvIndex.icon}"></span>
+            <p class="status" th:text="${weather.uvIndex.status}"></p>
+            <p th:text="${weather.uvIndex.value + ' ' + weather.uvIndex.measurement}"></p>
+        </div>
+    </div>
+    <div class="forecast-section">
+        <h3>시간대별 날씨</h3>
+        <div class="forecast-row">
+            <div th:each="forecast : ${weather.hourlyForecast}" class="forecast-item">
+                <span class="time" th:text="${forecast.time}"></span>
+                <span class="icon" th:classappend="${forecast.icon}"></span>
+                <span class="temp" th:text="${forecast.temperature}"></span>
+                <span class="humid" th:text="${forecast.humidity}"></span>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

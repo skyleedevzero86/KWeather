@@ -3,6 +3,7 @@ package com.kweather.domain.controller
 import com.kweather.global.common.util.DateTimeUtils.getCurrentDateTimeFormatted
 import com.kweather.domain.entity.Weather
 import com.kweather.domain.model.*
+import com.kweather.global.common.util.DateTimeUtils
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
@@ -13,6 +14,7 @@ class WeatherController {
     fun getWeather(model: Model): String {
 
         val (date, time) = getCurrentDateTimeFormatted()
+        val hour = DateTimeUtils.getCurrentHour()
 
 
         val weatherData = Weather(
@@ -23,8 +25,8 @@ class WeatherController {
             highLowTemperature = "-5°C / -1°C",
             weatherCondition = "맑음",
             windSpeed = "1km/초(남서) m/s 0",
-            airQuality = AirQuality("미세먼지", "yellow-smiley", "좋음", "20 ㎍/㎥"),
-            uvIndex = UVIndex("초미세먼지", "yellow-smiley", "좋음", "8 ㎍/㎥"),
+            airQuality = AirQuality("미세먼지", "yellow-smiley", "좋음", "20 ㎍/㎥", "㎍/㎥"),
+            uvIndex = UVIndex("초미세먼지", "yellow-smiley", "좋음", "8 ㎍/㎥", "㎍/㎥"),
             hourlyForecast = listOf(
                 HourlyForecast("지금", "moon", "-1.8°C", "34%"),
                 HourlyForecast("0시", "moon", "-6°C", "55%"),
@@ -33,7 +35,15 @@ class WeatherController {
                 HourlyForecast("9시", "sun", "-6°C", "55%")
             )
         )
+        val timeOfDay = when {
+            hour in 6..11 -> "한낮 (아침)"
+            hour in 12..17 -> "한낮 (낮)"
+            hour in 18..23 -> "한낮 (저녁)"
+            else -> "한낮 (밤)"
+        }
+
+        model.addAttribute("timeOfDay", timeOfDay)
         model.addAttribute("weather", weatherData)
-        return "weather"
+        return "domain/weather/weather"
     }
 }

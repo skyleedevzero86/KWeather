@@ -25,4 +25,9 @@ object DateTimeUtils {
 
         return Pair(formattedDate, formattedTime)
     }
+
+    fun getCurrentHour(): Int {
+        // 한국 시간으로 현재 시간(hour) 가져오기
+        return LocalDateTime.now(ZoneId.of("Asia/Seoul")).hour
+    }
 }
