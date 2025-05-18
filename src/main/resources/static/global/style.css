@@ -116,7 +116,14 @@ body {
     font-size: 2em;
     display: block;
     margin-bottom: 10px;
+
+    border: 2px solid black;
+    border-radius: 5px;
+    padding: 5px;
+    background-color: rgba(0, 0, 0, 0.2);
+    display: inline-block;
 }
+
 
 .status {
     font-size: 1em;

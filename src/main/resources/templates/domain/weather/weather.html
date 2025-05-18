@@ -11,7 +11,11 @@
 <body>
 <div class="weather-container">
     <div class="weather-header">
-        <p class="date" th:text="${weather.date}"></p>
+        <p class="datetime">
+            <span class="date" th:text="${weather.date}"></span>
+            <span class="time" th:text="${weather.time}"></span>
+            <span class="timeofday" th:text="${timeOfDay}"></span>
+        </p>
         <h1 th:text="${weather.location}"></h1>
         <div class="weather-main">
             <div class="current-temp">

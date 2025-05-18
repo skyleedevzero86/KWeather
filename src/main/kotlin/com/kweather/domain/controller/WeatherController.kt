@@ -8,14 +8,24 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
 
+/**
+ * 날씨 정보를 처리하는 컨트롤러입니다.
+ * 메인 페이지에 날씨 정보를 전달합니다.
+ */
 @Controller
 class WeatherController {
+
+    /**
+     * 루트 경로("/") 요청 시 호출되며,
+     * 현재 날씨 정보를 모델에 담아 View에 전달합니다.
+     *
+     * @param model Spring MVC의 Model 객체로, View에 데이터 전달에 사용됩니다.
+     * @return 날씨 정보를 표시할 뷰 이름
+     */
     @GetMapping("/")
     fun getWeather(model: Model): String {
-
         val (date, time) = getCurrentDateTimeFormatted()
         val hour = DateTimeUtils.getCurrentHour()
-
 
         val weatherData = Weather(
             date = date,
@@ -35,11 +45,12 @@ class WeatherController {
                 HourlyForecast("9시", "sun", "-6°C", "55%")
             )
         )
+
         val timeOfDay = when {
-            hour in 6..11 -> "한낮 (아침)"
-            hour in 12..17 -> "한낮 (낮)"
-            hour in 18..23 -> "한낮 (저녁)"
-            else -> "한낮 (밤)"
+            hour in 6..11 -> " ( 아침 )"
+            hour in 12..17 -> " ( 낮 )"
+            hour in 18..23 -> " ( 저녁 )"
+            else -> "새벽 (밤)"
         }
 
         model.addAttribute("timeOfDay", timeOfDay)
