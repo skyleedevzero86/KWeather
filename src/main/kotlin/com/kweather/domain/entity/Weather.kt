@@ -4,7 +4,7 @@ import com.kweather.domain.model.AirQuality
 import com.kweather.domain.model.HourlyForecast
 import com.kweather.domain.model.UVIndex
 
-class Weather(
+data class Weather(
     val date: String,
     val time: String,
     val location: String,

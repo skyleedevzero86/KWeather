@@ -3,8 +3,11 @@ package com.kweather.domain.controller
 import com.kweather.global.common.util.DateTimeUtils.getCurrentDateTimeFormatted
 import com.kweather.domain.entity.Weather
 import com.kweather.domain.model.*
+import org.springframework.stereotype.Controller
+import org.springframework.ui.Model
+import org.springframework.web.bind.annotation.GetMapping
 
-
+@Controller
 class WeatherController {
     @GetMapping("/")
     fun getWeather(model: Model): String {
@@ -30,7 +33,7 @@ class WeatherController {
                 HourlyForecast("9시", "sun", "-6°C", "55%")
             )
         )
-
-        return null
+        model.addAttribute("weather", weatherData)
+        return "weather"
     }
 }
