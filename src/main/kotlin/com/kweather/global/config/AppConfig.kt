@@ -12,11 +12,13 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.io.ClassPathResource
 import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.filter.OncePerRequestFilter
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
+import java.io.IOException
 
 /**
  * 애플리케이션 공통 설정 클래스
@@ -28,9 +30,16 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 @Configuration
 class AppConfig : WebMvcConfigurer {
 
+    /**
+     * 사이트 이름을 application.yml 또는 properties에서 주입받습니다.
+     */
     @Value("\${custom.site.name}")
     lateinit var siteName: String
 
+    /**
+     * AppConfig 클래스의 싱글턴 인스턴스를 설정합니다.
+     * 클래스 내부 companion object에서 접근하기 위해 사용됩니다.
+     */
     @Value("\${queue.api.base-url:http://localhost:8080}")
     private lateinit var baseUrl: String
 
@@ -106,5 +115,19 @@ class AppConfig : WebMvcConfigurer {
     override fun addResourceHandlers(registry: ResourceHandlerRegistry) {
         registry.addResourceHandler("/static/**")
             .addResourceLocations("classpath:/static/")
+            .setCachePeriod(0)
+
+        registry.addResourceHandler("/gen/images/**")
+            .addResourceLocations("classpath:/static/gen/images/")
+            .setCachePeriod(0)
+
+        registry.addResourceHandler("/static/global/**")
+            .addResourceLocations("classpath:/static/global/")
+            .setCachePeriod(0)
+
+        registry.addResourceHandler("/favicon.ico")
+            .addResourceLocations("classpath:/static/favicon.ico")
+            .setCachePeriod(0)
     }
+
 }
