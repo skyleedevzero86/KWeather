@@ -1,4 +1,4 @@
-package com.kweather.domain.model
+package com.kweather.domain.weather.model
 
 /**
  * 자외선 지수 정보 클래스입니다.

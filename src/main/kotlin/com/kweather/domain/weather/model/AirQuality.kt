@@ -1,4 +1,4 @@
-package com.kweather.domain.model
+package com.kweather.domain.weather.model
 
 /**
  * 미세먼지 정보 클래스입니다.

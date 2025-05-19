@@ -1,4 +1,4 @@
-package com.kweather.domain.model
+package com.kweather.domain.weather.model
 
 /**
  * 시간별 날씨 예보 클래스입니다.

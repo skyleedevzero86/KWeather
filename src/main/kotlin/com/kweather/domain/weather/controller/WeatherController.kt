@@ -1,8 +1,10 @@
-package com.kweather.domain.controller
+package com.kweather.domain.weather.controller
 
 import com.kweather.global.common.util.DateTimeUtils.getCurrentDateTimeFormatted
-import com.kweather.domain.entity.Weather
-import com.kweather.domain.model.*
+import com.kweather.domain.weather.entity.Weather
+import com.kweather.domain.weather.model.AirQuality
+import com.kweather.domain.weather.model.HourlyForecast
+import com.kweather.domain.weather.model.UVIndex
 import com.kweather.global.common.util.DateTimeUtils
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
