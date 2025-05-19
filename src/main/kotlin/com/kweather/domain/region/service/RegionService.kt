@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional
 import com.kweather.domain.region.dto.*
 import com.kweather.domain.region.repository.RegionRepository
 import com.kweather.domain.region.entity.Region
+import org.slf4j.LoggerFactory
 
 /**
  * 지역 정보를 제공하는 서비스 클래스입니다.
@@ -12,6 +13,7 @@ import com.kweather.domain.region.entity.Region
  */
 @Service
 class RegionService(private val regionRepository: RegionRepository) {
+    private val logger = LoggerFactory.getLogger(RegionService::class.java)
 
     /**
      * 시/도 목록을 조회합니다.
@@ -21,6 +23,7 @@ class RegionService(private val regionRepository: RegionRepository) {
     @Transactional(readOnly = true)
     fun getSidoList(): List<RegionResponseDto> {
         val sidoList = regionRepository.findAllSido()
+        logger.info("Found ${sidoList.size} sido regions")
         return sidoList.map { toResponseDto(it) }
     }
 
@@ -33,6 +36,7 @@ class RegionService(private val regionRepository: RegionRepository) {
     @Transactional(readOnly = true)
     fun getSggBySido(sidoCode: String): List<RegionResponseDto> {
         val sggList = regionRepository.findSggBySido(sidoCode)
+        logger.info("Found ${sggList.size} sgg regions for sido code: $sidoCode")
         return sggList.map { toResponseDto(it) }
     }
 
@@ -45,6 +49,7 @@ class RegionService(private val regionRepository: RegionRepository) {
     @Transactional(readOnly = true)
     fun getDongBySgg(sggCode: String): List<RegionResponseDto> {
         val dongList = regionRepository.findDongBySgg(sggCode)
+        logger.info("Found ${dongList.size} dong regions for sgg code: $sggCode")
         return dongList.map { toResponseDto(it) }
     }
 
@@ -59,7 +64,7 @@ class RegionService(private val regionRepository: RegionRepository) {
             code = region.regionCd,
             name = region.locallowNm,
             level = region.level,
-            children = emptyList()
+            children = emptyList() // 기본적으로 자식 지역은 빈 리스트로 설정
         )
     }
 
@@ -71,6 +76,8 @@ class RegionService(private val regionRepository: RegionRepository) {
     @Transactional(readOnly = true)
     fun getRegionHierarchy(): List<RegionResponseDto> {
         val sidoList = regionRepository.findAllSido()
+        logger.info("Building region hierarchy for ${sidoList.size} sido regions")
+
         return sidoList.map { sido ->
             RegionResponseDto(
                 code = sido.regionCd,
@@ -89,7 +96,7 @@ class RegionService(private val regionRepository: RegionRepository) {
      */
     private fun getChildrenRecursive(parentCode: String): List<RegionResponseDto> {
         val children = when {
-            parentCode.endsWith("000000") -> regionRepository.findSggBySido(parentCode)
+            parentCode.endsWith("00000") -> regionRepository.findSggBySido(parentCode)
             parentCode.endsWith("000") -> regionRepository.findDongBySgg(parentCode)
             else -> emptyList()
         }
@@ -115,10 +122,33 @@ class RegionService(private val regionRepository: RegionRepository) {
         val regions = if (parentCode.isNullOrEmpty()) {
             regionRepository.findAllSido()
         } else {
-            regionRepository.findByRegionCd(parentCode)?.children ?: emptyList()
+            regionRepository.findByRegionCd(parentCode)?.let {
+                regionRepository.findSggBySido(it.regionCd)
+            } ?: emptyList()
         }
+
+        logger.info("Found ${regions.size} regions for parent code: $parentCode")
         return regions.map { toResponseDto(it) }
     }
 
+    /**
+     * 지역 코드로 지역 정보를 조회합니다.
+     *
+     * @param regionCode 지역 코드
+     * @return 지역 정보 DTO
+     */
+    @Transactional(readOnly = true)
+    fun getRegionByCode(regionCode: String): RegionResponseDto? {
+        return regionRepository.findByRegionCd(regionCode)?.let { toResponseDto(it) }
+    }
 
+    /**
+     * 전체 지역 개수를 반환합니다.
+     *
+     * @return 지역 개수
+     */
+    @Transactional(readOnly = true)
+    fun getRegionCount(): Long {
+        return regionRepository.count()
+    }
 }

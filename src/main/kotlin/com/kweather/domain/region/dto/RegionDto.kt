@@ -21,8 +21,8 @@ package com.kweather.domain.region.dto
 data class RegionDto(
     val regionCd: String,
     val sidoCd: String,
-    val sggCd: String,
-    val umdCd: String,
+    val sggCd: String? = null,  // nullable
+    val umdCd: String? = null,
     val riCd: String,
     val locatjuminCd: String,
     val locatjijukCd: String,

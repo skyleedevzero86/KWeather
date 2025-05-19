@@ -9,5 +9,5 @@ import com.fasterxml.jackson.annotation.JsonProperty
  * @param stanReginCd 행정구역 데이터를 포함하는 리스트
  */
 data class ApiResponse(
-    @JsonProperty("StanReginCd") val stanReginCd: List<ApiResponseContent>
+    @JsonProperty("StanReginCd") val stanReginCd: List<ApiResponseContent> = emptyList()
 )

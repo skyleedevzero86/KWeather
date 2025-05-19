@@ -46,4 +46,12 @@ interface RegionRepository : JpaRepository<Region, String> {
      * @return 해당 코드에 맞는 지역
      */
     fun findByRegionCd(regionCd: String): Region?
+
+    /**
+     * 저장된 모든 지역 코드를 조회합니다.
+     *
+     * @return 지역 코드 목록
+     */
+    @Query("SELECT r.regionCd FROM Region r")
+    fun findAllRegionCodes(): List<String>
 }
