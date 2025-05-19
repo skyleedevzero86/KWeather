@@ -62,7 +62,7 @@ class RegionService(private val regionRepository: RegionRepository) {
     private fun toResponseDto(region: Region): RegionResponseDto {
         return RegionResponseDto(
             code = region.regionCd,
-            name = region.locallowNm,
+            name = region.locallowNm ?: "", // null 가능한 필드를 빈 문자열로 처리
             level = region.level,
             children = emptyList() // 기본적으로 자식 지역은 빈 리스트로 설정
         )
@@ -81,7 +81,7 @@ class RegionService(private val regionRepository: RegionRepository) {
         return sidoList.map { sido ->
             RegionResponseDto(
                 code = sido.regionCd,
-                name = sido.locallowNm,
+                name = sido.locallowNm ?: "", // null 가능한 필드를 빈 문자열로 처리
                 level = sido.level,
                 children = getChildrenRecursive(sido.regionCd)
             )
@@ -104,7 +104,7 @@ class RegionService(private val regionRepository: RegionRepository) {
         return children.map { child ->
             RegionResponseDto(
                 code = child.regionCd,
-                name = child.locallowNm,
+                name = child.locallowNm ?: "", // null 가능한 필드를 빈 문자열로 처리
                 level = child.level,
                 children = getChildrenRecursive(child.regionCd)
             )

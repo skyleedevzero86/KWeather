@@ -1,11 +1,16 @@
 [
   {
     "regionCd": "1234567890",
+    "sidoCd": "00",
+    "sggCd": "000",
+    "umdCd": "000",
     "riCd": "00",
+    "locatjuminCd": "1234567890",
     "locatjijukCd": "1234567890",
     "locataddNm": "테스트",
     "locatOrder": 1,
-    "locathighCd": "0000000000",
-    "locallowNm": "테스트동"
+    "locathighCd": null,
+    "locallowNm": "테스트동",
+    "adptDe": null
   }
 ]

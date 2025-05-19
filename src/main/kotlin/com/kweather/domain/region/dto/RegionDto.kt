@@ -21,17 +21,17 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class RegionDto(
     val regionCd: String,
-    @JsonProperty("riCd") val riCd: String = "default_value",  // 기본값 설정
-    val sggCd: String? = null,  // nullable
-    val umdCd: String? = null,
-    val sidoCd: String? = null,  // 추가된 부분
-    @JsonProperty("locatjuminCd")
-    val locatjuminCd: String? = null,
-    val locatjijukCd: String? = null,
-    val locataddNm: String,
-    val locatOrder: Int,
-    val locatRm: String? = null,  // nullable
-    val locathighCd: String,
-    val locallowNm: String,
-    val adptDe: String? = null  // nullable
+    val sidoCd: String?,
+    val sggCd: String?,
+    val umdCd: String?,
+    val riCd: String?,
+    val locatjuminCd: String?,
+    val locatjijukCd: String?,
+    val locataddNm: String?,
+    val locatOrder: Int?,
+    val locatRm: String?,
+    val locathighCd: String?,
+    val locallowNm: String?,
+    val adptDe: String?,
+    val level: Int? = null
 )

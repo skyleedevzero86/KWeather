@@ -10,6 +10,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
  * @param rows API 응답의 데이터 행 정보
  */
 data class ApiResponseContent(
-    @JsonProperty("head") val head: List<ApiResponseHead>? = null,
+    @JsonProperty("head") val head: List<Map<String, Any>>? = null,
     @JsonProperty("row") val rows: List<ApiResponseRow>? = null
 )

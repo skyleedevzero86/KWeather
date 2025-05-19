@@ -47,6 +47,7 @@ class RegionApiService(
 
             val response = restTemplate.exchange(request, String::class.java)
             logger.info("API response status: ${response.statusCode}, content-type: ${response.headers.contentType}")
+            logger.debug("Response body: ${response.body}") // 응답 본문 로그 추가
 
             if (response.statusCodeValue != 200) {
                 logger.error("API call failed with status: ${response.statusCode}, body: ${response.body}")
@@ -60,18 +61,17 @@ class RegionApiService(
             }
 
             val contentType = response.headers.contentType?.toString() ?: ""
-            if (contentType.contains("xml") || responseBody.trim().startsWith("<")) {
-                logger.warn("Received XML response, checking for errors")
+            if (contentType.contains("xml", ignoreCase = true) || responseBody.trim().startsWith("<")) {
+                logger.warn("Received XML response, attempting to parse")
                 try {
                     val xmlResponse = xmlMapper.readValue(responseBody, XmlApiResponse::class.java)
                     val errorMsg = xmlResponse.cmmMsgHeader?.errMsg
                     val returnAuthMsg = xmlResponse.cmmMsgHeader?.returnAuthMsg
                     val returnReasonCode = xmlResponse.cmmMsgHeader?.returnReasonCode
-
                     logger.error("XML error response: errMsg=$errorMsg, returnAuthMsg=$returnAuthMsg, returnReasonCode=$returnReasonCode")
                     return emptyList()
                 } catch (e: Exception) {
-                    logger.error("Failed to parse XML error response: ${e.message}")
+                    logger.error("Failed to parse XML response: ${e.message}")
                     return emptyList()
                 }
             }
@@ -81,11 +81,11 @@ class RegionApiService(
                 val result = apiResponse.stanReginCd?.flatMap { content ->
                     content.rows?.mapNotNull { row -> row.toRegionDto() } ?: emptyList()
                 } ?: emptyList()
-
                 logger.info("Successfully parsed JSON response, found ${result.size} regions")
                 return result
             } catch (e: Exception) {
                 logger.error("Failed to parse JSON response: ${e.message}", e)
+                logger.debug("Response body: $responseBody")
                 return emptyList()
             }
         } catch (e: Exception) {
