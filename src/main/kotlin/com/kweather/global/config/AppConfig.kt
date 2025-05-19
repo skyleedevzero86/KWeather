@@ -9,16 +9,18 @@ import jakarta.annotation.PostConstruct
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.apache.hc.client5.http.classic.HttpClient
+import org.apache.hc.client5.http.impl.classic.HttpClients
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.core.io.ClassPathResource
-import org.springframework.http.client.SimpleClientHttpRequestFactory
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory
+import org.springframework.web.client.DefaultResponseErrorHandler
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.filter.OncePerRequestFilter
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
-import java.io.IOException
+import org.springframework.http.client.ClientHttpResponse
 
 /**
  * 애플리케이션 공통 설정 클래스
@@ -74,11 +76,23 @@ class AppConfig : WebMvcConfigurer {
      */
     @Bean
     fun restTemplate(): RestTemplate {
-        val factory = SimpleClientHttpRequestFactory().apply {
-            setConnectTimeout(5000)
-            setReadTimeout(5000)
+        // HttpClient 5.x로 RestTemplate을 설정
+        val httpClient: HttpClient = HttpClients.createDefault()
+        val factory = HttpComponentsClientHttpRequestFactory(httpClient)
+
+        factory.setConnectTimeout(5000)  // 5초 연결 타임아웃
+        factory.setReadTimeout(10000)    // 10초 읽기 타임아웃
+
+        val restTemplate = RestTemplate(factory)
+
+        // 오류 핸들러 추가
+        restTemplate.errorHandler = object : DefaultResponseErrorHandler() {
+            override fun hasError(response: ClientHttpResponse): Boolean {
+                return false  // 모든 응답을 오류로 처리하지 않고 코드에서 직접 처리
+            }
         }
-        return RestTemplate(factory)
+
+        return restTemplate
     }
 
     /**

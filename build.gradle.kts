@@ -27,7 +27,6 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.3")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.18.3")
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
-    implementation("org.apache.httpcomponents:httpclient:4.5.14")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.postgresql:postgresql:42.7.2")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
@@ -55,6 +54,17 @@ dependencies {
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     implementation("org.springframework.boot:spring-boot-starter-batch")
     implementation("com.zaxxer:HikariCP:${property("hikariVersion")}")
+
+    // Spring HTTP Client 설정
+    implementation("org.springframework.boot:spring-boot-starter-web") {
+        exclude(group = "org.apache.httpcomponents.client5")
+    }
+
+    // 직접 RestTemplate 구성을 위한 기본 의존성만 유지
+    implementation("org.apache.httpcomponents.core5:httpcore5:5.2.1")
+    implementation("org.apache.httpcomponents.client5:httpclient5:5.2.1")
+    implementation("org.apache.httpcomponents.core5:httpcore5:5.2.1")
+    implementation("org.apache.httpcomponents.core5:httpcore5-h2:5.2.1")
 }
 
 kotlin {
@@ -63,13 +73,11 @@ kotlin {
     }
 }
 
-/*
-allOpen {
+/*allOpen {
     annotation("jakarta.persistence.Entity")
     annotation("jakarta.persistence.MappedSuperclass")
     annotation("jakarta.persistence.Embeddable")
-}
-*/
+}*/
 
 tasks.withType<Test> {
     useJUnitPlatform()

@@ -13,70 +13,23 @@ import org.springframework.batch.core.step.builder.StepBuilder
 import org.springframework.batch.item.ItemProcessor
 import org.springframework.batch.item.ItemReader
 import org.springframework.batch.item.ItemWriter
-import org.springframework.batch.item.support.ListItemReader
-import org.springframework.boot.CommandLineRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.transaction.PlatformTransactionManager
 import org.slf4j.LoggerFactory
-import com.fasterxml.jackson.databind.ObjectMapper
-import java.io.File
-import java.nio.file.Files
 import org.springframework.batch.core.launch.JobLauncher
 import org.springframework.batch.core.JobParametersBuilder
-import java.util.concurrent.ConcurrentHashMap
+import org.springframework.boot.CommandLineRunner
+import org.springframework.dao.DataIntegrityViolationException
 
 @Configuration
 @EnableBatchProcessing
 class RegionBatchConfig(
     private val regionApiService: RegionApiService,
     private val regionRepository: RegionRepository,
-    private val objectMapper: ObjectMapper,
     private val jobLauncher: JobLauncher
 ) {
     private val logger = LoggerFactory.getLogger(RegionBatchConfig::class.java)
-    private val regionCache = ConcurrentHashMap<String, Region>()
-    private val cacheFile = File("region_cache.json")
-
-    private fun loadCachedRegions(): List<RegionDto> {
-        if (!cacheFile.exists()) {
-            logger.warn("Cache file does not exist: ${cacheFile.absolutePath}")
-            val defaultData = loadDefaultRegions()
-            if (defaultData.isNotEmpty()) {
-                saveToCache(defaultData)
-                return defaultData
-            }
-            return emptyList()
-        }
-        val json = Files.readString(cacheFile.toPath())
-        logger.debug("Loading cached JSON: $json")
-        return try {
-            objectMapper.readValue(json, Array<RegionDto>::class.java).toList()
-        } catch (e: Exception) {
-            logger.error("Failed to parse cached JSON: ${e.message}", e)
-            emptyList()
-        }
-    }
-
-    private fun loadDefaultRegions(): List<RegionDto> {
-        val resource = javaClass.classLoader.getResourceAsStream("default_regions.json")
-        return if (resource != null) {
-            objectMapper.readValue(resource, Array<RegionDto>::class.java).toList()
-        } else {
-            logger.warn("No default regions found in resources")
-            emptyList()
-        }
-    }
-
-    private fun saveToCache(regions: List<RegionDto>) {
-        try {
-            val json = objectMapper.writeValueAsString(regions)
-            Files.writeString(cacheFile.toPath(), json)
-            logger.info("Saved ${regions.size} regions to cache")
-        } catch (e: Exception) {
-            logger.error("Failed to save regions to cache: ${e.message}", e)
-        }
-    }
 
     @Bean
     fun regionJob(jobRepository: JobRepository, step: Step): Job {
@@ -86,7 +39,6 @@ class RegionBatchConfig(
             .listener(object : JobExecutionListener {
                 override fun beforeJob(jobExecution: JobExecution) {
                     logger.info("Starting region import job")
-                    regionCache.clear()
                 }
 
                 override fun afterJob(jobExecution: JobExecution) {
@@ -96,7 +48,6 @@ class RegionBatchConfig(
                             logger.error("Job failure", e)
                         }
                     }
-                    regionCache.clear()
                 }
             })
             .build()
@@ -105,30 +56,48 @@ class RegionBatchConfig(
     @Bean
     fun regionStep(jobRepository: JobRepository, transactionManager: PlatformTransactionManager): Step {
         return StepBuilder("regionStep", jobRepository)
-            .chunk<RegionDto, Region>(1000, transactionManager)
+            .chunk<RegionDto, Region>(50, transactionManager) // 청크 크기를 더 작게 설정
             .reader(regionItemReader())
             .processor(regionItemProcessor())
             .writer(regionItemWriter())
             .faultTolerant()
             .retryLimit(3)
             .retry(Exception::class.java)
-            .skip(org.springframework.dao.DataIntegrityViolationException::class.java)
-            .skipLimit(10)
+            .skip(DataIntegrityViolationException::class.java)
+            .skipLimit(100)
             .listener(object : SkipListener<RegionDto, Region> {
                 override fun onSkipInWrite(item: Region, t: Throwable) {
                     logger.warn("Skipped region ${item.regionCd} due to: ${t.message}")
                 }
-                override fun onSkipInRead(t: Throwable) {}
-                override fun onSkipInProcess(item: RegionDto, t: Throwable) {}
+                override fun onSkipInRead(t: Throwable) {
+                    logger.warn("Skipped reading due to: ${t.message}")
+                }
+                override fun onSkipInProcess(item: RegionDto, t: Throwable) {
+                    logger.warn("Skipped processing ${item.regionCd} due to: ${t.message}")
+                }
             })
             .listener(object : StepExecutionListener {
                 override fun beforeStep(stepExecution: StepExecution) {
                     logger.info("Clearing existing regions")
-                    regionRepository.deleteAllInBatch()
+                    try {
+                        // 기존 데이터 삭제 시도
+                        val count = regionRepository.count()
+                        if (count > 0) {
+                            regionRepository.deleteAllInBatch()
+                            logger.info("Successfully cleared $count existing regions")
+                        } else {
+                            logger.info("No existing regions to clear")
+                        }
+                    } catch (e: Exception) {
+                        logger.error("Failed to clear existing regions: ${e.message}", e)
+                        // 기존 데이터 삭제 실패 시 처리할 내용을 추가
+                        // 배치 작업을 계속 진행하므로 예외를 다시 던지지 않음
+                    }
                 }
 
                 override fun afterStep(stepExecution: StepExecution): ExitStatus? {
                     logger.info("Step completed with status: ${stepExecution.status}")
+                    logger.info("Read count: ${stepExecution.readCount}, Write count: ${stepExecution.writeCount}, Skip count: ${stepExecution.skipCount}")
                     return null
                 }
             })
@@ -143,16 +112,9 @@ class RegionBatchConfig(
 
             init {
                 try {
+                    logger.info("Initializing region item reader")
                     val apiRegions = regionApiService.fetchAllRegionData()
-                    if (apiRegions.isEmpty()) {
-                        logger.info("API에서 데이터를 못 가져왔어요. 캐시를 확인합니다.")
-                        val cachedJson = File("region_cache.json").readText()
-                        val typeRef = object : com.fasterxml.jackson.core.type.TypeReference<List<RegionDto>>() {}
-                        regions = objectMapper.readValue(cachedJson, typeRef)
-                            .sortedBy { region -> region.locatOrder ?: Int.MAX_VALUE }
-                    } else {
-                        regions = apiRegions.sortedBy { region -> region.locatOrder ?: Int.MAX_VALUE }
-                    }
+                    regions = apiRegions.sortedBy { region -> region.locatOrder ?: Int.MAX_VALUE }
                     logger.info("Loaded ${regions.size} regions for reading")
                 } catch (e: Exception) {
                     logger.error("Failed to load regions: ${e.message}", e)
@@ -161,11 +123,15 @@ class RegionBatchConfig(
             }
 
             override fun read(): RegionDto? {
-                return if (index < regions.size) {
-                    regions[index++]
-                } else {
-                    null
+                if (index < regions.size) {
+                    if (index % 500 == 0) {
+                        logger.info("Reading progress: $index/${regions.size}")
+                    }
+                    val region = regions[index]
+                    index++
+                    return region
                 }
+                return null
             }
         }
     }
@@ -173,19 +139,14 @@ class RegionBatchConfig(
     @Bean
     fun regionItemProcessor(): ItemProcessor<RegionDto, Region> {
         return ItemProcessor { dto ->
-            logger.debug("Processing RegionDto: ${dto.locataddNm} (${dto.regionCd})")
-
-            // 지역 코드 구조에 따라 level을 결정
+            // 일관된 레벨 결정 로직 적용
             val level = when {
-                // 시/도 레벨 (XX00000000)
-                dto.regionCd.endsWith("00000000") || dto.sidoCd != null && dto.sggCd == null -> 1
-                // 시/군/구 레벨 (XXYYY00000)
-                dto.regionCd.endsWith("00000") || dto.sggCd != null && dto.umdCd == null -> 2
-                // 읍/면/동 레벨 (XXYYYZZ000)
-                else -> 3
+                dto.regionCd.endsWith("00000000") -> 1 // 시/도
+                dto.regionCd.endsWith("00000") -> 2 // 시/군/구
+                else -> 3 // 읍/면/동 또는 기타
             }
 
-            Region(
+            val region = Region(
                 regionCd = dto.regionCd,
                 sidoCd = dto.sidoCd ?: "",
                 sggCd = dto.sggCd ?: "",
@@ -195,12 +156,15 @@ class RegionBatchConfig(
                 locatjijukCd = dto.locatjijukCd ?: "",
                 locataddNm = dto.locataddNm ?: "",
                 locatOrder = dto.locatOrder ?: 0,
-                locatRm = dto.locatRm,
-                locathighCd = if (dto.locathighCd == "0000000000") null else dto.locathighCd,
+                locatRm = dto.locatRm ?: "",
+                locathighCd = dto.locathighCd.takeIf { it != "0000000000" && !it.isNullOrEmpty() },
                 locallowNm = dto.locallowNm ?: "",
-                adptDe = dto.adptDe,
-                level = level  // level 파라미터 추가
+                adptDe = dto.adptDe ?: "",
+                level = level
             )
+
+            logger.debug("Processed region: ${region.regionCd} (${region.locataddNm}) at level $level")
+            region
         }
     }
 
@@ -211,31 +175,20 @@ class RegionBatchConfig(
                 val validRegions = regions.filterNotNull()
                 logger.info("Attempting to save ${validRegions.size} regions")
 
-                val regionsToInsert = mutableListOf<Region>()
-                validRegions.forEach { region ->
-                    logger.debug("Processing region: ${region.locataddNm} (${region.regionCd})")
-                    var updatedRegion = region
-                    if (region.locathighCd != null && region.locathighCd != "0000000000" && region.locathighCd.isNotEmpty()) {
-                        val parent = regionRepository.findByRegionCd(region.locathighCd)
-                        if (parent != null) {
-                            updatedRegion = region.copy(parent = parent)
-                            parent.addChild(updatedRegion)
-                        } else {
-                            logger.warn("Parent region not found for code: ${region.locathighCd} (child: ${region.regionCd})")
-                            updatedRegion = region.copy(locathighCd = null)
-                        }
-                    } else if (region.locathighCd == "0000000000") {
-                        logger.warn("Invalid parent code '0000000000' for region: ${region.regionCd}")
-                        updatedRegion = region.copy(locathighCd = null)
-                    }
-                    regionsToInsert.add(updatedRegion)
+                // 샘플 로그 출력
+                if (validRegions.isNotEmpty()) {
+                    val sample = validRegions.first()
+                    logger.info("Sample region: ${sample.regionCd}, ${sample.locataddNm}, level=${sample.level}, parent=${sample.locathighCd}")
                 }
 
-                regionRepository.saveAll(regionsToInsert)
-                regionRepository.flush()
-                logger.info("Successfully saved ${regionsToInsert.size} regions to database")
+                // 저장 시도
+                regionRepository.saveAll(validRegions)
+                logger.info("Successfully saved ${validRegions.size} regions to database")
+
             } catch (e: Exception) {
                 logger.error("Failed to save regions: ${e.message}", e)
+                // 스택 트레이스 출력
+                e.printStackTrace()
                 throw RuntimeException("Region save failed", e)
             }
         }
@@ -244,10 +197,17 @@ class RegionBatchConfig(
     @Bean
     fun runBatchJob(regionJob: Job): CommandLineRunner {
         return CommandLineRunner {
-            val jobParameters = JobParametersBuilder()
-                .addLong("time", System.currentTimeMillis())
-                .toJobParameters()
-            jobLauncher.run(regionJob, jobParameters)
+            try {
+                val jobParameters = JobParametersBuilder()
+                    .addLong("time", System.currentTimeMillis())
+                    .toJobParameters()
+                logger.info("Running region batch job with parameters: $jobParameters")
+
+                val jobExecution = jobLauncher.run(regionJob, jobParameters)
+                logger.info("Job execution status: ${jobExecution.status}")
+            } catch (e: Exception) {
+                logger.error("Failed to run batch job: ${e.message}", e)
+            }
         }
     }
 }
