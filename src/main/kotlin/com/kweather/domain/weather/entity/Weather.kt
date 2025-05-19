@@ -1,8 +1,8 @@
-package com.kweather.domain.entity
+package com.kweather.domain.weather.entity
 
-import com.kweather.domain.model.AirQuality
-import com.kweather.domain.model.HourlyForecast
-import com.kweather.domain.model.UVIndex
+import com.kweather.domain.weather.model.AirQuality
+import com.kweather.domain.weather.model.HourlyForecast
+import com.kweather.domain.weather.model.UVIndex
 
 /**
  * 날씨 정보를 담는 데이터 클래스입니다.

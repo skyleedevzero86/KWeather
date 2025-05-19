@@ -1,24 +1,33 @@
 package com.kweather.global.config
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import jakarta.annotation.PostConstruct
+import jakarta.servlet.FilterChain
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+import org.apache.hc.client5.http.classic.HttpClient
+import org.apache.hc.client5.http.impl.classic.HttpClients
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.core.io.ClassPathResource
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory
+import org.springframework.web.client.DefaultResponseErrorHandler
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.filter.OncePerRequestFilter
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
-import jakarta.servlet.FilterChain
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
-import java.io.IOException
+import org.springframework.http.client.ClientHttpResponse
 
 /**
- * 웹 애플리케이션의 공통 설정을 담당하는 구성 클래스입니다.
+ * 애플리케이션 공통 설정 클래스
  * - 정적 리소스 매핑
- * - 공통 필터 등록
- * - 외부 API 통신용 RestTemplate 등록
+ * - ObjectMapper (Jackson)
+ * - RestTemplate
+ * - 인코딩 필터
  */
 @Configuration
 class AppConfig : WebMvcConfigurer {
@@ -30,34 +39,64 @@ class AppConfig : WebMvcConfigurer {
     lateinit var siteName: String
 
     /**
-     * 외부 큐 API의 기본 URL을 설정합니다.
-     * 기본값은 `http://localhost:8080` 입니다.
+     * AppConfig 클래스의 싱글턴 인스턴스를 설정합니다.
+     * 클래스 내부 companion object에서 접근하기 위해 사용됩니다.
      */
     @Value("\${queue.api.base-url:http://localhost:8080}")
     private lateinit var baseUrl: String
 
-    /**
-     * AppConfig 클래스의 싱글턴 인스턴스를 설정합니다.
-     * 클래스 내부 companion object에서 접근하기 위해 사용됩니다.
-     */
     @PostConstruct
     fun init() {
         instance = this
     }
 
-    /**
-     * RestTemplate 빈을 등록합니다.
-     *
-     * @return RestTemplate 인스턴스
-     */
-    @Bean
-    fun restTemplate(): RestTemplate = RestTemplate()
+    companion object {
+        lateinit var instance: AppConfig
+            private set
+    }
 
     /**
-     * 요청/응답의 Content-Type에 charset=UTF-8을 설정하는 필터입니다.
-     * JSON 또는 HTML 응답의 인코딩 문제를 방지합니다.
-     *
-     * @return OncePerRequestFilter 인스턴스
+     * JSON 직렬화를 위한 공통 ObjectMapper Bean 등록
+     * - Kotlin 모듈 지원
+     * - JavaTime 모듈 지원
+     * - Pretty Print 비활성화
+     * - 타임스탬프 직렬화 옵션 설정
+     */
+    @Bean
+    fun objectMapper(): ObjectMapper {
+        return jacksonObjectMapper()
+            .registerModule(KotlinModule.Builder().build())
+            .registerModule(JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+    }
+
+    /**
+     * 외부 API 통신용 RestTemplate Bean
+     * - 기본 timeout 설정 포함
+     */
+    @Bean
+    fun restTemplate(): RestTemplate {
+        // HttpClient 5.x로 RestTemplate을 설정
+        val httpClient: HttpClient = HttpClients.createDefault()
+        val factory = HttpComponentsClientHttpRequestFactory(httpClient)
+
+        factory.setConnectTimeout(5000)  // 5초 연결 타임아웃
+        factory.setReadTimeout(10000)    // 10초 읽기 타임아웃
+
+        val restTemplate = RestTemplate(factory)
+
+        // 오류 핸들러 추가
+        restTemplate.errorHandler = object : DefaultResponseErrorHandler() {
+            override fun hasError(response: ClientHttpResponse): Boolean {
+                return false  // 모든 응답을 오류로 처리하지 않고 코드에서 직접 처리
+            }
+        }
+
+        return restTemplate
+    }
+
+    /**
+     * 응답 Content-Type에 UTF-8 charset 설정하는 필터
      */
     @Bean
     fun encodingFilter(): OncePerRequestFilter {
@@ -85,9 +124,7 @@ class AppConfig : WebMvcConfigurer {
     }
 
     /**
-     * 정적 리소스 경로를 설정합니다.
-     *
-     * @param registry 정적 자원 등록기
+     * 정적 리소스 경로 설정
      */
     override fun addResourceHandlers(registry: ResourceHandlerRegistry) {
         registry.addResourceHandler("/static/**")
@@ -107,23 +144,4 @@ class AppConfig : WebMvcConfigurer {
             .setCachePeriod(0)
     }
 
-    companion object {
-        private lateinit var instance: AppConfig
-
-        /**
-         * 정적 리소스(static/)의 절대 경로를 반환합니다.
-         * 서버 내 실제 경로 접근을 위해 사용됩니다.
-         *
-         * @return static 디렉터리의 절대 경로
-         * @throws RuntimeException 디렉터리 접근 실패 시 예외 발생
-         */
-        fun getResourcesStaticDirPath(): String {
-            val resource = ClassPathResource("static/")
-            return try {
-                resource.file.absolutePath
-            } catch (e: IOException) {
-                throw RuntimeException("정적 리소스 디렉터리에 접근하지 못했습니다.", e)
-            }
-        }
-    }
 }

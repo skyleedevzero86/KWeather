@@ -2,6 +2,7 @@ application-*.yml
 application.properties
 application.yml
 application-*.properties
+
 HELP.md
 .gradle
 build/
