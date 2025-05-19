@@ -1,9 +1,11 @@
 [
   {
-    "regionCd": "1100000000",
-    "sidoCd": "11",
-    "locataddNm": "서울특별시",
+    "regionCd": "1234567890",
+    "riCd": "00",
+    "locatjijukCd": "1234567890",
+    "locataddNm": "테스트",
+    "locatOrder": 1,
     "locathighCd": "0000000000",
-    "locallowNm": "서울특별시"
+    "locallowNm": "테스트동"
   }
 ]

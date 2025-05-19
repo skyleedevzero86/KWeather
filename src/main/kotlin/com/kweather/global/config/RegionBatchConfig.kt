@@ -49,7 +49,13 @@ class RegionBatchConfig(
             return emptyList()
         }
         val json = Files.readString(cacheFile.toPath())
-        return objectMapper.readValue(json, Array<RegionDto>::class.java).toList()
+        logger.debug("Loading cached JSON: $json")  // JSON 데이터 로깅 추가
+        return try {
+            objectMapper.readValue(json, Array<RegionDto>::class.java).toList()
+        } catch (e: Exception) {
+            logger.error("Failed to parse cached JSON: ${e.message}", e)
+            emptyList()
+        }
     }
 
     private fun loadDefaultRegions(): List<RegionDto> {
@@ -142,12 +148,12 @@ class RegionBatchConfig(
                 logger.debug("Processing region: ${dto.locataddNm} (${dto.regionCd}), parent: ${dto.locathighCd}")
                 val region = Region(
                     regionCd = dto.regionCd,
-                    sidoCd = dto.sidoCd,
-                    sggCd = dto.sggCd ?: "",  // Provide a default empty string if `sggCd` is null
+                    sidoCd = dto.sidoCd ?: "",
+                    sggCd = dto.sggCd ?: "",
                     umdCd = dto.umdCd ?: "",
                     riCd = dto.riCd,
-                    locatjuminCd = dto.locatjuminCd,
-                    locatjijukCd = dto.locatjijukCd,
+                    locatjuminCd = dto.locatjuminCd ?: "",
+                    locatjijukCd = dto.locatjijukCd ?: "",  // null일 경우 빈 문자열로 처리
                     locataddNm = dto.locataddNm,
                     locatOrder = dto.locatOrder,
                     locatRm = dto.locatRm,
@@ -162,6 +168,7 @@ class RegionBatchConfig(
             }
         }
     }
+
 
     @Bean
     fun regionItemWriter(): ItemWriter<Region> {
