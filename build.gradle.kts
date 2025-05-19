@@ -3,8 +3,8 @@ plugins {
     kotlin("plugin.spring") version "1.9.25"
     id("org.springframework.boot") version "3.4.4"
     id("io.spring.dependency-management") version "1.1.7"
-    //kotlin("plugin.jpa") version "1.9.25"
-    ///kotlin("kapt") version "1.9.25"
+    kotlin("plugin.jpa") version "1.9.25"
+    kotlin("kapt") version "1.9.25"
 }
 
 group = "com"
@@ -32,7 +32,7 @@ dependencies {
     //implementation("org.springframework.boot:spring-boot-starter-webflux")
 
     // JPA
-    //implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 
     // Thymeleaf 템플릿 엔진
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
@@ -83,8 +83,8 @@ dependencies {
     implementation("org.webjars:jquery:3.7.1")
 
     // QueryDSL
-    //implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
-    //kapt("com.querydsl:querydsl-apt:5.1.0:jakarta")
+    implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
+    kapt("com.querydsl:querydsl-apt:5.1.0:jakarta")
 
     // 개발 도구
     developmentOnly("org.springframework.boot:spring-boot-devtools")
