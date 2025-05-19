@@ -58,7 +58,8 @@ class RegionService(private val regionRepository: RegionRepository) {
         return RegionResponseDto(
             code = region.regionCd,
             name = region.locallowNm,
-            level = region.level
+            level = region.level,
+            children = emptyList()
         )
     }
 
@@ -102,4 +103,22 @@ class RegionService(private val regionRepository: RegionRepository) {
             )
         }
     }
+
+    /**
+     * 특정 레벨과 상위 코드에 따른 하위 지역 목록을 조회합니다.
+     *
+     * @param parentCode 상위 지역 코드 (null이면 최상위 시/도 조회)
+     * @return 하위 지역 목록
+     */
+    @Transactional(readOnly = true)
+    fun getRegionsByParent(parentCode: String?): List<RegionResponseDto> {
+        val regions = if (parentCode.isNullOrEmpty()) {
+            regionRepository.findAllSido()
+        } else {
+            regionRepository.findByRegionCd(parentCode)?.children ?: emptyList()
+        }
+        return regions.map { toResponseDto(it) }
+    }
+
+
 }

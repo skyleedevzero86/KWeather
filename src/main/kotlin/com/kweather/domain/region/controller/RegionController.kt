@@ -2,6 +2,9 @@ package com.kweather.domain.region.controller
 
 import com.kweather.domain.region.dto.RegionResponseDto
 import com.kweather.domain.region.service.RegionService
+import org.springframework.batch.core.Job
+import org.springframework.batch.core.JobParametersBuilder
+import org.springframework.batch.core.launch.JobLauncher
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -15,7 +18,9 @@ import java.util.function.Supplier
  */
 @RestController
 @RequestMapping("/api/regions")
-class RegionController(private val regionService: RegionService) {
+class RegionController(private val regionService: RegionService,
+                       private val jobLauncher: JobLauncher,
+                       private val regionJob: Job) {
 
     /**
      * 지역 데이터를 실행할 수 있도록 돕는 유틸리티 메서드입니다.
@@ -78,4 +83,26 @@ class RegionController(private val regionService: RegionService) {
     fun getRegionHierarchy(): ResponseEntity<List<RegionResponseDto>> {
         return executeQuery(Supplier { regionService.getRegionHierarchy() })
     }
+
+    /**
+     * 특정 상위 코드에 따른 하위 지역 목록을 조회합니다.
+     *
+     * @param parentCode 상위 지역 코드 (null이면 최상위 시/도)
+     * @return 하위 지역 목록
+     */
+    @GetMapping("/regions/{parentCode}")
+    fun getRegionsByParent(@PathVariable parentCode: String?): ResponseEntity<List<RegionResponseDto>> {
+        return executeQuery { regionService.getRegionsByParent(parentCode) }
+    }
+
+    @GetMapping("/run-batch")
+    fun runBatch(): ResponseEntity<String> {
+        val jobParameters = JobParametersBuilder()
+            .addLong("time", System.currentTimeMillis())
+            .toJobParameters()
+        jobLauncher.run(regionJob, jobParameters)
+        return ResponseEntity.ok("배치 작업이 시작되었습니다.")
+    }
+
+
 }

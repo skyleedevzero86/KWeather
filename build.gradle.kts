@@ -88,6 +88,9 @@ dependencies {
 
     // 개발 도구
     developmentOnly("org.springframework.boot:spring-boot-devtools")
+
+    // 배치 처리
+    implementation("org.springframework.boot:spring-boot-starter-batch")
 }
 
 kotlin {
