@@ -5,17 +5,21 @@ import com.kweather.domain.weather.entity.Weather
 import com.kweather.domain.weather.model.AirQuality
 import com.kweather.domain.weather.model.HourlyForecast
 import com.kweather.domain.weather.model.UVIndex
+import com.kweather.domain.weather.service.WeatherService
 import com.kweather.global.common.util.DateTimeUtils
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestParam
 
 /**
  * 날씨 정보를 처리하는 컨트롤러입니다.
  * 메인 페이지에 날씨 정보를 전달합니다.
  */
 @Controller
-class WeatherController {
+class WeatherController (
+    private val weatherService: WeatherService
+){
 
     /**
      * 루트 경로("/") 요청 시 호출되며,
@@ -59,4 +63,19 @@ class WeatherController {
         model.addAttribute("weather", weatherData)
         return "domain/weather/weather"
     }
+
+    @GetMapping("/weather")
+    fun getWeather(
+        @RequestParam("nx") nx: Int,
+        @RequestParam("ny") ny: Int
+    ) {
+        val baseDate = DateTimeUtils.getBaseDate()
+        val baseTime = DateTimeUtils.getBaseTime()
+
+        val result = weatherService.fetchAndDisplayWeather(nx, ny, baseDate, baseTime)
+
+        println("결과: $result")
+    }
+
+
 }
