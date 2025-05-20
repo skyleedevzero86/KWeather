@@ -1,8 +1,9 @@
 package com.kweather.domain.region.repository
 
-import com.kweather.domain.region.entity.Region
+import com.kweather.domain.region.entity.Sgg
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 
+
 @Repository
-interface RegionRepository : JpaRepository<Region, String>
+interface SggRepository : JpaRepository<Sgg, String>

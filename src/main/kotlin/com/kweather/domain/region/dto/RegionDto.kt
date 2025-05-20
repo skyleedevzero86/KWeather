@@ -1,37 +1,24 @@
 package com.kweather.domain.region.dto
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
-/**
- * 행정구역의 데이터를 나타내는 DTO 클래스입니다.
- * 각 행정구역의 고유한 코드와 이름을 포함합니다.
- *
- * @param regionCd 행정구역 코드
- * @param riCd 리 코드
- * @param sggCd 시/군/구 코드
- * @param umdCd 읍/면/동 코드
- * @param locatjuminCd 주소 주민 코드
- * @param locatjijukCd 주소 지적 코드
- * @param locataddNm 주소 이름
- * @param locatOrder 주소 순서
- * @param locatRm 주소 비고
- * @param locathighCd 상위 행정구역 코드
- * @param locallowNm 하위 행정구역 이름
- * @param adptDe 적용일
- */
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class RegionDto(
-    val regionCd: String,
-    val sidoCd: String?,
-    val sggCd: String?,
-    val umdCd: String?,
-    val riCd: String?,
-    val locatjuminCd: String?,
-    val locatjijukCd: String?,
-    val locataddNm: String?,
-    val locatOrder: Int?,
-    val locatRm: String?,
-    val locathighCd: String?,
-    val locallowNm: String?,
-    val adptDe: String?,
-    val level: Int? = null
+    @JsonProperty("region_cd") val regionCd: String? = null,
+    @JsonProperty("sido_cd") val sidoCd: String? = null,
+    @JsonProperty("sgg_cd") val sggCd: String? = null,
+    @JsonProperty("umd_cd") val umdCd: String? = null,
+    @JsonProperty("ri_cd") val riCd: String? = null,
+    @JsonProperty("locatjumin_cd") val locatjuminCd: String? = null,
+    @JsonProperty("locatjijuk_cd") val locatjijukCd: String? = null,
+    @JsonProperty("locatadd_nm") val locataddNm: String? = null,
+    @JsonProperty("locat_order") val locatOrder: Int? = null,
+    @JsonProperty("locat_rm") val locatRm: String? = null,
+    @JsonProperty("locathigh_cd") val locathighCd: String? = null,
+    @JsonProperty("locallow_nm") val locallowNm: String? = null,
+    @JsonProperty("adpt_de") val adptDe: String? = null
 )
+
+
+
