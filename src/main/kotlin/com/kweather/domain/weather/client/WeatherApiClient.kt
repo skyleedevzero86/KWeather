@@ -9,10 +9,10 @@ import org.springframework.web.util.UriComponentsBuilder
 class WeatherApiClient(
     private val restTemplate: RestTemplate
 ) {
-    @Value("\${api.region.service-key}")
-    private lateinit var serviceKey: String
+    @Value("\${api.weather.service-key}")
+    private lateinit var serviceKey: String // 인코딩되지 않은 값 주입 권장
 
-    @Value("\${api.region.base-url}")
+    @Value("\${api.weather.base-url}")
     private lateinit var baseUrl: String
 
     data class WeatherResponse(
@@ -50,9 +50,9 @@ class WeatherApiClient(
         val obsrValue: String
     )
 
-    fun fetchUltraSrtNcst(serviceKey: String, baseUrl: String, nx: Int, ny: Int, baseDate: String, baseTime: String): WeatherResponse? {
-        val url = UriComponentsBuilder.fromHttpUrl("$baseUrl/getUltraSrtNcst")
-            .queryParam("serviceKey", serviceKey)
+    fun fetchUltraSrtNcst(nx: Int, ny: Int, baseDate: String, baseTime: String): WeatherResponse? {
+        val url = UriComponentsBuilder.fromHttpUrl(baseUrl)
+            .queryParam("serviceKey", serviceKey, true) // raw=true로 추가 인코딩 방지
             .queryParam("numOfRows", 10)
             .queryParam("pageNo", 1)
             .queryParam("base_date", baseDate)
@@ -62,6 +62,11 @@ class WeatherApiClient(
             .queryParam("dataType", "json")
             .toUriString()
 
-        return restTemplate.getForObject(url, WeatherResponse::class.java)
+        return try {
+            restTemplate.getForObject(url, WeatherResponse::class.java)
+        } catch (e: Exception) {
+            println("API 호출 오류: ${e.message}")
+            null
+        }
     }
 }

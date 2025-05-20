@@ -69,10 +69,13 @@ class WeatherController (
         @RequestParam("nx") nx: Int,
         @RequestParam("ny") ny: Int
     ) {
-
         val baseDate = DateTimeUtils.getBaseDate()
         val baseTime = DateTimeUtils.getBaseTime()
-        weatherService.fetchAndDisplayWeather(nx, ny, baseDate, baseTime)
+
+        val result = weatherService.fetchAndDisplayWeather(nx, ny, baseDate, baseTime)
+
+        println("결과: $result")
     }
+
 
 }

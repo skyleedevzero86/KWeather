@@ -53,7 +53,7 @@ object DateTimeUtils {
 
     /**
      * 현재 한국 시간 기준으로 기상청 API에 필요한 baseTime을 반환합니다.
-     * baseTime은 30분 단위로 조정됩니다 (예: 06:07 -> "0600", 06:37 -> "0630").
+     * baseTime은 30분 단위로 조정되며, 현재 시간 이전의 가장 가까운 유효한 시간을 반환합니다.
      *
      * @return HHmm 형식의 문자열 (예: "0600", "0630")
      */
@@ -62,8 +62,8 @@ object DateTimeUtils {
         val hour = now.hour
         val minute = now.minute
 
-        // 30분 단위로 조정
-        val adjustedHour = if (minute < 30) hour else if (hour < 23) hour + 1 else hour
+        // 현재 시간에서 가장 가까운 30분 단위로 조정 (미래 시간은 제외)
+        val adjustedHour = if (minute < 30) hour else hour
         val adjustedMinute = if (minute < 30) "00" else "30"
 
         // HHmm 형식으로 반환
