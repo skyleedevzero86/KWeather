@@ -5,63 +5,32 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import jakarta.annotation.PostConstruct
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.apache.hc.client5.http.classic.HttpClient
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
 import org.apache.hc.client5.http.impl.classic.HttpClients
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder
+import org.apache.hc.core5.util.TimeValue
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory
-import org.springframework.web.client.DefaultResponseErrorHandler
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.filter.OncePerRequestFilter
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
-import org.springframework.http.client.ClientHttpResponse
 
-/**
- * 애플리케이션 공통 설정 클래스
- * - 정적 리소스 매핑
- * - ObjectMapper (Jackson)
- * - RestTemplate
- * - 인코딩 필터
- */
+
 @Configuration
 class AppConfig : WebMvcConfigurer {
 
-    /**
-     * 사이트 이름을 application.yml 또는 properties에서 주입받습니다.
-     */
-    @Value("\${custom.site.name}")
-    lateinit var siteName: String
+    @Value("\${custom.site.name:KotlinWeather}")
+    private lateinit var siteName: String
 
-    /**
-     * AppConfig 클래스의 싱글턴 인스턴스를 설정합니다.
-     * 클래스 내부 companion object에서 접근하기 위해 사용됩니다.
-     */
     @Value("\${queue.api.base-url:http://localhost:8080}")
     private lateinit var baseUrl: String
 
-    @PostConstruct
-    fun init() {
-        instance = this
-    }
-
-    companion object {
-        lateinit var instance: AppConfig
-            private set
-    }
-
-    /**
-     * JSON 직렬화를 위한 공통 ObjectMapper Bean 등록
-     * - Kotlin 모듈 지원
-     * - JavaTime 모듈 지원
-     * - Pretty Print 비활성화
-     * - 타임스탬프 직렬화 옵션 설정
-     */
     @Bean
     fun objectMapper(): ObjectMapper {
         return jacksonObjectMapper()
@@ -70,34 +39,28 @@ class AppConfig : WebMvcConfigurer {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
     }
 
-    /**
-     * 외부 API 통신용 RestTemplate Bean
-     * - 기본 timeout 설정 포함
-     */
     @Bean
     fun restTemplate(): RestTemplate {
-        // HttpClient 5.x로 RestTemplate을 설정
-        val httpClient: HttpClient = HttpClients.createDefault()
-        val factory = HttpComponentsClientHttpRequestFactory(httpClient)
+        val connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+            .setMaxConnPerRoute(20)
+            .setMaxConnTotal(50)
+            .build()
 
-        factory.setConnectTimeout(5000)  // 5초 연결 타임아웃
-        factory.setReadTimeout(10000)    // 10초 읽기 타임아웃
+        val httpClient: CloseableHttpClient = HttpClients.custom()
+            .setConnectionManager(connectionManager)
+            .evictIdleConnections(TimeValue.ofSeconds(30))
+            .build()
 
-        val restTemplate = RestTemplate(factory)
-
-        // 오류 핸들러 추가
-        restTemplate.errorHandler = object : DefaultResponseErrorHandler() {
-            override fun hasError(response: ClientHttpResponse): Boolean {
-                return false  // 모든 응답을 오류로 처리하지 않고 코드에서 직접 처리
-            }
+        val factory = HttpComponentsClientHttpRequestFactory(httpClient).apply {
+            setConnectTimeout(5000)
+            setReadTimeout(10000)
         }
 
-        return restTemplate
+        return RestTemplate(factory)
     }
 
-    /**
-     * 응답 Content-Type에 UTF-8 charset 설정하는 필터
-     */
+
+
     @Bean
     fun encodingFilter(): OncePerRequestFilter {
         return object : OncePerRequestFilter() {
@@ -108,24 +71,17 @@ class AppConfig : WebMvcConfigurer {
             ) {
                 val contentType = response.contentType
                 when {
-                    contentType == null -> {
+                    contentType == null -> response.contentType = "application/json;charset=UTF-8"
+                    contentType.contains("application/json") && !contentType.contains("charset") ->
                         response.contentType = "application/json;charset=UTF-8"
-                    }
-                    contentType.contains("application/json") && !contentType.contains("charset") -> {
-                        response.contentType = "application/json;charset=UTF-8"
-                    }
-                    contentType.contains("text/html") && !contentType.contains("charset") -> {
+                    contentType.contains("text/html") && !contentType.contains("charset") ->
                         response.contentType = "text/html;charset=UTF-8"
-                    }
                 }
                 filterChain.doFilter(request, response)
             }
         }
     }
 
-    /**
-     * 정적 리소스 경로 설정
-     */
     override fun addResourceHandlers(registry: ResourceHandlerRegistry) {
         registry.addResourceHandler("/static/**")
             .addResourceLocations("classpath:/static/")
@@ -143,5 +99,4 @@ class AppConfig : WebMvcConfigurer {
             .addResourceLocations("classpath:/static/favicon.ico")
             .setCachePeriod(0)
     }
-
 }

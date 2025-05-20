@@ -20,7 +20,7 @@ repositories {
     mavenCentral()
 }
 
-extra["hikariVersion"] = "5.0.0"    // HikariCP 버전
+extra["hikariVersion"] = "5.0.0"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -52,16 +52,17 @@ dependencies {
     implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
     kapt("com.querydsl:querydsl-apt:5.1.0:jakarta")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
+
+    // Spring Batch 의존성 수정
     implementation("org.springframework.boot:spring-boot-starter-batch")
+
+    // HikariCP
     implementation("com.zaxxer:HikariCP:${property("hikariVersion")}")
 
-    // Spring HTTP Client 설정
+    // HTTP Client 설정
     implementation("org.springframework.boot:spring-boot-starter-web") {
         exclude(group = "org.apache.httpcomponents.client5")
     }
-
-    // 직접 RestTemplate 구성을 위한 기본 의존성만 유지
-    implementation("org.apache.httpcomponents.core5:httpcore5:5.2.1")
     implementation("org.apache.httpcomponents.client5:httpclient5:5.2.1")
     implementation("org.apache.httpcomponents.core5:httpcore5:5.2.1")
     implementation("org.apache.httpcomponents.core5:httpcore5-h2:5.2.1")
@@ -72,12 +73,6 @@ kotlin {
         freeCompilerArgs.addAll("-Xjsr305=strict")
     }
 }
-
-/*allOpen {
-    annotation("jakarta.persistence.Entity")
-    annotation("jakarta.persistence.MappedSuperclass")
-    annotation("jakarta.persistence.Embeddable")
-}*/
 
 tasks.withType<Test> {
     useJUnitPlatform()
