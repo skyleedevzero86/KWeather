@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -16,15 +17,15 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
+import org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.filter.OncePerRequestFilter
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
-
 @Configuration
 class AppConfig : WebMvcConfigurer {
-
     @Value("\${custom.site.name:KotlinWeather}")
     private lateinit var siteName: String
 
@@ -56,10 +57,13 @@ class AppConfig : WebMvcConfigurer {
             setReadTimeout(10000)
         }
 
-        return RestTemplate(factory)
+        val restTemplate = RestTemplate(factory)
+        // JSON 우선순위
+        restTemplate.messageConverters.removeIf { it is MappingJackson2XmlHttpMessageConverter }
+        restTemplate.messageConverters.add(0, MappingJackson2HttpMessageConverter(objectMapper())) // JSON
+        restTemplate.messageConverters.add(MappingJackson2XmlHttpMessageConverter(XmlMapper())) // XML as fallback
+        return restTemplate
     }
-
-
 
     @Bean
     fun encodingFilter(): OncePerRequestFilter {
