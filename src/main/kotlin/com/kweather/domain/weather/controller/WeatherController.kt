@@ -64,6 +64,11 @@ class WeatherController(
     }
 
     @GetMapping("/")
+    fun index(): String {
+        return "index" // index.html을 렌더링
+    }
+
+    @GetMapping("/weather")
     fun getWeather(model: Model): String {
         // 현재 날짜/시간 정보 가져오기
         val dateTimeInfo = getCurrentDateTimeInfo()

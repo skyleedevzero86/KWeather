@@ -405,3 +405,20 @@ body {
 .close-btn:hover {
     color: #ff0000;
 }
+
+.splash-icon {
+    font-size: 50px;
+    margin-bottom: 20px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.splash-text {
+    color: #000000;
+    font-size: 24px;
+    text-align: center;
+}
