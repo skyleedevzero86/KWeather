@@ -249,3 +249,41 @@ body {
         gap: 8px;
     }
 }
+
+.dust-forecast-section {
+    text-align: center;
+    padding: 20px;
+    background: white;
+    border-radius: 20px;
+    color: black;
+}
+
+.dust-forecast-section h3 {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+    color: black;
+}
+
+.dust-forecast-item {
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 15px;
+    margin-bottom: 15px;
+}
+
+.dust-forecast-item h4 {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+.dust-forecast-item p {
+    font-size: 1em;
+    margin: 5px 0;
+}
+
+.forecast-images {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}

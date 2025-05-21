@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Forecast</title>
+    <title>날씨 예보</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" th:href="@{/static/global/global.css}" />
     <link rel="stylesheet" th:href="@{/static/global/style.css}" />
@@ -26,7 +26,7 @@
             <div class="weather-info">
                 <div class="weather-condition" th:text="${weather.weatherCondition}"></div>
                 <div class="humidity" th:text="'습도 ' + ${weather.hourlyForecast[0].humidity}"></div>
-                <div class="pm-value" th:text="'미세조 ' + ${weather.airQuality.value}"></div>
+                <div class="pm-value" th:text="'미세먼지 ' + ${weather.airQuality.value}"></div>
             </div>
         </div>
     </div>
@@ -53,6 +53,30 @@
                 <span class="temp" th:text="${forecast.temperature}"></span>
                 <span class="humid" th:text="${forecast.humidity}"></span>
             </div>
+        </div>
+    </div>
+    <!-- 미세먼지 예보 섹션 추가 -->
+    <div class="dust-forecast-section">
+        <h3>미세먼지 예보</h3>
+        <div th:if="${dustForecast != null}">
+            <div th:each="forecast : ${dustForecast}">
+                <div class="dust-forecast-item">
+                    <h4 th:text="${forecast.date} + ' (' + ${forecast.type} + ')'"></h4>
+                    <p th:text="'발표 시간: ' + ${forecast.dataTime}"></p>
+                    <p th:text="'요약: ' + ${forecast.overall}"></p>
+                    <p th:text="'원인: ' + ${forecast.cause}"></p>
+                    <p th:text="'등급: ' + ${forecast.grade}"></p>
+                    <div th:if="${forecast.imageUrls != null and not #lists.isEmpty(forecast.imageUrls)}">
+                        <h5>예보 이미지</h5>
+                        <div class="forecast-images">
+                            <img th:each="url : ${forecast.imageUrls}" th:src="${url}" alt="예보 이미지" style="max-width: 100px; margin: 5px;" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div th:if="${dustForecast == null}">
+            <p>미세먼지 예보 데이터를 불러올 수 없습니다.</p>
         </div>
     </div>
 </div>

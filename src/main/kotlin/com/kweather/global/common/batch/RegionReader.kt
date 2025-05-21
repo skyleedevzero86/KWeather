@@ -15,7 +15,7 @@ import java.net.URL
 
 @Component
 class RegionReader(
-    @Value("\${api.region.service-key}") private val serviceKey: String,
+    @Value("\${api.service-key}") private val serviceKey: String,
     @Value("\${api.region.base-url}") private val baseUrl: String,
     private val objectMapper: ObjectMapper,
     private val regionCacheLoader: RegionCacheLoader

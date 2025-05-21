@@ -2,11 +2,10 @@ package com.kweather.domain.weather.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.kweather.domain.forecast.dto.ForecastInfo
+import com.kweather.domain.forecast.dto.ForecastResponse
+import com.kweather.domain.forecast.dto.ForecastResponseData
 import com.kweather.domain.weather.dto.*
-import com.kweather.domain.weather.entity.Weather
-import com.kweather.domain.weather.model.AirQuality
-import com.kweather.domain.weather.model.HourlyForecast
-import com.kweather.domain.weather.model.UVIndex
 import com.kweather.global.common.util.DateTimeUtils
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -24,13 +23,16 @@ class WeatherService(
     @Value("\${api.weather.base-url:}")
     private val baseUrl: String,
     @Value("\${api.service-key:}")
-    private val serviceKey: String
+    private val serviceKey: String,
+    @Value("\${api.arpltninforinqiresvc.base-url:}")
+    private val forecastBaseUrl: String
 ) {
     private val logger = LoggerFactory.getLogger(WeatherService::class.java)
 
     init {
         require(serviceKey.isNotBlank()) { "Service key must not be blank" }
         require(baseUrl.isNotBlank()) { "Base URL must not be blank" }
+        require(forecastBaseUrl.isNotBlank()) { "Forecast Base URL must not be blank" }
     }
 
     fun getUltraShortWeather(nx: Int, ny: Int): WeatherResponse {
@@ -46,6 +48,7 @@ class WeatherService(
             val response = fetchDataFromApi(urlString)
             logger.info("Raw API Response: {}", response.take(200))
 
+            // XML 오류 응답 여부 확인
             if (response.trim().startsWith("<")) {
                 if (response.contains("SERVICE_KEY_IS_NOT_REGISTERED_ERROR") || response.contains("SERVICE ERROR")) {
                     logger.error("API key error: {}", response)
@@ -55,9 +58,11 @@ class WeatherService(
                 throw IllegalStateException("API returned an error response")
             }
 
+            // JSON으로 파싱
             val weatherResponse = objectMapper.readValue<WeatherResponse>(response)
             logger.info("Parsed Weather Response: $weatherResponse")
 
+            // NO_DATA 경우 처리 및 재시도
             if (weatherResponse.response?.header?.resultCode == "03" && weatherResponse.response.header.resultMsg == "NO_DATA") {
                 logger.warn("No weather data available for $baseDate $baseTime, retrying with earlier time")
                 return retryWithEarlierTime(nx, ny, baseDate) ?: weatherResponse
@@ -75,7 +80,7 @@ class WeatherService(
         val currentHour = now.hour
         val currentMinute = now.minute
         val retryTime = if (currentHour >= 12 && currentMinute >= 5) {
-            "0000"
+            "0000" // 12:05 이후에는 0000으로 고정
         } else {
             when {
                 currentMinute < 30 -> String.format("%02d00", if (currentHour == 0) 23 else currentHour - 1)
@@ -93,7 +98,7 @@ class WeatherService(
             logger.info("Retry Raw API Response: {}", response.take(200))
 
             if (response.trim().startsWith("<")) {
-                return null
+                return null // XML 에러 응답이면 null 반환
             }
 
             return objectMapper.readValue<WeatherResponse>(response)
@@ -138,7 +143,7 @@ class WeatherService(
     }
 
     private fun buildApiUrl(baseDate: String, baseTime: String, nx: Int, ny: Int): String {
-        return "${baseUrl}?serviceKey=${serviceKey}" +
+        var lurs = "${baseUrl}?serviceKey=${serviceKey}" +
                 "&numOfRows=10" +
                 "&pageNo=1" +
                 "&base_date=${baseDate}" +
@@ -146,6 +151,9 @@ class WeatherService(
                 "&nx=${nx}" +
                 "&ny=${ny}" +
                 "&dataType=JSON"
+
+        logger.warn("Weather response does not contain items. Response: $lurs")
+        return lurs
     }
 
     fun parseWeatherData(response: WeatherResponse): List<WeatherInfo> {
@@ -185,64 +193,16 @@ class WeatherService(
         }
     }
 
-    fun buildWeatherEntity(nx: Int, ny: Int): Weather {
-        val response = getUltraShortWeather(nx, ny)
-        val weatherInfoList = parseWeatherData(response)
-
-        val currentDateTime = DateTimeUtils.getCurrentDateTimeFormatted()
-        val hour = LocalDateTime.now(ZoneId.of("Asia/Seoul")).hour
-
-        // 이미지 데이터 반영
-        val airQuality = AirQuality(
-            title = "미세먼지",
-            icon = "yellow-smiley",
-            status = "좋음",
-            value = "20",
-            measurement = "㎍/㎥"
-        )
-        val uvIndex = UVIndex(
-            title = "초미세먼지",
-            icon = "yellow-smiley",
-            status = "좋음",
-            value = "8",
-            measurement = "㎍/㎥"
-        )
-        val hourlyForecast = listOf(
-            HourlyForecast("지금", "moon", "-1.8°C", "34%"),
-            HourlyForecast("0시", "moon", "-6°C", "55%"),
-            HourlyForecast("3시", "moon", "-6°C", "60%"),
-            HourlyForecast("6시", "moon", "-7°C", "67%"),
-            HourlyForecast("9시", "sun", "-6°C", "55%")
-        )
-
-        val temperature = weatherInfoList.find { it.category == "T1H" }?.value ?: "-1.8°C"
-        val weatherCondition = "맑음" // API에서 PTY로 확인 가능
-        val windSpeed = "1km/초(남서) m/s 0"
-
-        return Weather(
-            date = currentDateTime.first,
-            time = currentDateTime.second,
-            location = "한남동 (용산구)",
-            currentTemperature = temperature,
-            highLowTemperature = "-7°C / -1°C", // 이미지 데이터 기반
-            weatherCondition = weatherCondition,
-            windSpeed = windSpeed,
-            airQuality = airQuality,
-            uvIndex = uvIndex,
-            hourlyForecast = hourlyForecast
-        )
-    }
-
     private fun getUnitForCategory(category: String?): String {
         return when (category) {
-            "T1H" -> "°C"
-            "RN1" -> "mm"
-            "UUU" -> "m/s"
-            "VVV" -> "m/s"
-            "REH" -> "%"
-            "PTY" -> ""
-            "VEC" -> "deg"
-            "WSD" -> "m/s"
+            "T1H" -> "°C"    // 기온
+            "RN1" -> "mm"    // 1시간 강수량
+            "UUU" -> "m/s"   // 동서바람성분
+            "VVV" -> "m/s"   // 남북바람성분
+            "REH" -> "%"     // 습도
+            "PTY" -> ""      // 강수형태
+            "VEC" -> "deg"   // 풍향
+            "WSD" -> "m/s"   // 풍속
             else -> ""
         }
     }
@@ -255,5 +215,90 @@ class WeatherService(
         if (endIndex < 0) return null
 
         return this.substring(startIndex + start.length, endIndex)
+    }
+
+    // 미세먼지 예보 데이터를 가져오는 함수
+    fun getDustForecast(searchDate: String, informCode: String): ForecastResponse {
+        val urlString = buildForecastApiUrl(searchDate, informCode)
+        logger.info("Making API request to: {} (redacted service key)", urlString.replace(serviceKey, "[REDACTED]"))
+
+        return try {
+            val response = fetchDataFromApi(urlString)
+            logger.info("Raw API Response: {}", response.take(200))
+
+            if (response.trim().startsWith("<")) {
+                if (response.contains("SERVICE_KEY_IS_NOT_REGISTERED_ERROR") || response.contains("SERVICE ERROR")) {
+                    logger.error("API key error: {}", response)
+                    throw IllegalStateException("API service key error: Check if the key is valid and properly formatted")
+                }
+                logger.error("Received XML error response: {}", response.take(500))
+                throw IllegalStateException("API returned an error response")
+            }
+
+            val forecastResponse = objectMapper.readValue<ForecastResponse>(response)
+            logger.info("Parsed Forecast Response: $forecastResponse")
+            forecastResponse
+        } catch (e: Exception) {
+            logger.error("Failed to fetch dust forecast data", e)
+            ForecastResponse(ForecastResponseData(header = Header("ERROR", "Failed to fetch dust forecast data: ${e.message}"), body = null))
+        }
+    }
+
+    // 미세먼지 예보 API URL 생성
+    private fun buildForecastApiUrl(searchDate: String, informCode: String): String {
+        return "${forecastBaseUrl}?serviceKey=${serviceKey}" +
+                "&returnType=json" +
+                "&numOfRows=10" +
+                "&pageNo=1" +
+                "&searchDate=${searchDate}" +
+                "&InformCode=${informCode}"
+    }
+
+    // 미세먼지 예보 데이터 파싱
+    fun parseDustForecast(response: ForecastResponse): List<ForecastInfo> {
+        if (response.response?.header?.resultCode != "00" && response.response?.header?.resultCode != null) {
+            return listOf(
+                ForecastInfo(
+                    date = "",
+                    type = "",
+                    overall = "",
+                    cause = "",
+                    grade = "API Error: ${response.response.header.resultCode} - ${response.response.header.resultMsg}",
+                    dataTime = "",
+                    imageUrls = emptyList()
+                )
+            )
+        }
+
+        val items = response.response?.body?.items
+        if (items == null) {
+            logger.warn("Forecast response does not contain items. Response: $response")
+            return emptyList()
+        }
+
+        return items.mapNotNull { item ->
+            try {
+                val imageUrls = listOfNotNull(
+                    item.imageUrl1,
+                    item.imageUrl2,
+                    item.imageUrl3,
+                    item.imageUrl4,
+                    item.imageUrl5,
+                    item.imageUrl6
+                )
+                ForecastInfo(
+                    date = item.informData ?: throw IllegalArgumentException("informData is missing"),
+                    type = item.informCode ?: throw IllegalArgumentException("informCode is missing"),
+                    overall = item.informOverall ?: throw IllegalArgumentException("informOverall is missing"),
+                    cause = item.informCause ?: throw IllegalArgumentException("informCause is missing"),
+                    grade = item.informGrade ?: throw IllegalArgumentException("informGrade is missing"),
+                    dataTime = item.dataTime ?: throw IllegalArgumentException("dataTime is missing"),
+                    imageUrls = imageUrls
+                )
+            } catch (e: IllegalArgumentException) {
+                logger.warn("Skipping invalid item due to: ${e.message}")
+                null
+            }
+        }
     }
 }
