@@ -21,7 +21,6 @@ import org.springframework.web.filter.OncePerRequestFilter
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
-
 @Configuration
 class AppConfig : WebMvcConfigurer {
 
@@ -58,8 +57,6 @@ class AppConfig : WebMvcConfigurer {
 
         return RestTemplate(factory)
     }
-
-
 
     @Bean
     fun encodingFilter(): OncePerRequestFilter {

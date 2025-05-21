@@ -9,23 +9,15 @@ import com.kweather.global.common.util.DateTimeUtils
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
-/**
- * 날씨 정보를 처리하는 컨트롤러입니다.
- * 메인 페이지에 날씨 정보를 전달합니다.
- */
 @Controller
-class WeatherController (
+class WeatherController(
     private val weatherService: WeatherService
-){
+) {
 
-    /**
-     * 루트 경로("/") 요청 시 호출되며,
-     * 현재 날씨 정보를 모델에 담아 View에 전달합니다.
-     *
-     * @param model Spring MVC의 Model 객체로, View에 데이터 전달에 사용됩니다.
-     * @return 날씨 정보를 표시할 뷰 이름
-     */
     @GetMapping("/")
     fun getWeather(model: Model): String {
         val (date, time) = DateTimeUtils.getCurrentDateTimeFormatted()
@@ -50,14 +42,33 @@ class WeatherController (
             )
         )
 
-        val searchDate = "2025-05-21"
-        val informCode = "PM10"
-        val forecastResponse = weatherService.getDustForecast(searchDate, informCode)
-        val dustForecast = weatherService.parseDustForecast(forecastResponse)
+        val currentDate = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
+        val previousHour = now.minusHours(1) // 현재 15:46 KST, 1시간 전은 14:46 -> "O3"
+        val informCode = when (previousHour.hour) {
+            in 0..5 -> "PM10"
+            in 6..11 -> "PM25"
+            in 12..17 -> "O3"  // 현재 시각 기준 "O3"로 설정
+            else -> "PM10"
+        }
+
+        val dustForecast = weatherService.getDustForecast(currentDate, informCode)
+
+        val categorizedForecast = dustForecast.map { forecast ->
+            val regions = forecast.grade.split(",").map { it.trim() }.associate {
+                val parts = it.split(":")
+                if (parts.size == 2) parts[0].trim() to parts[1].trim() else "N/A" to "N/A"
+            }
+            Triple(
+                regions.filter { it.value == "좋음" }.keys.toList().ifEmpty { listOf("N/A") },
+                regions.filter { it.value == "보통" }.keys.toList().ifEmpty { listOf("N/A") },
+                regions.filter { it.value == "나쁨" }.keys.toList().ifEmpty { listOf("N/A") }
+            )
+        }
 
         val timeOfDay = when {
             hour in 6..11 -> " ( 아침 )"
-            hour in 12..17 -> " ( 낮 )"
+            hour in 12..17 -> " ( 낮 )"  // 현재 15:46 KST, "낮"으로 표시
             hour in 18..23 -> " ( 저녁 )"
             else -> "새벽 (밤)"
         }
@@ -65,6 +76,7 @@ class WeatherController (
         model.addAttribute("timeOfDay", timeOfDay)
         model.addAttribute("weather", weatherData)
         model.addAttribute("dustForecast", if (dustForecast.isEmpty()) null else dustForecast)
+        model.addAttribute("categorizedForecast", if (categorizedForecast.isEmpty()) null else categorizedForecast)
         return "domain/weather/weather"
     }
 }

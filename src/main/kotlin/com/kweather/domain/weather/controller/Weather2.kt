@@ -1,7 +1,6 @@
 package com.kweather.domain.weather.controller
 
 import com.kweather.domain.forecast.dto.ForecastInfo
-import com.kweather.domain.weather.dto.WeatherInfo
 import com.kweather.domain.weather.service.WeatherService
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
@@ -22,11 +21,10 @@ class Weather2(
     ): ResponseEntity<List<ForecastInfo>> {
         return try {
             val response = weatherService.getDustForecast(searchDate.toString(), informCode)
-            val forecastInfoList = weatherService.parseDustForecast(response)
-            if (forecastInfoList.isEmpty()) {
+            if (response.isEmpty()) {
                 ResponseEntity.noContent().build() // 204 No Content for empty response
             } else {
-                ResponseEntity.ok(forecastInfoList)
+                ResponseEntity.ok(response)
             }
         } catch (e: IllegalStateException) {
             ResponseEntity.status(500).body(

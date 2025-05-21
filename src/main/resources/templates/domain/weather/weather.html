@@ -58,26 +58,98 @@
     <div class="dust-forecast-section">
         <h3>미세먼지 예보</h3>
         <div th:if="${dustForecast != null}">
-            <div th:each="forecast : ${dustForecast}">
-                <div class="dust-forecast-item">
-                    <h4 th:text="${forecast.date} + ' (' + ${forecast.type} + ')'"></h4>
-                    <p th:text="'발표 시간: ' + ${forecast.dataTime}"></p>
-                    <p th:text="'요약: ' + ${forecast.overall}"></p>
-                    <p th:text="'원인: ' + ${forecast.cause}"></p>
-                    <p th:text="'등급: ' + ${forecast.grade}"></p>
-                    <div th:if="${forecast.imageUrls != null and not #lists.isEmpty(forecast.imageUrls)}">
-                        <h5>예보 이미지</h5>
-                        <div class="forecast-images">
-                            <img th:each="url : ${forecast.imageUrls}" th:src="${url}" alt="예보 이미지" style="max-width: 100px; margin: 5px;" />
-                        </div>
+            <div th:each="forecast, iter : ${dustForecast}" class="dust-forecast-item">
+                <h4 th:text="${forecast.date} + ' (' + ${forecast.type} + ')'"></h4>
+                <p th:text="'시간: ' + ${forecast.dataTime}"></p>
+                <p class="overall-text" th:text="${forecast.overall}" th:unless="${forecast.overall == 'N/A'}"></p>
+                <p class="cause-text" th:text="${forecast.cause}" th:unless="${forecast.cause == 'N/A'}"></p>
+                <div class="grade-section">
+                    <div class="grade-category"
+                         th:unless="${#lists.isEmpty(categorizedForecast[iter.index].first) or categorizedForecast[iter.index].first.size() == 1 and categorizedForecast[iter.index].first[0] == 'N/A'}">
+                        <h5 class="good-title">좋음</h5>
+                        <ul class="grade-list good">
+                            <li th:each="region : ${categorizedForecast[iter.index].first}"
+                                th:text="${region}"
+                                th:unless="${region == 'N/A'}"></li>
+                        </ul>
+                    </div>
+                    <div class="grade-category"
+                         th:unless="${#lists.isEmpty(categorizedForecast[iter.index].second) or categorizedForecast[iter.index].second.size() == 1 and categorizedForecast[iter.index].second[0] == 'N/A'}">
+                        <h5 class="moderate-title">보통</h5>
+                        <ul class="grade-list moderate">
+                            <li th:each="region : ${categorizedForecast[iter.index].second}"
+                                th:text="${region}"
+                                th:unless="${region == 'N/A'}"></li>
+                        </ul>
+                    </div>
+                    <div class="grade-category"
+                         th:unless="${#lists.isEmpty(categorizedForecast[iter.index].third) or categorizedForecast[iter.index].third.size() == 1 and categorizedForecast[iter.index].third[0] == 'N/A'}">
+                        <h5 class="bad-title">나쁨</h5>
+                        <ul class="grade-list bad">
+                            <li th:each="region : ${categorizedForecast[iter.index].third}"
+                                th:text="${region}"
+                                th:unless="${region == 'N/A'}"></li>
+                        </ul>
+                    </div>
+                </div>
+                <div th:if="${forecast.imageUrls != null and not #lists.isEmpty(forecast.imageUrls)}">
+                    <h5>예보 이미지</h5>
+                    <div class="forecast-images">
+                        <img th:each="url : ${forecast.imageUrls}" th:src="${url}" alt="예보 이미지" style="max-width: 100px; margin: 5px;" onclick="openPopup(this.src)" />
                     </div>
                 </div>
             </div>
         </div>
         <div th:if="${dustForecast == null}">
-            <p>미세먼지 예보 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</p>
+            <p>미세먼지 예보 데이터를 불러올 수 없습니다. (날짜 형식이 잘못되었거나 API 요청이 실패했습니다.)</p>
         </div>
     </div>
 </div>
+
+<!-- 팝업 HTML -->
+<div id="imagePopup" class="popup">
+    <div class="popup-content">
+        <button class="close-btn" onclick="closePopup()">X</button>
+        <img id="popupImage" src="" alt="확대된 이미지">
+    </div>
+</div>
+
+<script>
+    // 괄호와 괄호 안 내용을 제거하는 함수
+    function removeParentheses(text) {
+        return text.replace(/\([^()]*\)/g, '').replace(/\[.*?\]/g, '').replace(/\./g, '').trim();
+    }
+
+    // DOM이 로드된 후 실행
+    document.addEventListener('DOMContentLoaded', () => {
+        // 요약과 원인에서 괄호 제거
+        document.querySelectorAll('.overall-text').forEach(element => {
+            element.textContent = removeParentheses(element.textContent);
+        });
+        document.querySelectorAll('.cause-text').forEach(element => {
+            element.textContent = removeParentheses(element.textContent);
+        });
+    });
+
+    function openPopup(imageUrl) {
+        const popup = document.getElementById('imagePopup');
+        const popupImage = document.getElementById('popupImage');
+        popupImage.src = imageUrl;
+        popup.style.display = 'flex';
+    }
+
+    function closePopup() {
+        const popup = document.getElementById('imagePopup');
+        popup.style.display = 'none';
+    }
+
+    document.getElementById('imagePopup').addEventListener('click', function(event) {
+        event.stopPropagation();
+    });
+
+    document.querySelector('.popup-content').addEventListener('click', function(event) {
+        event.stopPropagation();
+    });
+</script>
 </body>
 </html>
