@@ -64,18 +64,4 @@ class WeatherController (
         return "domain/weather/weather"
     }
 
-    @GetMapping("/weather")
-    fun getWeather(
-        @RequestParam("nx") nx: Int,
-        @RequestParam("ny") ny: Int
-    ) {
-        val baseDate = DateTimeUtils.getBaseDate()
-        val baseTime = DateTimeUtils.getBaseTime()
-
-        val result = weatherService.fetchAndDisplayWeather(nx, ny, baseDate, baseTime)
-
-        println("결과: $result")
-    }
-
-
 }
