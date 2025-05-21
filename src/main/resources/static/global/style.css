@@ -287,18 +287,13 @@ body {
     flex-wrap: wrap;
 }
 
-.forecast-images h5 {
-    font-size: 1.3em; /* "좋음", "보통", "나쁨"과 동일한 크기로 조정 */
+.image-title {
+    font-size: 1.3em;
     width: 100%;
     text-align: center;
     margin-bottom: 10px;
-    /* 색상 및 테두리 추가 */
-    color: #1E90FF; /* 파란색으로 설정 (예보 이미지 제목) */
-    border: 2px solid black; /* 검은색 테두리 */
-    padding: 5px 10px;
-    border-radius: 5px;
-    display: inline-block;
-    background-color: rgba(30, 144, 255, 0.1); /* 배경색 추가 */
+    border: 2px solid black;
+    padding: 5px;
 }
 
 /* 등급 스타일 */
@@ -308,66 +303,62 @@ body {
     font-size: 1.5em;
 }
 
-.grade-category {
-    margin-bottom: 15px;
-    display: inline-block;
-    margin-right: 20px;
+.grade-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 auto;
 }
 
-.grade-category h5 {
-    font-size: 1.3em; /* "예보 이미지"와 동일한 크기로 조정 */
-    margin-bottom: 5px;
-    color: #333;
-    /* 색상 및 테두리 추가 */
-    border: 2px solid black; /* 검은색 테두리 */
-    padding: 5px 10px;
-    border-radius: 5px;
-    display: inline-block;
+.grade-table th, .grade-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: center;
 }
 
-.good-title {
-    color: #4a90e2; /* 파랑색 */
+.grade-table th {
+    font-size: 1.3em;
+    border: 2px solid black;
 }
 
-.moderate-title {
-    color: #2ecc71; /* 녹색 */
+.grade-title.good {
+    color: #0000FF; /* 파란색 */
 }
 
-.bad-title {
-    color: #e74c3c; /* 빨간색 */
+.grade-title.moderate {
+    color: #00FF00; /* 녹색 */
 }
 
-/* 색상 적용 */
-.grade-category:nth-child(1) h5 { /* 좋음 - 파란색 */
-    color: #1E90FF;
-    background-color: rgba(30, 144, 255, 0.1);
+.grade-title.bad {
+    color: #FF0000; /* 빨간색 */
 }
 
-.grade-category:nth-child(2) h5 { /* 보통 - 녹색 */
-    color: #32CD32;
-    background-color: rgba(50, 205, 50, 0.1);
-}
-
-.grade-category:nth-child(3) h5 { /* 나쁨 - 빨간색 */
-    color: #FF4500;
-    background-color: rgba(255, 69, 0, 0.1);
-}
-
-.grade-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    text-align: left;
-    display: inline-block;
-}
-
-.grade-list li {
-    display: inline;
-    margin-right: 10px;
-    padding: 5px;
+.grade-cell {
     background: #f0f0f0;
     border-radius: 5px;
     font-size: 0.9em;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+    .grade-table th, .grade-table td {
+        padding: 5px;
+        font-size: 0.9em;
+    }
+
+    .grade-table th {
+        font-size: 1.1em;
+    }
+}
+
+@media (max-width: 480px) {
+    .grade-table th, .grade-table td {
+        padding: 3px;
+        font-size: 0.8em;
+    }
+
+    .grade-table th {
+        font-size: 1em;
+    }
 }
 
 /* 팝업 스타일 */

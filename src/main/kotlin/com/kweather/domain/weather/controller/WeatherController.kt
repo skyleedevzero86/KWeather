@@ -44,31 +44,39 @@ class WeatherController(
 
         val currentDate = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
-        val previousHour = now.minusHours(1) // 현재 15:46 KST, 1시간 전은 14:46 -> "O3"
+        val previousHour = now.minusHours(1)
         val informCode = when (previousHour.hour) {
             in 0..5 -> "PM10"
             in 6..11 -> "PM25"
-            in 12..17 -> "O3"  // 현재 시각 기준 "O3"로 설정
+            in 12..17 -> "O3"
             else -> "PM10"
         }
 
-        val dustForecast = weatherService.getDustForecast(currentDate, informCode)
+        val dustForecast = try {
+            weatherService.getDustForecast(currentDate, informCode)
+        } catch (e: Exception) {
+            emptyList() // API 오류 발생 시 빈 리스트 반환
+        }
 
-        val categorizedForecast = dustForecast.map { forecast ->
-            val regions = forecast.grade.split(",").map { it.trim() }.associate {
-                val parts = it.split(":")
-                if (parts.size == 2) parts[0].trim() to parts[1].trim() else "N/A" to "N/A"
+        val categorizedForecast = if (dustForecast.isNotEmpty()) {
+            dustForecast.map { forecast ->
+                val regions = forecast.grade.split(",").map { it.trim() }.associate {
+                    val parts = it.split(":")
+                    if (parts.size == 2) parts[0].trim() to parts[1].trim() else "N/A" to "N/A"
+                }
+                Triple(
+                    regions.filter { it.value == "좋음" }.keys.toList().ifEmpty { listOf("N/A") },
+                    regions.filter { it.value == "보통" }.keys.toList().ifEmpty { listOf("N/A") },
+                    regions.filter { it.value == "나쁨" }.keys.toList().ifEmpty { listOf("N/A") }
+                )
             }
-            Triple(
-                regions.filter { it.value == "좋음" }.keys.toList().ifEmpty { listOf("N/A") },
-                regions.filter { it.value == "보통" }.keys.toList().ifEmpty { listOf("N/A") },
-                regions.filter { it.value == "나쁨" }.keys.toList().ifEmpty { listOf("N/A") }
-            )
+        } else {
+            emptyList()
         }
 
         val timeOfDay = when {
             hour in 6..11 -> " ( 아침 )"
-            hour in 12..17 -> " ( 낮 )"  // 현재 15:46 KST, "낮"으로 표시
+            hour in 12..17 -> " ( 낮 )"
             hour in 18..23 -> " ( 저녁 )"
             else -> "새벽 (밤)"
         }

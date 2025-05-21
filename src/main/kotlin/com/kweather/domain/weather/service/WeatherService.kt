@@ -92,7 +92,11 @@ class WeatherService(
 
             if (response.trim().startsWith("<")) {
                 logger.error("Received XML error response: {}", response.take(500))
-                throw IllegalStateException("Dust Forecast API returned an error response")
+                // XML 파싱 시도 (간단한 예외 처리용)
+                if (response.contains("SERVICE ERROR") && response.contains("returnReasonCode>01")) {
+                    throw IllegalStateException("API returned service error (Code: 01) - Check request parameters or service key")
+                }
+                throw IllegalStateException("Dust Forecast API returned an unexpected XML response")
             }
 
             val dustResponse = objectMapper.readValue<ForecastResponse>(response)
@@ -211,8 +215,8 @@ class WeatherService(
                 "&numOfRows=100" +
                 "&pageNo=1" +
                 "&searchDate=${searchDate}" +
-                "&dataTerm=DAILY" //+
-                //"&informCode=${informCode}"
+                "&dataTerm=DAILY" +
+                "&informCode=${informCode}" // informCode 추가
     }
 
     fun parseWeatherData(response: WeatherResponse): List<WeatherInfo> {

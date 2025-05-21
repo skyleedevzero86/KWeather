@@ -64,39 +64,47 @@
                 <p class="overall-text" th:text="${forecast.overall}" th:unless="${forecast.overall == 'N/A'}"></p>
                 <p class="cause-text" th:text="${forecast.cause}" th:unless="${forecast.cause == 'N/A'}"></p>
                 <div class="grade-section">
-                    <div class="grade-category"
-                         th:unless="${#lists.isEmpty(categorizedForecast[iter.index].first) or categorizedForecast[iter.index].first.size() == 1 and categorizedForecast[iter.index].first[0] == 'N/A'}">
-                        <h5 class="good-title">좋음</h5>
-                        <ul class="grade-list good">
-                            <li th:each="region : ${categorizedForecast[iter.index].first}"
-                                th:text="${region}"
-                                th:unless="${region == 'N/A'}"></li>
-                        </ul>
-                    </div>
-                    <div class="grade-category"
-                         th:unless="${#lists.isEmpty(categorizedForecast[iter.index].second) or categorizedForecast[iter.index].second.size() == 1 and categorizedForecast[iter.index].second[0] == 'N/A'}">
-                        <h5 class="moderate-title">보통</h5>
-                        <ul class="grade-list moderate">
-                            <li th:each="region : ${categorizedForecast[iter.index].second}"
-                                th:text="${region}"
-                                th:unless="${region == 'N/A'}"></li>
-                        </ul>
-                    </div>
-                    <div class="grade-category"
-                         th:unless="${#lists.isEmpty(categorizedForecast[iter.index].third) or categorizedForecast[iter.index].third.size() == 1 and categorizedForecast[iter.index].third[0] == 'N/A'}">
-                        <h5 class="bad-title">나쁨</h5>
-                        <ul class="grade-list bad">
-                            <li th:each="region : ${categorizedForecast[iter.index].third}"
-                                th:text="${region}"
-                                th:unless="${region == 'N/A'}"></li>
-                        </ul>
-                    </div>
+                    <table class="grade-table">
+                        <!-- 헤더 행 -->
+                        <tr>
+                            <th th:if="${not #lists.isEmpty(categorizedForecast[iter.index].first) and not (categorizedForecast[iter.index].first.size() == 1 and categorizedForecast[iter.index].first[0] == 'N/A')}"
+                                class="grade-title good">좋음</th>
+                            <th th:if="${not #lists.isEmpty(categorizedForecast[iter.index].second) and not (categorizedForecast[iter.index].second.size() == 1 and categorizedForecast[iter.index].second[0] == 'N/A')}"
+                                class="grade-title moderate">보통</th>
+                            <th th:if="${not #lists.isEmpty(categorizedForecast[iter.index].third) and not (categorizedForecast[iter.index].third.size() == 1 and categorizedForecast[iter.index].third[0] == 'N/A')}"
+                                class="grade-title bad">나쁨</th>
+                        </tr>
+                        <!-- 최대 행 수 계산 전에 null 체크 -->
+                        <th:block th:with="forecastData=${categorizedForecast[iter.index] != null ? categorizedForecast[iter.index] : null},
+                                         maxRows=${forecastData != null ? (#lists.size(forecastData.first) > #lists.size(forecastData.second) ?
+                                          (#lists.size(forecastData.first) > #lists.size(forecastData.third) ? #lists.size(forecastData.first) : #lists.size(forecastData.third)) :
+                                          (#lists.size(forecastData.second) > #lists.size(forecastData.third) ? #lists.size(forecastData.second) : #lists.size(forecastData.third))) : 0}">
+                            <!-- 데이터 행 -->
+                            <tr th:each="i : ${#numbers.sequence(0, maxRows > 0 ? maxRows - 1 : 0)}">
+                                <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].first) and not (categorizedForecast[iter.index].first.size() == 1 and categorizedForecast[iter.index].first[0] == 'N/A')}"
+                                    th:text="${#lists.size(categorizedForecast[iter.index].first) > i ? categorizedForecast[iter.index].first[i] : ''}"
+                                    th:unless="${#lists.size(categorizedForecast[iter.index].first) > i and categorizedForecast[iter.index].first[i] == 'N/A'}"
+                                    class="grade-cell good"></td>
+                                <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].second) and not (categorizedForecast[iter.index].second.size() == 1 and categorizedForecast[iter.index].second[0] == 'N/A')}"
+                                    th:text="${#lists.size(categorizedForecast[iter.index].second) > i ? categorizedForecast[iter.index].second[i] : ''}"
+                                    th:unless="${#lists.size(categorizedForecast[iter.index].second) > i and categorizedForecast[iter.index].second[i] == 'N/A'}"
+                                    class="grade-cell moderate"></td>
+                                <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].third) and not (categorizedForecast[iter.index].third.size() == 1 and categorizedForecast[iter.index].third[0] == 'N/A')}"
+                                    th:text="${#lists.size(categorizedForecast[iter.index].third) > i ? categorizedForecast[iter.index].third[i] : ''}"
+                                    th:unless="${#lists.size(categorizedForecast[iter.index].third) > i and categorizedForecast[iter.index].third[i] == 'N/A'}"
+                                    class="grade-cell bad"></td>
+                            </tr>
+                        </th:block>
+                    </table>
                 </div>
                 <div th:if="${forecast.imageUrls != null and not #lists.isEmpty(forecast.imageUrls)}">
-                    <h5>예보 이미지</h5>
+                    <h5 class="image-title">예보 이미지</h5>
                     <div class="forecast-images">
                         <img th:each="url : ${forecast.imageUrls}" th:src="${url}" alt="예보 이미지" style="max-width: 100px; margin: 5px;" onclick="openPopup(this.src)" />
                     </div>
+                </div>
+                <div th:if="${forecast.imageUrls == null or #lists.isEmpty(forecast.imageUrls)}">
+                    <h5 class="image-title">이미지 없음</h5>
                 </div>
             </div>
         </div>
