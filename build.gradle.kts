@@ -66,6 +66,8 @@ dependencies {
     implementation("org.apache.httpcomponents.client5:httpclient5:5.2.1")
     implementation("org.apache.httpcomponents.core5:httpcore5:5.2.1")
     implementation("org.apache.httpcomponents.core5:httpcore5-h2:5.2.1")
+
+    implementation("io.arrow-kt:arrow-core:1.2.0")
 }
 
 kotlin {
