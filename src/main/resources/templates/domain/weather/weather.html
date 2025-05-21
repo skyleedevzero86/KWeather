@@ -55,7 +55,6 @@
             </div>
         </div>
     </div>
-    <!-- 미세먼지 예보 섹션 추가 -->
     <div class="dust-forecast-section">
         <h3>미세먼지 예보</h3>
         <div th:if="${dustForecast != null}">
@@ -76,7 +75,7 @@
             </div>
         </div>
         <div th:if="${dustForecast == null}">
-            <p>미세먼지 예보 데이터를 불러올 수 없습니다.</p>
+            <p>미세먼지 예보 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</p>
         </div>
     </div>
 </div>

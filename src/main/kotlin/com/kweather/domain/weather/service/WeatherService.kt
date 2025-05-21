@@ -58,8 +58,8 @@ class WeatherService(
                 throw IllegalStateException("API returned an error response")
             }
 
-            // JSON으로 파싱
-            val weatherResponse = objectMapper.readValue<WeatherResponse>(response)
+            // JSON으로 파싱 (명확한 메서드 호출)
+            val weatherResponse: WeatherResponse = objectMapper.readValue(response)
             logger.info("Parsed Weather Response: $weatherResponse")
 
             // NO_DATA 경우 처리 및 재시도
@@ -93,7 +93,7 @@ class WeatherService(
         val urlString = buildApiUrl(baseDate, retryTime, nx, ny)
         logger.info("Retry making API request to: {} (redacted service key)", urlString.replace(serviceKey, "[REDACTED]"))
 
-        try {
+        return try {
             val response = fetchDataFromApi(urlString)
             logger.info("Retry Raw API Response: {}", response.take(200))
 
@@ -101,7 +101,8 @@ class WeatherService(
                 return null // XML 에러 응답이면 null 반환
             }
 
-            return objectMapper.readValue<WeatherResponse>(response)
+            // JSON 파싱 (명확한 메서드 호출)
+            objectMapper.readValue<WeatherResponse>(response)
         } catch (e: Exception) {
             logger.error("Retry failed: ${e.message}")
             return null
@@ -143,7 +144,7 @@ class WeatherService(
     }
 
     private fun buildApiUrl(baseDate: String, baseTime: String, nx: Int, ny: Int): String {
-        var lurs = "${baseUrl}?serviceKey=${serviceKey}" +
+        val url = "${baseUrl}?serviceKey=${serviceKey}" +
                 "&numOfRows=10" +
                 "&pageNo=1" +
                 "&base_date=${baseDate}" +
@@ -152,8 +153,8 @@ class WeatherService(
                 "&ny=${ny}" +
                 "&dataType=JSON"
 
-        logger.warn("Weather response does not contain items. Response: $lurs")
-        return lurs
+        logger.info("Constructed API URL: {}", url.replace(serviceKey, "[REDACTED]"))
+        return url
     }
 
     fun parseWeatherData(response: WeatherResponse): List<WeatherInfo> {
@@ -224,27 +225,32 @@ class WeatherService(
 
         return try {
             val response = fetchDataFromApi(urlString)
+            logger.info("Response code: {}", (URL(urlString).openConnection() as HttpURLConnection).responseCode)
             logger.info("Raw API Response: {}", response.take(200))
 
             if (response.trim().startsWith("<")) {
                 if (response.contains("SERVICE_KEY_IS_NOT_REGISTERED_ERROR") || response.contains("SERVICE ERROR")) {
                     logger.error("API key error: {}", response)
-                    throw IllegalStateException("API service key error: Check if the key is valid and properly formatted")
+                    throw IllegalStateException("API service key error: Check if the key is valid;")
                 }
                 logger.error("Received XML error response: {}", response.take(500))
                 throw IllegalStateException("API returned an error response")
             }
 
-            val forecastResponse = objectMapper.readValue<ForecastResponse>(response)
-            logger.info("Parsed Forecast Response: $forecastResponse")
+            // JSON 파싱 (명확한 메서드 호출)
+            val forecastResponse: ForecastResponse = objectMapper.readValue(response)
+            logger.info("Parsed Forecast Response: {}", forecastResponse)
             forecastResponse
         } catch (e: Exception) {
-            logger.error("Failed to fetch dust forecast data", e)
-            ForecastResponse(ForecastResponseData(header = Header("ERROR", "Failed to fetch dust forecast data: ${e.message}"), body = null))
+            logger.error("Failed to fetch dust forecast data for searchDate: $searchDate, informCode: $informCode", e)
+            ForecastResponse(
+                ForecastResponseData(
+                    header = Header("ERROR", "Failed to fetch dust forecast data: ${e.message}")
+                )
+            )
         }
     }
 
-    // 미세먼지 예보 API URL 생성
     private fun buildForecastApiUrl(searchDate: String, informCode: String): String {
         return "${forecastBaseUrl}?serviceKey=${serviceKey}" +
                 "&returnType=json" +
@@ -254,7 +260,6 @@ class WeatherService(
                 "&InformCode=${informCode}"
     }
 
-    // 미세먼지 예보 데이터 파싱
     fun parseDustForecast(response: ForecastResponse): List<ForecastInfo> {
         if (response.response?.header?.resultCode != "00" && response.response?.header?.resultCode != null) {
             return listOf(
@@ -263,7 +268,7 @@ class WeatherService(
                     type = "",
                     overall = "",
                     cause = "",
-                    grade = "API Error: ${response.response.header.resultCode} - ${response.response.header.resultMsg}",
+                    grade = "데이터를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
                     dataTime = "",
                     imageUrls = emptyList()
                 )
@@ -272,7 +277,7 @@ class WeatherService(
 
         val items = response.response?.body?.items
         if (items == null) {
-            logger.warn("Forecast response does not contain items. Response: $response")
+            logger.warn("Forecast response does not contain items. Response: {}", response)
             return emptyList()
         }
 

@@ -31,7 +31,6 @@ class WeatherController (
         val (date, time) = DateTimeUtils.getCurrentDateTimeFormatted()
         val hour = DateTimeUtils.getCurrentHour()
 
-        // 기존 날씨 데이터
         val weatherData = Weather(
             date = date,
             time = time,
@@ -51,9 +50,8 @@ class WeatherController (
             )
         )
 
-        // 미세먼지 예보 데이터 가져오기
-        val searchDate = "2025-05-21" // 실제로는 현재 날짜를 동적으로 설정 가능
-        val informCode = "PM10" // PM10, PM25, O3 중 선택 가능
+        val searchDate = "2025-05-21"
+        val informCode = "PM10"
         val forecastResponse = weatherService.getDustForecast(searchDate, informCode)
         val dustForecast = weatherService.parseDustForecast(forecastResponse)
 
@@ -66,7 +64,7 @@ class WeatherController (
 
         model.addAttribute("timeOfDay", timeOfDay)
         model.addAttribute("weather", weatherData)
-        model.addAttribute("dustForecast", dustForecast)
+        model.addAttribute("dustForecast", if (dustForecast.isEmpty()) null else dustForecast)
         return "domain/weather/weather"
     }
 }

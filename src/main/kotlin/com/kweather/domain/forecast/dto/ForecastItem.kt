@@ -1,5 +1,8 @@
 package com.kweather.domain.forecast.dto
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class ForecastItem(
     val informCode: String? = null,      // 예보 코드 (PM10, PM25, O3 등)
     val informData: String? = null,      // 예보 날짜
