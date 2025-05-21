@@ -1,5 +1,6 @@
 package com.kweather.domain.weather.dto
 
+
 import com.kweather.domain.weather.model.AirQuality
 import com.kweather.domain.weather.model.UVIndex
 

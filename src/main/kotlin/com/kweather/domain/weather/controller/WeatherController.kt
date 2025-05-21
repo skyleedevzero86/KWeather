@@ -9,11 +9,10 @@ import com.kweather.global.common.util.DateTimeUtils
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+
 
 @Controller
+
 class WeatherController(
     private val weatherService: WeatherService
 ) {
@@ -87,4 +86,6 @@ class WeatherController(
         model.addAttribute("categorizedForecast", if (categorizedForecast.isEmpty()) null else categorizedForecast)
         return "domain/weather/weather"
     }
+
 }
+

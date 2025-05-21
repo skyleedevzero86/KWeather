@@ -27,9 +27,9 @@ object DateTimeUtils {
     fun getBaseDate(): String {
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
         return if (now.hour >= 12) {
-            now.minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            now.minusDays(1).format(DateTimeFormatter.ofPattern("yyyyMMdd"))
         } else {
-            now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            now.format(DateTimeFormatter.ofPattern("yyyyMMdd"))
         }
     }
 
