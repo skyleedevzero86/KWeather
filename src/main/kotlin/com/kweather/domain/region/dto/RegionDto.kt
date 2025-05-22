@@ -18,7 +18,15 @@ data class RegionDto(
     @JsonProperty("locathigh_cd") val locathighCd: String? = null,
     @JsonProperty("locallow_nm") val locallowNm: String? = null,
     @JsonProperty("adpt_de") val adptDe: String? = null
-)
+) {
+    fun isValid(): Boolean {
+        return !regionCd.isNullOrBlank() &&
+                !sidoCd.isNullOrBlank() &&
+                !sggCd.isNullOrBlank() &&
+                !umdCd.isNullOrBlank() &&
+                !riCd.isNullOrBlank()
+    }
+}
 
 
 

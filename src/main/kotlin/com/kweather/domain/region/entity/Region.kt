@@ -2,28 +2,24 @@ package com.kweather.domain.region.entity
 
 import jakarta.persistence.*
 
-
 @Entity
+@Table(name = "regions")
 data class Region(
     @Id
     @Column(name = "region_cd", length = 10)
     val regionCd: String,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sido_cd", referencedColumnName = "sido_cd")
-    val sido: Sido? = null,
+    @Column(name = "sido_cd", length = 2, nullable = false)
+    val sidoCd: String,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sgg_cd", referencedColumnName = "sgg_cd")
-    val sgg: Sgg? = null,
+    @Column(name = "sgg_cd", length = 3, nullable = false)
+    val sggCd: String,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "umd_cd", referencedColumnName = "umd_cd")
-    val umd: Umd? = null,
+    @Column(name = "umd_cd", length = 3, nullable = false)
+    val umdCd: String,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ri_cd", referencedColumnName = "ri_cd")
-    val ri: Ri? = null,
+    @Column(name = "ri_cd", length = 2, nullable = false)
+    val riCd: String,
 
     @Column(name = "locatjumin_cd", length = 10)
     val locatjuminCd: String? = null,
