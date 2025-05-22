@@ -7,6 +7,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" th:href="@{/static/global/global.css}" />
     <link rel="stylesheet" th:href="@{/static/global/style.css}" />
+    <style>
+        .na-message {
+            color: #888;
+            font-style: italic;
+        }
+    </style>
 </head>
 <body>
 <div class="weather-container">
@@ -110,6 +116,49 @@
         </div>
         <div th:if="${dustForecast == null}">
             <p>미세먼지 예보 데이터를 불러올 수 없습니다. (날짜 형식이 잘못되었거나 API 요청이 실패했습니다.)</p>
+        </div>
+    </div>
+    <!-- 실시간 미세먼지 섹션 -->
+    <div class="real-time-dust-section">
+        <h3>실시간 미세먼지</h3>
+        <div th:if="${realTimeDust != null and not #lists.isEmpty(realTimeDust)}">
+            <table class="real-time-dust-table">
+                <tr>
+                    <th>시도</th>
+                    <th>측정소</th>
+                    <th>측정 시간</th>
+                    <th>미세먼지(PM10)</th>
+                    <th>미세먼지 등급</th>
+                    <th>초미세먼지(PM2.5)</th>
+                    <th>초미세먼지 등급</th>
+                </tr>
+                <tr th:each="dust : ${realTimeDust}">
+                    <td th:text="${dust.sidoName}"></td>
+                    <td th:text="${dust.stationName}"></td>
+                    <td th:text="${dust.dataTime}"></td>
+                    <!-- 미세먼지(PM10) 값 표시 -->
+                    <td>
+                        <span th:if="${dust.pm10Value != 'N/A'}" th:text="${dust.pm10Value} + ' μg/m³'"></span>
+                        <span th:if="${dust.pm10Value == 'N/A'}" th:text="'측정 중'" class="na-message"></span>
+                    </td>
+                    <!-- 미세먼지 등급 표시 -->
+                    <td class="grade-cell"
+                        th:classappend="${dust.pm10Grade == '좋음' ? 'grade-good' : (dust.pm10Grade == '보통' ? 'grade-moderate' : (dust.pm10Grade == '나쁨' ? 'grade-bad' : (dust.pm10Grade == '매우나쁨' ? 'grade-very-bad' : '')))}"
+                        th:text="${dust.pm10Grade == 'N/A' ? '측정 중' : dust.pm10Grade}"></td>
+                    <!-- 초미세먼지(PM2.5) 값 표시 -->
+                    <td>
+                        <span th:if="${dust.pm25Value != 'N/A'}" th:text="${dust.pm25Value} + ' μg/m³'"></span>
+                        <span th:if="${dust.pm25Value == 'N/A'}" th:text="'측정 중'" class="na-message"></span>
+                    </td>
+                    <!-- 초미세먼지 등급 표시 -->
+                    <td class="grade-cell"
+                        th:classappend="${dust.pm25Grade == '좋음' ? 'grade-good' : (dust.pm25Grade == '보통' ? 'grade-moderate' : (dust.pm25Grade == '나쁨' ? 'grade-bad' : (dust.pm25Grade == '매우나쁨' ? 'grade-very-bad' : '')))}"
+                        th:text="${dust.pm25Grade == 'N/A' ? '측정 중' : dust.pm25Grade}"></td>
+                </tr>
+            </table>
+        </div>
+        <div th:if="${realTimeDust == null or #lists.isEmpty(realTimeDust)}">
+            <p th:text="${errorMessage != null ? errorMessage : '실시간 미세먼지 데이터를 불러올 수 없습니다.'}" style="color: red;"></p>
         </div>
     </div>
 </div>

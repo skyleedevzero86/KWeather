@@ -20,18 +20,16 @@ import java.io.InputStreamReader
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.nio.charset.StandardCharsets
 import arrow.core.Either
 import arrow.core.flatMap
 import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.right
 
-/**
- * 날씨 정보 서비스
- * - 함수형 프로그래밍 접근법과 전략 패턴 적용
- */
 @Service
 class WeatherService(
     private val objectMapper: ObjectMapper,
@@ -39,21 +37,29 @@ class WeatherService(
     private val weatherBaseUrl: String,
     @Value("\${api.arpltninforinqiresvc.base-url:}")
     private val dustForecastBaseUrl: String,
+    @Value("\${api.arpltninforinqiresvc.real-time-base-url:}")
+    private val realTimeDustBaseUrl: String,
     @Value("\${api.service-key:}")
     private val serviceKey: String
 ) {
     private val logger = LoggerFactory.getLogger(WeatherService::class.java)
 
-    // API Client 전략 인터페이스
+    data class RealTimeDustRequestParams(
+        val returnType: String = "json",
+        val numOfRows: Int = 100,
+        val pageNo: Int = 1,
+        val sidoName: String,
+        val ver: String = "1.0"
+    )
+
     private interface ApiClient<P, T> {
         fun buildUrl(params: P): String
         fun parseResponse(response: String): Either<String, T>
     }
 
-    // 날씨 API 클라이언트 구현
     private inner class WeatherApiClient : ApiClient<WeatherRequestParams, WeatherResponse> {
         override fun buildUrl(params: WeatherRequestParams): String {
-            return "${weatherBaseUrl}?serviceKey=${serviceKey}" +
+            val url = "${weatherBaseUrl}?serviceKey=${serviceKey}" +
                     "&numOfRows=10" +
                     "&pageNo=1" +
                     "&base_date=${params.baseDate}" +
@@ -61,6 +67,8 @@ class WeatherService(
                     "&nx=${params.nx}" +
                     "&ny=${params.ny}" +
                     "&dataType=JSON"
+            logger.info("Weather API URL built: $url")
+            return url
         }
 
         override fun parseResponse(response: String): Either<String, WeatherResponse> =
@@ -72,15 +80,16 @@ class WeatherService(
             )
     }
 
-    // 미세먼지 예보 API 클라이언트 구현
     private inner class DustForecastApiClient : ApiClient<DustForecastRequestParams, ForecastResponse> {
         override fun buildUrl(params: DustForecastRequestParams): String {
-            return "${dustForecastBaseUrl}?serviceKey=${serviceKey}" +
+            val url = "${dustForecastBaseUrl}?serviceKey=${serviceKey}" +
                     "&returnType=json" +
                     "&numOfRows=100" +
                     "&pageNo=1" +
                     "&searchDate=${params.searchDate}" +
                     "&dataTerm=DAILY"
+            logger.info("Dust Forecast API URL built: $url")
+            return url
         }
 
         override fun parseResponse(response: String): Either<String, ForecastResponse> =
@@ -92,21 +101,45 @@ class WeatherService(
             )
     }
 
-    // API 요청을 추상화한 함수
+    private inner class RealTimeDustApiClient : ApiClient<RealTimeDustRequestParams, RealTimeDustResponse> {
+        override fun buildUrl(params: RealTimeDustRequestParams): String {
+            val encodedSidoName = URLEncoder.encode(params.sidoName, StandardCharsets.UTF_8.toString()) // 한글 파라미터 인코딩
+            val url = "${realTimeDustBaseUrl}?serviceKey=${serviceKey}" +
+                    "&returnType=${params.returnType}" +
+                    "&numOfRows=${params.numOfRows}" +
+                    "&pageNo=${params.pageNo}" +
+                    "&sidoName=${encodedSidoName}" +
+                    "&ver=${params.ver}"
+            logger.info("Real-time Dust API URL built: $url")
+            return url
+        }
+
+        override fun parseResponse(response: String): Either<String, RealTimeDustResponse> =
+            runCatching {
+                objectMapper.readValue<RealTimeDustResponse>(response)
+            }.fold(
+                onSuccess = { it.right() },
+                onFailure = { "Failed to parse real-time dust response: ${it.message}".left() }
+            )
+    }
+
     private fun <P, T, R> makeApiRequest(
         client: ApiClient<P, T>,
         params: P,
         transform: (T) -> Either<String, R>
     ): ApiResult<R> {
         logger.info("Making API request with params: $params")
+        logger.info("Using serviceKey: $serviceKey")
 
         return try {
             val urlString = client.buildUrl(params)
-            logger.info("URL: {} (redacted service key)", urlString.replace(serviceKey, "[REDACTED]"))
+            logger.info("Final URL for request: $urlString")
 
             val response = fetchDataFromApi(urlString).getOrElse { error ->
                 return ApiResult.Error("Failed to fetch data: $error")
             }
+
+            logger.info("Received response: ${response.take(500)}")
 
             if (response.trim().startsWith("<")) {
                 handleXmlErrorResponse(response)
@@ -135,7 +168,6 @@ class WeatherService(
         }
     }
 
-    // HTTP 요청을 수행하고 결과를 반환하는 함수
     private fun fetchDataFromApi(urlString: String): Either<String, String> =
         Either.catch {
             URL(urlString).openConnection().let { conn ->
@@ -143,6 +175,7 @@ class WeatherService(
                     requestMethod = "GET"
                     connectTimeout = 10000
                     readTimeout = 10000
+                    setRequestProperty("User-Agent", "KWeather/1.0 (your.email@example.com)")
                 }
 
                 val responseCode = conn.responseCode
@@ -163,7 +196,6 @@ class WeatherService(
             "HTTP request failed: ${e.message}"
         }
 
-    // '자원 사용'을 안전하게 처리하는 고차 함수
     private inline fun <T : AutoCloseable, R> use(resource: T, block: (T) -> R): R {
         try {
             return block(resource)
@@ -176,9 +208,6 @@ class WeatherService(
         }
     }
 
-    /**
-     * 초단기 날씨 정보를 조회합니다.
-     */
     fun getUltraShortWeather(nx: Int, ny: Int): WeatherResponse {
         val baseDate = DateTimeUtils.getBaseDate()
         val baseTime = DateTimeUtils.getBaseTime()
@@ -208,9 +237,6 @@ class WeatherService(
         }
     }
 
-    /**
-     * 미세먼지 예보 정보를 조회합니다.
-     */
     fun getDustForecast(searchDate: String, informCode: String): List<ForecastInfo> {
         val params = DustForecastRequestParams(searchDate, informCode)
         val dustClient = DustForecastApiClient()
@@ -230,7 +256,48 @@ class WeatherService(
         }
     }
 
-    // 날씨 예보 응답 항목 파싱
+    fun getRealTimeDust(sidoName: String): List<RealTimeDustInfo> {
+        val params = RealTimeDustRequestParams(sidoName = sidoName)
+        val realTimeDustClient = RealTimeDustApiClient()
+
+        return when (val result = makeApiRequest(realTimeDustClient, params) { response: RealTimeDustResponse ->
+            val dustInfos = response.response?.body?.items?.mapNotNull { item ->
+                item?.let { parseRealTimeDustItem(it) }
+            } ?: emptyList<RealTimeDustInfo>()
+
+            Either.Right(dustInfos)
+        }) {
+            is ApiResult.Success<List<RealTimeDustInfo>> -> result.data
+            is ApiResult.Error -> {
+                logger.error("Real-time dust API request failed: ${result.message}")
+                emptyList()
+            }
+        }
+    }
+
+    private fun parseRealTimeDustItem(item: RealTimeDustItem): RealTimeDustInfo? =
+        runCatching {
+            RealTimeDustInfo(
+                sidoName = item.sidoName ?: throw IllegalArgumentException("sidoName is missing"),
+                stationName = item.stationName ?: throw IllegalArgumentException("stationName is missing"),
+                pm10Value = item.pm10Value ?: "N/A",
+                pm10Grade = convertGrade(item.pm10Grade),
+                pm25Value = item.pm25Value ?: "N/A",
+                pm25Grade = convertGrade(item.pm25Grade),
+                dataTime = item.dataTime ?: throw IllegalArgumentException("dataTime is missing")
+            )
+        }.onFailure { e ->
+            logger.warn("Skipping invalid real-time dust item: ${e.message}")
+        }.getOrNull()
+
+    private fun convertGrade(grade: String?): String = when (grade) {
+        "1" -> "좋음"
+        "2" -> "보통"
+        "3" -> "나쁨"
+        "4" -> "매우나쁨"
+        else -> "N/A"
+    }
+
     private fun parseForecastItem(item: ForecastItem, defaultInformCode: String): ForecastInfo? =
         runCatching {
             ForecastInfo(
@@ -253,9 +320,6 @@ class WeatherService(
             logger.warn("Skipping invalid forecast item: ${e.message}")
         }.getOrNull()
 
-    /**
-     * 초기 요청 실패 시 이전 시간대로 재시도
-     */
     private fun retryWithEarlierTime(nx: Int, ny: Int, baseDate: String): WeatherResponse? {
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
         val retryTime = calculateRetryTime(now.hour, now.minute)
@@ -276,7 +340,6 @@ class WeatherService(
         }
     }
 
-    // 재시도용 시간 계산 로직
     private fun calculateRetryTime(hour: Int, minute: Int): String =
         when {
             hour >= 12 && minute >= 5 -> "0000"
@@ -284,9 +347,6 @@ class WeatherService(
             else -> String.format("%02d30", if (minute < 45) hour else if (hour == 0) 23 else hour - 1)
         }
 
-    /**
-     * 날씨 데이터를 파싱합니다.
-     */
     fun parseWeatherData(response: WeatherResponse): List<WeatherInfo> =
         when {
             response.response?.header?.resultCode != "00" && response.response?.header?.resultCode != null -> {
@@ -311,7 +371,6 @@ class WeatherService(
             }
         }
 
-    // 날씨 항목 파싱 로직
     private fun parseWeatherItem(item: WeatherItem?): WeatherInfo? =
         item?.let {
             runCatching {
@@ -327,9 +386,6 @@ class WeatherService(
             }.getOrNull()
         }
 
-    /**
-     * 날씨 엔티티를 구성합니다.
-     */
     fun buildWeatherEntity(nx: Int, ny: Int): Weather {
         val response = getUltraShortWeather(nx, ny)
         val weatherInfoList = parseWeatherData(response)
@@ -351,7 +407,6 @@ class WeatherService(
         )
     }
 
-    // 미세먼지 정보 생성
     private fun createAirQuality(): AirQuality =
         AirQuality(
             title = "미세먼지",
@@ -361,7 +416,6 @@ class WeatherService(
             measurement = "㎍/㎥"
         )
 
-    // 자외선 정보 생성
     private fun createUVIndex(): UVIndex =
         UVIndex(
             title = "초미세먼지",
@@ -371,7 +425,6 @@ class WeatherService(
             measurement = "㎍/㎥"
         )
 
-    // 시간별 예보 생성
     private fun createHourlyForecast(): List<HourlyForecast> =
         listOf(
             HourlyForecast("지금", "moon", "-1.8°C", "34%"),
@@ -381,7 +434,6 @@ class WeatherService(
             HourlyForecast("9시", "sun", "-6°C", "55%")
         )
 
-    // 날씨 항목별 단위 반환
     private fun getUnitForCategory(category: String?): String =
         when (category) {
             "T1H" -> "°C"
@@ -393,10 +445,10 @@ class WeatherService(
         }
 
     init {
+        logger.info("Service initialized with serviceKey: $serviceKey")
         validateConfiguration()
     }
 
-    // 설정 유효성 검사
     private fun validateConfiguration() {
         if (serviceKey.isBlank()) {
             logger.warn("Service key is blank. API calls may fail.")
@@ -406,6 +458,9 @@ class WeatherService(
         }
         if (dustForecastBaseUrl.isBlank()) {
             logger.warn("Dust Forecast Base URL is blank. API calls may fail.")
+        }
+        if (realTimeDustBaseUrl.isBlank()) {
+            logger.warn("Real-Time Dust Base URL is blank. API calls may fail.")
         }
     }
 }

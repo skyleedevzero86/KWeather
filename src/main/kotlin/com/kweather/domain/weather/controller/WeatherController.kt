@@ -17,8 +17,8 @@ import arrow.core.Option
 import arrow.core.Some
 import arrow.core.None
 import com.kweather.domain.weather.model.WeatherDataProvider
+import com.kweather.domain.weather.dto.RealTimeDustInfo
 import org.springframework.beans.factory.annotation.Value
-
 
 @Controller
 class WeatherController(
@@ -26,7 +26,9 @@ class WeatherController(
     @Value("\${weather.default.region.name:한남동}")
     private val defaultRegionName: String,
     @Value("\${weather.default.region.district:용산구}")
-    private val defaultRegionDistrict: String
+    private val defaultRegionDistrict: String,
+    @Value("\${weather.default.sido:서울}")
+    private val defaultSido: String
 ) {
     private val logger = LoggerFactory.getLogger(WeatherController::class.java)
 
@@ -42,6 +44,9 @@ class WeatherController(
                 logger.error("Failed to get dust forecast: ${e.message}", e)
                 emptyList()
             }
+
+        override fun getRealTimeDustData(sidoName: String): List<RealTimeDustInfo> =
+            emptyList() // 기본 제공자는 빈 리스트 반환
     }
 
     // 실시간 API 기반 날씨 정보 제공자 (향후 확장용)
@@ -59,6 +64,14 @@ class WeatherController(
                 weatherService.getDustForecast(date, informCode)
             }.getOrElse { e ->
                 logger.error("Failed to get dust forecast: ${e.message}", e)
+                emptyList()
+            }
+
+        override fun getRealTimeDustData(sidoName: String): List<RealTimeDustInfo> =
+            runCatching {
+                weatherService.getRealTimeDust(sidoName)
+            }.getOrElse { e ->
+                logger.error("Failed to get real-time dust data: ${e.message}", e)
                 emptyList()
             }
     }
@@ -83,6 +96,10 @@ class WeatherController(
         val informCode = determineInformCode(hour)
         val dustForecast = weatherDataProvider.getDustForecastData(currentDate, informCode)
 
+        // 실시간 미세먼지 데이터 조회
+        val realTimeDust = weatherDataProvider.getRealTimeDustData(defaultSido)
+        val errorMessage = if (realTimeDust.isEmpty()) "실시간 미세먼지 데이터를 불러올 수 없습니다. API 키가 유효하지 않을 수 있습니다. 설정을 확인해 주세요." else null
+
         // 미세먼지 예보 데이터 가공
         val categorizedForecast = processDustForecastData(dustForecast)
 
@@ -90,7 +107,7 @@ class WeatherController(
         val timeOfDay = determineTimeOfDay(hour)
 
         // 모델에 데이터 추가
-        addAttributesToModel(model, weatherData, dustForecast, categorizedForecast, timeOfDay)
+        addAttributesToModel(model, weatherData, dustForecast, realTimeDust, categorizedForecast, timeOfDay, errorMessage)
 
         return "domain/weather/weather"
     }
@@ -186,13 +203,17 @@ class WeatherController(
         model: Model,
         weatherData: Weather,
         dustForecast: List<com.kweather.domain.forecast.dto.ForecastInfo>,
+        realTimeDust: List<com.kweather.domain.weather.dto.RealTimeDustInfo>,
         categorizedForecast: List<Triple<List<String>, List<String>, List<String>>>,
-        timeOfDay: String
+        timeOfDay: String,
+        errorMessage: String?
     ) {
         model.addAttribute("timeOfDay", timeOfDay)
         model.addAttribute("weather", weatherData)
         model.addAttribute("dustForecast", dustForecast.toOption().orNull())
+        model.addAttribute("realTimeDust", realTimeDust.toOption().orNull())
         model.addAttribute("categorizedForecast", categorizedForecast.toOption().orNull())
+        model.addAttribute("errorMessage", errorMessage)
     }
 
     /**
