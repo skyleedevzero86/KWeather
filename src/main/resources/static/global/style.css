@@ -338,6 +338,59 @@ body {
     font-size: 0.9em;
 }
 
+/* 실시간 미세먼지 섹션 스타일 */
+.real-time-dust-section {
+    text-align: center;
+    padding: 20px;
+    background: white;
+    border-radius: 20px;
+    color: black;
+}
+
+.real-time-dust-section h3 {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+    color: black;
+}
+
+.real-time-dust-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 auto;
+}
+
+.real-time-dust-table th, .real-time-dust-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+.real-time-dust-table th {
+    font-size: 1.2em;
+    background-color: #f0f0f0;
+    border: 2px solid black;
+}
+
+.real-time-dust-table td {
+    font-size: 1em;
+}
+
+.grade-good {
+    color: #0000FF; /* 파란색 */
+}
+
+.grade-moderate {
+    color: #00FF00; /* 녹색 */
+}
+
+.grade-bad {
+    color: #FF0000; /* 빨간색 */
+}
+
+.grade-very-bad {
+    color: #800080; /* 보라색 */
+}
+
 /* 반응형 스타일 */
 @media (max-width: 768px) {
     .grade-table th, .grade-table td {
@@ -347,6 +400,15 @@ body {
 
     .grade-table th {
         font-size: 1.1em;
+    }
+
+    .real-time-dust-table th, .real-time-dust-table td {
+        padding: 5px;
+        font-size: 0.9em;
+    }
+
+    .real-time-dust-table th {
+        font-size: 1em;
     }
 }
 
@@ -358,6 +420,15 @@ body {
 
     .grade-table th {
         font-size: 1em;
+    }
+
+    .real-time-dust-table th, .real-time-dust-table td {
+        padding: 3px;
+        font-size: 0.8em;
+    }
+
+    .real-time-dust-table th {
+        font-size: 0.9em;
     }
 }
 
