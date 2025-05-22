@@ -1,4 +1,4 @@
-package com.kweather.domain.weather.dto
+package com.kweather.domain.weather.model
 
 data class Header(
     val resultCode: String? = null,

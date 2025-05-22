@@ -1,4 +1,4 @@
-package com.kweather.domain.weather.dto
+package com.kweather.domain.realtime.dto
 
 data class RealTimeDustInfo(
     val sidoName: String,          // 시도 이름

@@ -1,7 +1,7 @@
 package com.kweather.domain.weather.model
 
 import com.kweather.domain.weather.entity.Weather
-import com.kweather.domain.weather.dto.RealTimeDustInfo
+import com.kweather.domain.realtime.dto.RealTimeDustInfo
 
 interface WeatherDataProvider {
     fun getWeatherData(date: String, time: String): Weather

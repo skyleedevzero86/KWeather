@@ -1,4 +1,4 @@
-package com.kweather.domain.weather.dto
+package com.kweather.domain.weather.model
 
 // 응답 결과 래핑을 위한 시일드 클래스 정의
 sealed class ApiResult<out T> {

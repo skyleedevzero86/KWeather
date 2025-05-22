@@ -139,21 +139,29 @@
                     <!-- 미세먼지(PM10) 값 표시 -->
                     <td>
                         <span th:if="${dust.pm10Value != 'N/A'}" th:text="${dust.pm10Value} + ' μg/m³'"></span>
-                        <span th:if="${dust.pm10Value == 'N/A'}" th:text="'측정 중'" class="na-message"></span>
+                        <span th:if="${dust.pm10Value == 'N/A'}" class="na-message" th:text="'측정 중'"></span>
                     </td>
                     <!-- 미세먼지 등급 표시 -->
-                    <td class="grade-cell"
-                        th:classappend="${dust.pm10Grade == '좋음' ? 'grade-good' : (dust.pm10Grade == '보통' ? 'grade-moderate' : (dust.pm10Grade == '나쁨' ? 'grade-bad' : (dust.pm10Grade == '매우나쁨' ? 'grade-very-bad' : '')))}"
-                        th:text="${dust.pm10Grade == 'N/A' ? '측정 중' : dust.pm10Grade}"></td>
+                    <td class="grade-cell" th:switch="${dust.pm10Grade}">
+                        <span th:case="'N/A'" class="na-message" th:text="'측정 중'"></span>
+                        <span th:case="'좋음'" class="grade-good" th:text="'좋음'"></span>
+                        <span th:case="'보통'" class="grade-moderate" th:text="'보통'"></span>
+                        <span th:case="'나쁨'" class="grade-bad" th:text="'나쁨'"></span>
+                        <span th:case="'매우나쁨'" class="grade-very-bad" th:text="'매우나쁨'"></span>
+                    </td>
                     <!-- 초미세먼지(PM2.5) 값 표시 -->
                     <td>
                         <span th:if="${dust.pm25Value != 'N/A'}" th:text="${dust.pm25Value} + ' μg/m³'"></span>
-                        <span th:if="${dust.pm25Value == 'N/A'}" th:text="'측정 중'" class="na-message"></span>
+                        <span th:if="${dust.pm25Value == 'N/A'}" class="na-message" th:text="'측정 중'"></span>
                     </td>
                     <!-- 초미세먼지 등급 표시 -->
-                    <td class="grade-cell"
-                        th:classappend="${dust.pm25Grade == '좋음' ? 'grade-good' : (dust.pm25Grade == '보통' ? 'grade-moderate' : (dust.pm25Grade == '나쁨' ? 'grade-bad' : (dust.pm25Grade == '매우나쁨' ? 'grade-very-bad' : '')))}"
-                        th:text="${dust.pm25Grade == 'N/A' ? '측정 중' : dust.pm25Grade}"></td>
+                    <td class="grade-cell" th:switch="${dust.pm25Grade}">
+                        <span th:case="'N/A'" class="na-message" th:text="'측정 중'"></span>
+                        <span th:case="'좋음'" class="grade-good" th:text="'좋음'"></span>
+                        <span th:case="'보통'" class="grade-moderate" th:text="'보통'"></span>
+                        <span th:case="'나쁨'" class="grade-bad" th:text="'나쁨'"></span>
+                        <span th:case="'매우나쁨'" class="grade-very-bad" th:text="'매우나쁨'"></span>
+                    </td>
                 </tr>
             </table>
         </div>
