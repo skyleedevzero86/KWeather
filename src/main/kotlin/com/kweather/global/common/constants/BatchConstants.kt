@@ -1,4 +1,3 @@
-// 수정된 BatchConstants
 package com.kweather.global.common.constants
 
 object BatchConstants {

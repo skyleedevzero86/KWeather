@@ -4,7 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class StanReginCdResponse(
-    @JsonProperty("StanReginCd")
-    val stanReginCd: List<StanReginCdContainer>?
+data class ResponseResult(
+    @JsonProperty("resultCode")
+    val resultCode: String? = null,
+
+    @JsonProperty("resultMsg")
+    val resultMsg: String? = null
 )

@@ -1,12 +1,12 @@
 package com.kweather.global.common.batch
 
 import com.kweather.domain.region.entity.Region
-import org.springframework.stereotype.Component
-import com.kweather.domain.region.repository.*
+import com.kweather.domain.region.repository.RegionRepository
 import com.kweather.global.common.constants.BatchConstants
+import org.slf4j.LoggerFactory
 import org.springframework.batch.item.Chunk
 import org.springframework.batch.item.ItemWriter
-import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
 @Component
@@ -19,7 +19,7 @@ class RegionWriter(
     @Transactional
     override fun write(chunk: Chunk<out Region>) {
         try {
-            val items = chunk.items
+            val items = chunk.items.filterNotNull()
             logger.info("저장할 지역 데이터 {} 건", items.size)
 
             if (items.isNotEmpty()) {
@@ -38,7 +38,7 @@ class RegionWriter(
                 }
             }
         } catch (e: Exception) {
-            logger.error(BatchConstants.LogMessages.DATA_SAVE_FAILED, e)
+            logger.error("${BatchConstants.LogMessages.DATA_SAVE_FAILED}, error=${e.message}", e)
             throw e
         }
     }
