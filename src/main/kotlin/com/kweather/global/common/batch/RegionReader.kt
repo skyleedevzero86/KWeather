@@ -7,10 +7,14 @@ import org.slf4j.LoggerFactory
 import org.springframework.batch.item.ItemReader
 import org.springframework.batch.item.support.ListItemReader
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.retry.annotation.Backoff
+import org.springframework.retry.annotation.Retryable
 import org.springframework.stereotype.Component
 import java.io.BufferedReader
+import java.io.IOException
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
 
 @Component
@@ -27,7 +31,7 @@ class RegionReader(
         require(baseUrl.isNotBlank()) { "Base URL must not be blank" }
     }
 
-    fun reader(pageNo: Int = 1, numOfRows: Int = 100): ItemReader<RegionDto> {
+    fun reader(pageNo: Int = 1, numOfRows: Int = 50): ItemReader<RegionDto> { // numOfRows를 50으로 줄임
         val allRegions = mutableListOf<RegionDto>()
 
         try {
@@ -48,6 +52,11 @@ class RegionReader(
         }
     }
 
+    @Retryable(
+        value = [SocketTimeoutException::class, IOException::class],
+        maxAttempts = 3,
+        backoff = Backoff(delay = 2000, multiplier = 1.5)
+    )
     private fun fetchRegionsFromApi(allRegions: MutableList<RegionDto>, pageNo: Int, numOfRows: Int) {
         var currentPage = pageNo
 
@@ -84,6 +93,11 @@ class RegionReader(
         }
     }
 
+    @Retryable(
+        value = [SocketTimeoutException::class],
+        maxAttempts = 3,
+        backoff = Backoff(delay = 2000, multiplier = 1.5)
+    )
     private fun fetchDataFromApi(urlString: String): String {
         var connection: HttpURLConnection? = null
         var reader: BufferedReader? = null
@@ -92,16 +106,16 @@ class RegionReader(
             val url = URL(urlString)
             connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
-            connection.connectTimeout = 10000
-            connection.readTimeout = 10000
+            connection.connectTimeout = 15000 // 타임아웃을 15초로 증가
+            connection.readTimeout = 15000    // 타임아웃을 15초로 증가
 
             val responseCode = connection.responseCode
             logger.info("Response code: {}", responseCode)
 
             reader = if (responseCode >= 200 && responseCode < 300) {
-                BufferedReader(InputStreamReader(connection.inputStream))
+                BufferedReader(InputStreamReader(connection.inputStream, "UTF-8"))
             } else {
-                BufferedReader(InputStreamReader(connection.errorStream))
+                BufferedReader(InputStreamReader(connection.errorStream, "UTF-8"))
             }
 
             val response = StringBuilder()
@@ -112,6 +126,9 @@ class RegionReader(
             }
 
             return response.toString()
+        } catch (e: Exception) {
+            logger.error("Failed to fetch data from API: {}", e.message)
+            throw e
         } finally {
             reader?.close()
             connection?.disconnect()

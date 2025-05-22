@@ -10,7 +10,10 @@ import com.kweather.domain.weather.dto.*
 import com.kweather.domain.weather.entity.Weather
 import com.kweather.global.common.util.DateTimeUtils
 import org.slf4j.LoggerFactory
+import java.net.SocketTimeoutException
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.retry.annotation.Backoff
+import org.springframework.retry.annotation.Retryable
 import org.springframework.stereotype.Service
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -30,6 +33,8 @@ import com.kweather.domain.realtime.dto.RealTimeDustInfo
 import com.kweather.domain.realtime.dto.RealTimeDustItem
 import com.kweather.domain.realtime.dto.RealTimeDustResponse
 import com.kweather.domain.weather.model.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @Service
 class WeatherService(
@@ -47,7 +52,7 @@ class WeatherService(
 
     data class RealTimeDustRequestParams(
         val returnType: String = "json",
-        val numOfRows: Int = 100,
+        val numOfRows: Int = 50, // 요청 크기를 100에서 50으로 줄임
         val pageNo: Int = 1,
         val sidoName: String,
         val ver: String = "1.0"
@@ -60,15 +65,19 @@ class WeatherService(
 
     private inner class WeatherApiClient : ApiClient<WeatherRequestParams, WeatherResponse> {
         override fun buildUrl(params: WeatherRequestParams): String {
+            val formatter = DateTimeFormatter.ofPattern("yyyyMMdd")
+            val date = LocalDate.parse(params.baseDate, formatter)
+            val nextDate = date.plusDays(1).format(formatter)
+
             val url = "${weatherBaseUrl}?serviceKey=${serviceKey}" +
-                    "&numOfRows=10" +
+                    "&numOfRows=1000" +
                     "&pageNo=1" +
-                    "&base_date=${params.baseDate}" +
+                    "&base_date=${nextDate}" +
                     "&base_time=${params.baseTime}" +
                     "&nx=${params.nx}" +
                     "&ny=${params.ny}" +
                     "&dataType=JSON"
-            logger.info("Weather API URL built: $url")
+            logger.info("날씨 API URL 생성 완료: $url")
             return url
         }
 
@@ -77,7 +86,7 @@ class WeatherService(
                 objectMapper.readValue<WeatherResponse>(response)
             }.fold(
                 onSuccess = { it.right() },
-                onFailure = { "Failed to parse weather response: ${it.message}".left() }
+                onFailure = { "날씨 응답 파싱 실패: ${it.message}".left() }
             )
     }
 
@@ -89,7 +98,7 @@ class WeatherService(
                     "&pageNo=1" +
                     "&searchDate=${params.searchDate}" +
                     "&dataTerm=DAILY"
-            logger.info("Dust Forecast API URL built: $url")
+            logger.info("미세먼지 예보 API URL 생성 완료: $url")
             return url
         }
 
@@ -98,20 +107,20 @@ class WeatherService(
                 objectMapper.readValue<ForecastResponse>(response)
             }.fold(
                 onSuccess = { it.right() },
-                onFailure = { "Failed to parse dust forecast response: ${it.message}".left() }
+                onFailure = { "미세먼지 예보 응답 파싱 실패: ${it.message}".left() }
             )
     }
 
     private inner class RealTimeDustApiClient : ApiClient<RealTimeDustRequestParams, RealTimeDustResponse> {
         override fun buildUrl(params: RealTimeDustRequestParams): String {
-            val encodedSidoName = URLEncoder.encode(params.sidoName, StandardCharsets.UTF_8.toString()) // 한글 파라미터 인코딩
+            val encodedSidoName = URLEncoder.encode(params.sidoName, StandardCharsets.UTF_8.toString())
             val url = "${realTimeDustBaseUrl}?serviceKey=${serviceKey}" +
                     "&returnType=${params.returnType}" +
                     "&numOfRows=${params.numOfRows}" +
                     "&pageNo=${params.pageNo}" +
                     "&sidoName=${encodedSidoName}" +
                     "&ver=${params.ver}"
-            logger.info("Real-time Dust API URL built: $url")
+            logger.info("실시간 미세먼지 API URL 생성 완료: $url")
             return url
         }
 
@@ -120,31 +129,36 @@ class WeatherService(
                 objectMapper.readValue<RealTimeDustResponse>(response)
             }.fold(
                 onSuccess = { it.right() },
-                onFailure = { "Failed to parse real-time dust response: ${it.message}".left() }
+                onFailure = { "실시간 미세먼지 응답 파싱 실패: ${it.message}".left() }
             )
     }
 
+    @Retryable(
+        value = [SocketTimeoutException::class, IOException::class],
+        maxAttempts = 3,
+        backoff = Backoff(delay = 2000, multiplier = 1.5)
+    )
     private fun <P, T, R> makeApiRequest(
         client: ApiClient<P, T>,
         params: P,
         transform: (T) -> Either<String, R>
     ): ApiResult<R> {
-        logger.info("Making API request with params: $params")
-        logger.info("Using serviceKey: $serviceKey")
+        logger.info("API 요청 시작 - 파라미터: $params")
+        logger.info("사용 중인 서비스키: $serviceKey")
 
         return try {
             val urlString = client.buildUrl(params)
-            logger.info("Final URL for request: $urlString")
+            logger.info("최종 요청 URL: $urlString")
 
             val response = fetchDataFromApi(urlString).getOrElse { error ->
-                return ApiResult.Error("Failed to fetch data: $error")
+                return ApiResult.Error("데이터 가져오기 실패: $error")
             }
 
-            logger.info("Received response: ${response.take(500)}")
+            logger.info("응답 수신 완료: ${response.take(500)}")
 
             if (response.trim().startsWith("<")) {
                 handleXmlErrorResponse(response)
-                return ApiResult.Error("API returned an XML error response")
+                return ApiResult.Error("API에서 XML 오류 응답을 반환했습니다")
             }
 
             client.parseResponse(response).flatMap(transform).fold(
@@ -152,35 +166,40 @@ class WeatherService(
                 { result -> ApiResult.Success(result) }
             )
         } catch (e: Exception) {
-            logger.error("API request failed", e)
-            ApiResult.Error("API request failed: ${e.message}", e)
+            logger.error("API 요청 실패", e)
+            ApiResult.Error("API 요청 실패: ${e.message}", e)
         }
     }
 
     private fun handleXmlErrorResponse(response: String) {
         when {
             response.contains("SERVICE_KEY_IS_NOT_REGISTERED_ERROR") || response.contains("SERVICE ERROR") -> {
-                logger.error("API key error: {}", response)
-                throw IllegalStateException("API service key error: Check if the key is valid and properly formatted")
+                logger.error("API 키 오류: {}", response)
+                throw IllegalStateException("API 서비스 키 오류: 키가 유효하고 올바르게 형식화되었는지 확인하세요")
             }
             else -> {
-                logger.error("Received XML error response: {}", response.take(500))
+                logger.error("XML 오류 응답 수신: {}", response.take(500))
             }
         }
     }
 
+    @Retryable(
+        value = [SocketTimeoutException::class],
+        maxAttempts = 3,
+        backoff = Backoff(delay = 2000, multiplier = 1.5)
+    )
     private fun fetchDataFromApi(urlString: String): Either<String, String> =
         Either.catch {
             URL(urlString).openConnection().let { conn ->
                 (conn as HttpURLConnection).apply {
                     requestMethod = "GET"
-                    connectTimeout = 10000
-                    readTimeout = 10000
+                    connectTimeout = 15000 // 타임아웃을 15초로 증가
+                    readTimeout = 15000   // 타임아웃을 15초로 증가
                     setRequestProperty("User-Agent", "KWeather/1.0 (your.email@example.com)")
                 }
 
                 val responseCode = conn.responseCode
-                logger.info("Response code: $responseCode")
+                logger.info("응답 코드: $responseCode")
 
                 val reader = if (responseCode in 200..299) {
                     BufferedReader(InputStreamReader(conn.inputStream))
@@ -193,8 +212,8 @@ class WeatherService(
                 }
             }
         }.mapLeft { e ->
-            logger.error("HTTP request failed", e)
-            "HTTP request failed: ${e.message}"
+            logger.error("HTTP 요청 실패", e)
+            "HTTP 요청 실패: ${e.message}"
         }
 
     private inline fun <T : AutoCloseable, R> use(resource: T, block: (T) -> R): R {
@@ -204,7 +223,7 @@ class WeatherService(
             try {
                 resource.close()
             } catch (e: IOException) {
-                logger.error("Failed to close resource", e)
+                logger.error("리소스 닫기 실패", e)
             }
         }
     }
@@ -213,7 +232,7 @@ class WeatherService(
         val baseDate = DateTimeUtils.getBaseDate()
         val baseTime = DateTimeUtils.getBaseTime()
 
-        logger.info("Using baseDate: $baseDate, baseTime: $baseTime")
+        logger.info("사용 중인 기준날짜: $baseDate, 기준시간: $baseTime")
 
         val params = WeatherRequestParams(baseDate, baseTime, nx, ny)
         val weatherClient = WeatherApiClient()
@@ -221,7 +240,7 @@ class WeatherService(
         return when (val result = makeApiRequest(weatherClient, params) { response ->
             if (response.response?.header?.resultCode == "03" &&
                 response.response.header.resultMsg == "NO_DATA") {
-                logger.warn("No weather data available for $baseDate $baseTime, retrying with earlier time")
+                logger.warn("${baseDate} ${baseTime}에 대한 날씨 데이터가 없습니다. 이전 시간으로 재시도합니다.")
                 Either.Right(retryWithEarlierTime(nx, ny, baseDate) ?: response)
             } else {
                 Either.Right(response)
@@ -229,9 +248,9 @@ class WeatherService(
         }) {
             is ApiResult.Success -> result.data
             is ApiResult.Error -> {
-                logger.error("Weather API request failed: ${result.message}")
+                logger.error("날씨 API 요청 실패: ${result.message}")
                 WeatherResponse(WeatherResponseData(
-                    header = Header("ERROR", "Failed to fetch weather data: ${result.message}"),
+                    header = Header("ERROR", "날씨 데이터 가져오기 실패: ${result.message}"),
                     body = null
                 ))
             }
@@ -251,8 +270,8 @@ class WeatherService(
         }) {
             is ApiResult.Success<List<ForecastInfo>> -> result.data
             is ApiResult.Error -> {
-                logger.error("Dust forecast API request failed: ${result.message}")
-                throw IllegalStateException("Failed to fetch dust forecast data: ${result.message}")
+                logger.error("미세먼지 예보 API 요청 실패: ${result.message}")
+                throw IllegalStateException("미세먼지 예보 데이터 가져오기 실패: ${result.message}")
             }
         }
     }
@@ -270,8 +289,8 @@ class WeatherService(
         }) {
             is ApiResult.Success<List<RealTimeDustInfo>> -> result.data
             is ApiResult.Error -> {
-                logger.error("Real-time dust API request failed: ${result.message}")
-                emptyList()
+                logger.error("실시간 미세먼지 API 요청 실패: ${result.message}")
+                emptyList() // 실패 시 빈 리스트 반환
             }
         }
     }
@@ -279,16 +298,16 @@ class WeatherService(
     private fun parseRealTimeDustItem(item: RealTimeDustItem): RealTimeDustInfo? =
         runCatching {
             RealTimeDustInfo(
-                sidoName = item.sidoName ?: throw IllegalArgumentException("sidoName is missing"),
-                stationName = item.stationName ?: throw IllegalArgumentException("stationName is missing"),
+                sidoName = item.sidoName ?: throw IllegalArgumentException("시도명이 누락되었습니다"),
+                stationName = item.stationName ?: throw IllegalArgumentException("측정소명이 누락되었습니다"),
                 pm10Value = item.pm10Value ?: "N/A",
                 pm10Grade = convertGrade(item.pm10Grade),
                 pm25Value = item.pm25Value ?: "N/A",
                 pm25Grade = convertGrade(item.pm25Grade),
-                dataTime = item.dataTime ?: throw IllegalArgumentException("dataTime is missing")
+                dataTime = item.dataTime ?: throw IllegalArgumentException("측정시간이 누락되었습니다")
             )
         }.onFailure { e ->
-            logger.warn("Skipping invalid real-time dust item: ${e.message}")
+            logger.warn("유효하지 않은 실시간 미세먼지 항목을 건너뜁니다: ${e.message}")
         }.getOrNull()
 
     private fun convertGrade(grade: String?): String = when (grade) {
@@ -302,12 +321,12 @@ class WeatherService(
     private fun parseForecastItem(item: ForecastItem, defaultInformCode: String): ForecastInfo? =
         runCatching {
             ForecastInfo(
-                date = item.dataTime ?: throw IllegalArgumentException("dataTime is missing"),
+                date = item.dataTime ?: throw IllegalArgumentException("데이터 시간이 누락되었습니다"),
                 type = item.informCode ?: defaultInformCode,
                 overall = item.informOverall ?: "N/A",
                 cause = item.informCause ?: "N/A",
                 grade = item.informGrade ?: "N/A",
-                dataTime = item.dataTime ?: throw IllegalArgumentException("dataTime is missing"),
+                dataTime = item.dataTime ?: throw IllegalArgumentException("데이터 시간이 누락되었습니다"),
                 imageUrls = listOfNotNull(
                     item.imageUrl1,
                     item.imageUrl2,
@@ -318,14 +337,14 @@ class WeatherService(
                 )
             )
         }.onFailure { e ->
-            logger.warn("Skipping invalid forecast item: ${e.message}")
+            logger.warn("유효하지 않은 예보 항목을 건너뜁니다: ${e.message}")
         }.getOrNull()
 
     private fun retryWithEarlierTime(nx: Int, ny: Int, baseDate: String): WeatherResponse? {
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
         val retryTime = calculateRetryTime(now.hour, now.minute)
 
-        logger.info("Retrying with baseTime: $retryTime")
+        logger.info("이전 시간으로 재시도: $retryTime")
 
         val params = WeatherRequestParams(baseDate, retryTime, nx, ny)
         val weatherClient = WeatherApiClient()
@@ -335,7 +354,7 @@ class WeatherService(
         }) {
             is ApiResult.Success -> result.data
             is ApiResult.Error -> {
-                logger.error("Retry failed: ${result.message}")
+                logger.error("재시도 실패: ${result.message}")
                 null
             }
         }
@@ -356,13 +375,13 @@ class WeatherService(
                         baseDate = "",
                         baseTime = "",
                         category = "ERROR",
-                        value = "API Error: ${response.response.header.resultCode} - ${response.response.header.resultMsg}",
+                        value = "API 오류: ${response.response.header.resultCode} - ${response.response.header.resultMsg}",
                         unit = ""
                     )
                 )
             }
             response.response?.body?.items?.item == null -> {
-                logger.warn("Weather response does not contain items. Response: $response")
+                logger.warn("날씨 응답에 항목이 포함되어 있지 않습니다. 응답: $response")
                 emptyList()
             }
             else -> {
@@ -376,14 +395,14 @@ class WeatherService(
         item?.let {
             runCatching {
                 WeatherInfo(
-                    baseDate = it.baseDate ?: throw IllegalArgumentException("baseDate is missing"),
-                    baseTime = it.baseTime ?: throw IllegalArgumentException("baseTime is missing"),
-                    category = it.category ?: throw IllegalArgumentException("category is missing"),
-                    value = it.obsrValue ?: throw IllegalArgumentException("obsrValue is missing"),
+                    baseDate = it.baseDate ?: throw IllegalArgumentException("기준날짜가 누락되었습니다"),
+                    baseTime = it.baseTime ?: throw IllegalArgumentException("기준시간이 누락되었습니다"),
+                    category = it.category ?: throw IllegalArgumentException("카테고리가 누락되었습니다"),
+                    value = it.obsrValue ?: throw IllegalArgumentException("관측값이 누락되었습니다"),
                     unit = getUnitForCategory(it.category)
                 )
             }.onFailure { e ->
-                logger.warn("Skipping invalid weather item: ${e.message}")
+                logger.warn("유효하지 않은 날씨 항목을 건너뜁니다: ${e.message}")
             }.getOrNull()
         }
 
@@ -446,22 +465,22 @@ class WeatherService(
         }
 
     init {
-        logger.info("Service initialized with serviceKey: $serviceKey")
+        logger.info("서비스 초기화 완료 - 서비스키: $serviceKey")
         validateConfiguration()
     }
 
     private fun validateConfiguration() {
         if (serviceKey.isBlank()) {
-            logger.warn("Service key is blank. API calls may fail.")
+            logger.warn("서비스 키가 비어있습니다. API 호출이 실패할 수 있습니다.")
         }
         if (weatherBaseUrl.isBlank()) {
-            logger.warn("Weather Base URL is blank. API calls may fail.")
+            logger.warn("날씨 기본 URL이 비어있습니다. API 호출이 실패할 수 있습니다.")
         }
         if (dustForecastBaseUrl.isBlank()) {
-            logger.warn("Dust Forecast Base URL is blank. API calls may fail.")
+            logger.warn("미세먼지 예보 기본 URL이 비어있습니다. API 호출이 실패할 수 있습니다.")
         }
         if (realTimeDustBaseUrl.isBlank()) {
-            logger.warn("Real-Time Dust Base URL is blank. API calls may fail.")
+            logger.warn("실시간 미세먼지 기본 URL이 비어있습니다. API 호출이 실패할 수 있습니다.")
         }
     }
 }

@@ -45,6 +45,7 @@ class AppConfig : WebMvcConfigurer {
         val connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
             .setMaxConnPerRoute(20)
             .setMaxConnTotal(50)
+            .setValidateAfterInactivity(TimeValue.ofSeconds(10))
             .build()
 
         val httpClient: CloseableHttpClient = HttpClients.custom()
@@ -53,15 +54,14 @@ class AppConfig : WebMvcConfigurer {
             .build()
 
         val factory = HttpComponentsClientHttpRequestFactory(httpClient).apply {
-            setConnectTimeout(5000)
-            setReadTimeout(10000)
+            setConnectTimeout(15000) // 타임아웃 15초로 증가
+            setReadTimeout(15000)   // 타임아웃 15초로 증가
         }
 
         val restTemplate = RestTemplate(factory)
-        // JSON 우선순위
         restTemplate.messageConverters.removeIf { it is MappingJackson2XmlHttpMessageConverter }
-        restTemplate.messageConverters.add(0, MappingJackson2HttpMessageConverter(objectMapper())) // JSON
-        restTemplate.messageConverters.add(MappingJackson2XmlHttpMessageConverter(XmlMapper())) // XML as fallback
+        restTemplate.messageConverters.add(0, MappingJackson2HttpMessageConverter(objectMapper()))
+        restTemplate.messageConverters.add(MappingJackson2XmlHttpMessageConverter(XmlMapper()))
         return restTemplate
     }
 
