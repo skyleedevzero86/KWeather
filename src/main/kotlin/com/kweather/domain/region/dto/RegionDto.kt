@@ -27,6 +27,3 @@ data class RegionDto(
                 !riCd.isNullOrBlank()
     }
 }
-
-
-
