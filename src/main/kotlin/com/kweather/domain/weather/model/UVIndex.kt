@@ -8,9 +8,10 @@ package com.kweather.domain.weather.model
  * @property temperature 기온
  * @property humidity 습도
  */
-data class HourlyForecast(
-    val time: String,
+data class UVIndex(
+    val title: String,
     val icon: String,
-    val temperature: String,
-    val humidity: String
+    val status: String,
+    val value: String,
+    val measurement: String
 )

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -16,15 +17,15 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
+import org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.filter.OncePerRequestFilter
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
-
 @Configuration
 class AppConfig : WebMvcConfigurer {
-
     @Value("\${custom.site.name:KotlinWeather}")
     private lateinit var siteName: String
 
@@ -44,6 +45,7 @@ class AppConfig : WebMvcConfigurer {
         val connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
             .setMaxConnPerRoute(20)
             .setMaxConnTotal(50)
+            .setValidateAfterInactivity(TimeValue.ofSeconds(10))
             .build()
 
         val httpClient: CloseableHttpClient = HttpClients.custom()
@@ -52,14 +54,16 @@ class AppConfig : WebMvcConfigurer {
             .build()
 
         val factory = HttpComponentsClientHttpRequestFactory(httpClient).apply {
-            setConnectTimeout(5000)
-            setReadTimeout(10000)
+            setConnectTimeout(15000) // 타임아웃 15초로 증가
+            setReadTimeout(15000)   // 타임아웃 15초로 증가
         }
 
-        return RestTemplate(factory)
+        val restTemplate = RestTemplate(factory)
+        restTemplate.messageConverters.removeIf { it is MappingJackson2XmlHttpMessageConverter }
+        restTemplate.messageConverters.add(0, MappingJackson2HttpMessageConverter(objectMapper()))
+        restTemplate.messageConverters.add(MappingJackson2XmlHttpMessageConverter(XmlMapper()))
+        return restTemplate
     }
-
-
 
     @Bean
     fun encodingFilter(): OncePerRequestFilter {
