@@ -1,4 +1,4 @@
-package com.kweather.domain.weather.dto
+package com.kweather.domain.weather.model
 
 data class Body(
     val dataType: String? = null,

@@ -17,7 +17,7 @@ import arrow.core.Option
 import arrow.core.Some
 import arrow.core.None
 import com.kweather.domain.weather.model.WeatherDataProvider
-import com.kweather.domain.weather.dto.RealTimeDustInfo
+import com.kweather.domain.realtime.dto.RealTimeDustInfo
 import org.springframework.beans.factory.annotation.Value
 
 @Controller
@@ -203,7 +203,7 @@ class WeatherController(
         model: Model,
         weatherData: Weather,
         dustForecast: List<com.kweather.domain.forecast.dto.ForecastInfo>,
-        realTimeDust: List<com.kweather.domain.weather.dto.RealTimeDustInfo>,
+        realTimeDust: List<RealTimeDustInfo>,
         categorizedForecast: List<Triple<List<String>, List<String>, List<String>>>,
         timeOfDay: String,
         errorMessage: String?

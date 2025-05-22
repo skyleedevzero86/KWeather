@@ -8,9 +8,6 @@ import com.kweather.domain.forecast.dto.ForecastItem
 import com.kweather.domain.forecast.dto.ForecastResponse
 import com.kweather.domain.weather.dto.*
 import com.kweather.domain.weather.entity.Weather
-import com.kweather.domain.weather.model.AirQuality
-import com.kweather.domain.weather.model.HourlyForecast
-import com.kweather.domain.weather.model.UVIndex
 import com.kweather.global.common.util.DateTimeUtils
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -29,6 +26,10 @@ import arrow.core.flatMap
 import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.right
+import com.kweather.domain.realtime.dto.RealTimeDustInfo
+import com.kweather.domain.realtime.dto.RealTimeDustItem
+import com.kweather.domain.realtime.dto.RealTimeDustResponse
+import com.kweather.domain.weather.model.*
 
 @Service
 class WeatherService(

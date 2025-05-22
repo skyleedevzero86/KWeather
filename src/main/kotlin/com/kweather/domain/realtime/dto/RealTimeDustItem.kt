@@ -1,23 +1,7 @@
-package com.kweather.domain.weather.dto
+package com.kweather.domain.realtime.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class RealTimeDustResponse(
-    val response: RealTimeDustResponseData? = null
-)
-
-data class RealTimeDustResponseData(
-    val header: Header? = null,
-    val body: RealTimeDustBody? = null
-)
-
-data class RealTimeDustBody(
-    val totalCount: Int? = null,
-    val items: List<RealTimeDustItem>? = null,
-    val pageNo: Int? = null,
-    val numOfRows: Int? = null
-)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class RealTimeDustItem(
