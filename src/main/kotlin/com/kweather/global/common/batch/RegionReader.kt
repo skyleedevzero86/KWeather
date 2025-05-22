@@ -3,6 +3,9 @@ package com.kweather.global.common.batch
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.kweather.domain.region.dto.RegionDto
 import com.kweather.domain.region.dto.StanReginCdResponse
+import com.kweather.domain.region.service.HierarchyService
+import com.kweather.global.common.constants.BatchConstants
+import com.kweather.global.common.exception.ApiServiceException
 import org.slf4j.LoggerFactory
 import org.springframework.batch.item.ItemReader
 import org.springframework.batch.item.support.ListItemReader
@@ -22,124 +25,141 @@ class RegionReader(
     @Value("\${api.service-key}") private val serviceKey: String,
     @Value("\${api.region.base-url}") private val baseUrl: String,
     private val objectMapper: ObjectMapper,
-    private val regionCacheLoader: RegionCacheLoader
+    private val regionCacheLoader: RegionCacheLoader,
+    private val hierarchyService: HierarchyService
 ) {
     private val logger = LoggerFactory.getLogger(RegionReader::class.java)
 
     init {
-        require(serviceKey.isNotBlank()) { "Service key must not be blank" }
-        require(baseUrl.isNotBlank()) { "Base URL must not be blank" }
+        require(serviceKey.isNotBlank()) { BatchConstants.ErrorMessages.SERVICE_KEY_EMPTY }
+        require(baseUrl.isNotBlank()) { BatchConstants.ErrorMessages.BASE_URL_EMPTY }
     }
 
-    fun reader(pageNo: Int = 1, numOfRows: Int = 50): ItemReader<RegionDto> { // numOfRows를 50으로 줄임
+    fun reader(pageNo: Int = 1, numOfRows: Int = BatchConstants.DEFAULT_PAGE_SIZE): ItemReader<RegionDto> {
         val allRegions = mutableListOf<RegionDto>()
 
-        try {
+        return try {
             fetchRegionsFromApi(allRegions, pageNo, numOfRows)
 
             if (allRegions.isEmpty()) {
-                logger.warn("No data fetched from API, attempting to load from cache")
+                logger.warn(BatchConstants.LogMessages.API_REQUEST_FAILED)
                 allRegions.addAll(regionCacheLoader.loadRegionsFromCache())
             }
 
-            logger.info("Total loaded {} region data items", allRegions.size)
-            return ListItemReader(allRegions)
+            // 계층 구조 데이터 미리 로드
+            logger.info(BatchConstants.LogMessages.HIERARCHY_DATA_PRELOAD)
+            hierarchyService.loadHierarchyData(allRegions)
+            logger.info(BatchConstants.LogMessages.HIERARCHY_DATA_PRELOAD_COMPLETE)
+
+            logger.info(BatchConstants.LogMessages.TOTAL_DATA_LOADED, allRegions.size)
+            ListItemReader(allRegions)
         } catch (e: Exception) {
-            logger.error("Error loading region data from API, attempting to load from cache", e)
-            val cachedRegions = regionCacheLoader.loadRegionsFromCache()
-            logger.info("Loaded {} region data items from cache", cachedRegions.size)
-            return ListItemReader(cachedRegions)
+            logger.error(BatchConstants.LogMessages.API_REQUEST_FAILED, e)
+            handleApiFailure()
         }
+    }
+
+    private fun handleApiFailure(): ItemReader<RegionDto> {
+        val cachedRegions = regionCacheLoader.loadRegionsFromCache()
+        logger.info(BatchConstants.LogMessages.HIERARCHY_DATA_PRELOAD)
+        hierarchyService.loadHierarchyData(cachedRegions)
+        logger.info(BatchConstants.LogMessages.HIERARCHY_DATA_PRELOAD_COMPLETE)
+        logger.info(BatchConstants.LogMessages.CACHE_LOAD_SUCCESS, cachedRegions.size)
+        return ListItemReader(cachedRegions)
     }
 
     @Retryable(
         value = [SocketTimeoutException::class, IOException::class],
-        maxAttempts = 3,
-        backoff = Backoff(delay = 2000, multiplier = 1.5)
+        maxAttempts = BatchConstants.MAX_RETRY_ATTEMPTS,
+        backoff = Backoff(delay = BatchConstants.RETRY_DELAY_MS, multiplier = BatchConstants.RETRY_MULTIPLIER)
     )
     private fun fetchRegionsFromApi(allRegions: MutableList<RegionDto>, pageNo: Int, numOfRows: Int) {
         var currentPage = pageNo
 
         while (true) {
             val urlString = buildApiUrl(currentPage, numOfRows)
-            logger.info("Making API request to: {} (page {})", urlString.replace(serviceKey, "[REDACTED]"), currentPage)
+            logger.info(BatchConstants.LogMessages.API_REQUEST_START, currentPage)
 
             val response = fetchDataFromApi(urlString)
-            logger.info("Response first 200 chars: {}", response.take(200))
+            validateApiResponse(response)
 
-            // 응답이 XML 형식인지 확인 (에러 응답인 경우)
-            if (response.trim().startsWith("<")) {
-                if (response.contains("SERVICE_KEY_IS_NOT_REGISTERED_ERROR") ||
-                    response.contains("SERVICE ERROR")) {
-                    logger.error("API key error: {}", response)
-                    throw IllegalStateException("API service key error: Check if the key is valid and properly formatted")
-                }
-                logger.error("Received XML error response: {}", response.take(500))
-                throw IllegalStateException("API returned an error response")
-            }
-
-            // JSON 응답 처리
             val stanReginCdResponse = objectMapper.readValue(response, StanReginCdResponse::class.java)
             val regions = stanReginCdResponse.StanReginCd?.flatMap { it.row.orEmpty() } ?: emptyList()
 
             if (regions.isEmpty()) {
-                logger.info("No more data to fetch at page {}", currentPage)
+                logger.info(BatchConstants.LogMessages.NO_MORE_DATA, currentPage)
                 break
             }
 
             allRegions.addAll(regions)
-            logger.info("Loaded {} region data items from page {}", regions.size, currentPage)
+            logger.info(BatchConstants.LogMessages.API_RESPONSE_SUCCESS, currentPage, regions.size)
             currentPage++
+        }
+    }
+
+    private fun validateApiResponse(response: String) {
+        if (response.trim().startsWith("<")) {
+            when {
+                response.contains("SERVICE_KEY_IS_NOT_REGISTERED_ERROR") ||
+                        response.contains("SERVICE ERROR") -> {
+                    logger.error(BatchConstants.LogMessages.API_KEY_ERROR, response)
+                    throw ApiServiceException(BatchConstants.ErrorMessages.API_SERVICE_KEY_ERROR)
+                }
+                else -> {
+                    logger.error(BatchConstants.LogMessages.XML_ERROR_RESPONSE, response.take(500))
+                    throw ApiServiceException(BatchConstants.ErrorMessages.API_ERROR_RESPONSE)
+                }
+            }
         }
     }
 
     @Retryable(
         value = [SocketTimeoutException::class],
-        maxAttempts = 3,
-        backoff = Backoff(delay = 2000, multiplier = 1.5)
+        maxAttempts = BatchConstants.MAX_RETRY_ATTEMPTS,
+        backoff = Backoff(delay = BatchConstants.RETRY_DELAY_MS, multiplier = BatchConstants.RETRY_MULTIPLIER)
     )
     private fun fetchDataFromApi(urlString: String): String {
         var connection: HttpURLConnection? = null
-        var reader: BufferedReader? = null
 
-        try {
+        return try {
             val url = URL(urlString)
             connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.connectTimeout = 15000 // 타임아웃을 15초로 증가
-            connection.readTimeout = 15000    // 타임아웃을 15초로 증가
+            connection.apply {
+                requestMethod = "GET"
+                connectTimeout = BatchConstants.API_TIMEOUT_MS
+                readTimeout = BatchConstants.API_TIMEOUT_MS
+                setRequestProperty("Accept", "application/json")
+                setRequestProperty("User-Agent", "KWeather-BatchProcessor/1.0")
+            }
 
             val responseCode = connection.responseCode
-            logger.info("Response code: {}", responseCode)
+            logger.debug(BatchConstants.LogMessages.API_RESPONSE_CODE, responseCode)
 
-            reader = if (responseCode >= 200 && responseCode < 300) {
-                BufferedReader(InputStreamReader(connection.inputStream, "UTF-8"))
+            val inputStream = if (responseCode in BatchConstants.HttpStatus.OK_MIN..BatchConstants.HttpStatus.OK_MAX) {
+                connection.inputStream
             } else {
-                BufferedReader(InputStreamReader(connection.errorStream, "UTF-8"))
+                connection.errorStream
             }
 
-            val response = StringBuilder()
-            var line: String?
-
-            while (reader.readLine().also { line = it } != null) {
-                response.append(line)
+            BufferedReader(InputStreamReader(inputStream, "UTF-8")).use { reader ->
+                reader.readText()
             }
-
-            return response.toString()
         } catch (e: Exception) {
-            logger.error("Failed to fetch data from API: {}", e.message)
+            logger.error(BatchConstants.LogMessages.API_DATA_FETCH_FAILED, e.message)
             throw e
         } finally {
-            reader?.close()
             connection?.disconnect()
         }
     }
 
     private fun buildApiUrl(pageNo: Int, numOfRows: Int): String {
-        return "${baseUrl}?ServiceKey=${serviceKey}" +
-                "&pageNo=${pageNo}" +
-                "&numOfRows=${numOfRows}" +
-                "&type=json" +
-                "&flag=Y"
+        return buildString {
+            append(baseUrl)
+            append("?ServiceKey=").append(serviceKey)
+            append("&pageNo=").append(pageNo)
+            append("&numOfRows=").append(numOfRows)
+            append("&type=json")
+            append("&flag=Y")
+        }
     }
 }
