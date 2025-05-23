@@ -1,6 +1,10 @@
 package com.kweather.domain.weather.model
 
+import com.fasterxml.jackson.annotation.JsonProperty
+
 data class Header(
-    val resultCode: String? = null,
-    val resultMsg: String? = null
+    @JsonProperty("resultCode")
+    val resultCode: String?,
+    @JsonProperty("resultMsg")
+    val resultMsg: String?
 )

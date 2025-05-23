@@ -142,16 +142,26 @@ class WeatherController(
         val senTaIndexData = weatherDataProvider.getSenTaIndexData(defaultAreaNo, apiTime)
         val airStagnationIndexData = weatherDataProvider.getAirStagnationIndexData(defaultAreaNo, apiTime)
 
-        print("uvIndexData: $uvIndexData")
-        print("senTaIndexData: $senTaIndexData")
-        print("airStagnationIndexData: $airStagnationIndexData")
+        // 숫자 시퀀스 생성
+        val uvHoursSequence = (0..75 step 3).toList() // 자외선 지수 (0, 3, 6, ..., 75)
+        val sentaHoursSequence = (1..31).toList() // 여름철 체감온도 (1, 2, ..., 31)
+        val asiHoursSequence = (3..78 step 3).toList() // 대기정체지수 (3, 6, ..., 78)
 
+        logger.debug("UVIndex 데이터: $uvIndexData")
+        logger.debug("SenTaIndex 데이터: $senTaIndexData")
+        logger.debug("AirStagnationIndex 데이터: $airStagnationIndexData")
+
+        logger.info("weatherData: $weatherData")
+        logger.info("dustForecast: $dustForecast")
+        logger.info("realTimeDust: $realTimeDust")
 
         val categorizedForecast = processDustForecastData(dustForecast)
-
         val timeOfDay = determineTimeOfDay(hour)
 
         addAttributesToModel(model, weatherData, dustForecast, realTimeDust, uvIndexData, senTaIndexData, airStagnationIndexData, categorizedForecast, timeOfDay, errorMessage)
+        model.addAttribute("uvHoursSequence", uvHoursSequence)
+        model.addAttribute("sentaHoursSequence", sentaHoursSequence)
+        model.addAttribute("asiHoursSequence", asiHoursSequence)
 
         return "domain/weather/weather"
     }
@@ -172,7 +182,7 @@ class WeatherController(
 
     private fun getCurrentDateTimeInfo(): Triple<String, String, Int> {
         val (date, time) = DateTimeUtils.getCurrentDateTimeFormatted()
-        val hour = DateTimeUtils.getCurrentHour()
+        val hour = DateTimeUtils.getCurrentHour() // 현재 시간: 21
         return Triple(date, time, hour)
     }
 
@@ -275,12 +285,17 @@ class WeatherController(
             measurement = "㎍/㎥"
         )
 
-    private fun createDefaultHourlyForecast(): List<HourlyForecast> =
-        listOf(
-            HourlyForecast("지금", "moon", "-1.8°C", "34%"),
-            HourlyForecast("0시", "moon", "-6°C", "55%"),
-            HourlyForecast("3시", "moon", "-6°C", "60%"),
-            HourlyForecast("6시", "moon", "-7°C", "67%"),
-            HourlyForecast("9시", "sun", "-6°C", "55%")
-        )
+    private fun createDefaultHourlyForecast(): List<HourlyForecast> {
+        val currentHour = DateTimeUtils.getCurrentHour() // 21
+        val currentHourIndex = currentHour / 3 * 3 // 21
+        val hours = listOf(0, 3, 6, 9, 12, 15, 18, 21)
+        return hours.mapIndexed { index, hourOffset ->
+            val forecastHour = (currentHourIndex + hourOffset) % 24 // 21, 0, 3, 6, 9, 12, 15, 18
+            val forecastTime = if (hourOffset == 0) "지금" else "${forecastHour}시"
+            val forecastIcon = if (forecastHour in 6..18) "sun" else "moon"
+            val forecastTemp = "-${index + 1}°C" // 기본값, 실제 데이터로 대체 필요
+            val forecastHumidity = "${(50 + index * 5)}%" // 기본값, 실제 데이터로 대체 필요
+            HourlyForecast(forecastTime, forecastIcon, forecastTemp, forecastHumidity)
+        }
+    }
 }

@@ -1,13 +1,16 @@
 package com.kweather.domain.senta.dto
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class SenTaIndexBody(
-    @JsonProperty("item")
-    val items: List<SenTaIndexItem>? = null,
-    val pageNo: Int? = null,
-    val numOfRows: Int? = null,
-    val totalCount: Int? = null
+    @JsonProperty("dataType")
+    val dataType: String?,
+    @JsonProperty("items")
+    val items: SenTaIndexItems?,
+    @JsonProperty("pageNo")
+    val pageNo: Int?,
+    @JsonProperty("numOfRows")
+    val numOfRows: Int?,
+    @JsonProperty("totalCount")
+    val totalCount: Int?
 )

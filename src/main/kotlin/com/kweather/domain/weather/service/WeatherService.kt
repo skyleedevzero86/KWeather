@@ -237,7 +237,7 @@ class WeatherService(
                 { it }
             )
 
-            logger.info("응답 수신 완료: ${response.take(500)}")
+            logger.info("응답 수신 완료: $response")
 
             if (response.trim().startsWith("<")) {
                 handleXmlErrorResponse(response)
@@ -257,11 +257,11 @@ class WeatherService(
     private fun handleXmlErrorResponse(response: String) {
         when {
             response.contains("SERVICE_KEY_IS_NOT_REGISTERED_ERROR") || response.contains("SERVICE ERROR") -> {
-                logger.error("API 키 오류: {}", response)
+                logger.error("API 키 오류: $response")
                 throw IllegalStateException("API 서비스 키 오류: 키가 유효하고 올바르게 형식화되었는지 확인하세요")
             }
             else -> {
-                logger.error("XML 오류 응답 수신: {}", response.take(500))
+                logger.error("XML 오류 응답 수신: $response")
             }
         }
     }
@@ -337,6 +337,7 @@ class WeatherService(
                     body = null
                 ))
             }
+            else -> throw IllegalStateException("예상치 못한 API 결과: $result")
         }
     }
 
@@ -344,17 +345,18 @@ class WeatherService(
         val params = DustForecastRequestParams(searchDate, informCode)
         val dustClient = DustForecastApiClient()
 
-        return when (val result = makeApiRequest(dustClient, params) { response: ForecastResponse ->
-            val forecastInfos = response.response?.body?.items?.mapNotNull { item: ForecastItem? ->
+        return when (val result = makeApiRequest(dustClient, params) { response ->
+            val forecastInfos = response.response?.body?.items?.item?.mapNotNull { item: ForecastItem? ->
                 item?.let { parseForecastItem(it, informCode) }
-            } ?: emptyList<ForecastInfo>()
+            } ?: emptyList()
             Either.Right(forecastInfos)
         }) {
             is ApiResult.Success -> result.data
             is ApiResult.Error -> {
                 logger.error("미세먼지 예보 API 요청 실패: ${result.message}")
-                throw IllegalStateException("미세먼지 예보 데이터 가져오기 실패: ${result.message}")
+                emptyList()
             }
+            else -> throw IllegalStateException("예상치 못한 API 결과: $result")
         }
     }
 
@@ -362,10 +364,10 @@ class WeatherService(
         val params = RealTimeDustRequestParams(sidoName = sidoName)
         val realTimeDustClient = RealTimeDustApiClient()
 
-        return when (val result = makeApiRequest(realTimeDustClient, params) { response: RealTimeDustResponse ->
-            val dustInfos = response.response?.body?.items?.mapNotNull { item ->
+        return when (val result = makeApiRequest(realTimeDustClient, params) { response ->
+            val dustInfos = response.response?.body?.items?.item?.mapNotNull { item: RealTimeDustItem? ->
                 item?.let { parseRealTimeDustItem(it) }
-            } ?: emptyList<RealTimeDustInfo>()
+            } ?: emptyList()
             Either.Right(dustInfos)
         }) {
             is ApiResult.Success -> result.data
@@ -373,6 +375,7 @@ class WeatherService(
                 logger.error("실시간 미세먼지 API 요청 실패: ${result.message}")
                 emptyList()
             }
+            else -> throw IllegalStateException("예상치 못한 API 결과: $result")
         }
     }
 
@@ -380,10 +383,11 @@ class WeatherService(
         val params = UVIndexRequestParams(areaNo = areaNo, time = time)
         val uvIndexClient = UVIndexApiClient()
 
-        return when (val result = makeApiRequest(uvIndexClient, params) { response: UVIndexResponse ->
-            val uvIndexInfos = response.response?.body?.items?.mapNotNull { item ->
+        return when (val result = makeApiRequest(uvIndexClient, params) { response ->
+            val uvIndexInfos = response.response?.body?.items?.item?.mapNotNull { item: UVIndexItem? ->
                 item?.let { parseUVIndexItem(it) }
-            } ?: emptyList<UVIndexInfo>()
+            } ?: emptyList()
+            logger.debug("파싱된 UVIndex 데이터: $uvIndexInfos")
             Either.Right(uvIndexInfos)
         }) {
             is ApiResult.Success -> result.data
@@ -391,6 +395,7 @@ class WeatherService(
                 logger.error("자외선 지수 API 요청 실패: ${result.message}")
                 emptyList()
             }
+            else -> throw IllegalStateException("예상치 못한 API 결과: $result")
         }
     }
 
@@ -398,17 +403,33 @@ class WeatherService(
         val params = SenTaIndexRequestParams(areaNo = areaNo, time = time)
         val senTaIndexClient = SenTaIndexApiClient()
 
-        return when (val result = makeApiRequest(senTaIndexClient, params) { response: SenTaIndexResponse ->
-            val senTaIndexInfos = response.response?.body?.items?.mapNotNull { item ->
-                item?.let { parseSenTaIndexItem(it) }
-            } ?: emptyList<SenTaIndexInfo>()
-            Either.Right(senTaIndexInfos)
+        // 5월~9월에만 데이터 제공
+        val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
+        val month = now.monthValue
+        if (month !in 5..9) {
+            logger.warn("여름철 체감온도 데이터는 5월~9월에만 제공됩니다. 현재 월: $month")
+            return emptyList()
+        }
+
+        return when (val result = makeApiRequest(senTaIndexClient, params) { response ->
+            val items = response.response?.body?.items?.item
+            if (items.isNullOrEmpty()) {
+                logger.warn("여름철 체감온도 데이터가 비어 있습니다. 응답: $response")
+                Either.Right(emptyList<SenTaIndexInfo>())
+            } else {
+                val senTaIndexInfos = items.mapNotNull { item: SenTaIndexItem? ->
+                    item?.let { parseSenTaIndexItem(it) }
+                }
+                logger.debug("파싱된 SenTaIndex 데이터: $senTaIndexInfos")
+                Either.Right(senTaIndexInfos)
+            }
         }) {
             is ApiResult.Success -> result.data
             is ApiResult.Error -> {
                 logger.error("여름철 체감온도 API 요청 실패: ${result.message}")
                 emptyList()
             }
+            else -> throw IllegalStateException("예상치 못한 API 결과: $result")
         }
     }
 
@@ -416,26 +437,28 @@ class WeatherService(
         val params = AirStagnationIndexRequestParams(areaNo = areaNo, time = time, pageNo = 1, numOfRows = 10, dataType = "json")
         val airStagnationIndexClient = AirStagnationIndexApiClient()
 
-        return when (val result = makeApiRequest(airStagnationIndexClient, params) { response: AirStagnationIndexResponse ->
+        return when (val result = makeApiRequest(airStagnationIndexClient, params) { response ->
             if (response.response?.header?.resultCode == "03" && response.response.header.resultMsg == "NO_DATA") {
                 logger.warn("대기정체지수 데이터 없음: time=$time, 이전 시간으로 재시도")
                 val previousTime = LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1)
                     .format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
                 val retryParams = AirStagnationIndexRequestParams(areaNo = areaNo, time = previousTime, pageNo = 1, numOfRows = 10, dataType = "json")
-                val retryResult = makeApiRequest(airStagnationIndexClient, retryParams) { retryResponse: AirStagnationIndexResponse ->
-                    val airStagnationIndexInfos = retryResponse.response?.body?.items?.mapNotNull { item ->
+                val retryResult = makeApiRequest(airStagnationIndexClient, retryParams) { retryResponse ->
+                    val airStagnationIndexInfos = retryResponse.response?.body?.items?.item?.mapNotNull { item: AirStagnationIndexItem? ->
                         item?.let { parseAirStagnationIndexItem(it) }
-                    } ?: emptyList<AirStagnationIndexInfo>()
+                    } ?: emptyList()
                     Either.Right(airStagnationIndexInfos)
                 }
                 when (retryResult) {
                     is ApiResult.Success -> Either.Right(retryResult.data)
-                    is ApiResult.Error -> Either.Right(emptyList<AirStagnationIndexInfo>())
+                    is ApiResult.Error -> Either.Right(emptyList())
+                    else -> throw IllegalStateException("예상치 못한 재시도 결과: $retryResult")
                 }
             } else {
-                val airStagnationIndexInfos = response.response?.body?.items?.mapNotNull { item ->
+                val airStagnationIndexInfos = response.response?.body?.items?.item?.mapNotNull { item: AirStagnationIndexItem? ->
                     item?.let { parseAirStagnationIndexItem(it) }
-                } ?: emptyList<AirStagnationIndexInfo>()
+                } ?: emptyList()
+                logger.debug("파싱된 AirStagnationIndex 데이터: $airStagnationIndexInfos")
                 Either.Right(airStagnationIndexInfos)
             }
         }) {
@@ -444,6 +467,7 @@ class WeatherService(
                 logger.error("대기정체지수 API 요청 실패: ${result.message}")
                 emptyList()
             }
+            else -> throw IllegalStateException("예상치 못한 API 결과: $result")
         }
     }
 
@@ -473,41 +497,27 @@ class WeatherService(
     private fun parseUVIndexItem(item: UVIndexItem): UVIndexInfo? =
         runCatching {
             val values = mutableMapOf<String, String>()
-            listOf("h0", "h3", "h6", "h9", "h12", "h15", "h18", "h21", "h24", "h27", "h30", "h33", "h36", "h39", "h42", "h45", "h48", "h51", "h54", "h57", "h60", "h63", "h66", "h69", "h72", "h75").forEach { key ->
-                val value = when (key) {
-                    "h0" -> item.h0
-                    "h3" -> item.h3
-                    "h6" -> item.h6
-                    "h9" -> item.h9
-                    "h12" -> item.h12
-                    "h15" -> item.h15
-                    "h18" -> item.h18
-                    "h21" -> item.h21
-                    "h24" -> item.h24
-                    "h27" -> item.h27
-                    "h30" -> item.h30
-                    "h33" -> item.h33
-                    "h36" -> item.h36
-                    "h39" -> item.h39
-                    "h42" -> item.h42
-                    "h45" -> item.h45
-                    "h48" -> item.h48
-                    "h51" -> item.h51
-                    "h54" -> item.h54
-                    "h57" -> item.h57
-                    "h60" -> item.h60
-                    "h63" -> item.h63
-                    "h66" -> item.h66
-                    "h69" -> item.h69
-                    "h72" -> item.h72
-                    "h75" -> item.h75
-                    else -> null
+            with(item) {
+                listOf(
+                    "h0" to h0, "h3" to h3, "h6" to h6, "h9" to h9,
+                    "h12" to h12, "h15" to h15, "h18" to h18, "h21" to h21,
+                    "h24" to h24, "h27" to h27, "h30" to h30, "h33" to h33,
+                    "h36" to h36, "h39" to h39, "h42" to h42, "h45" to h45,
+                    "h48" to h48, "h51" to h51, "h54" to h54, "h57" to h57,
+                    "h60" to h60, "h63" to h63, "h66" to h66, "h69" to h69,
+                    "h72" to h72, "h75" to h75
+                ).forEach { (key, value) ->
+                    if (value != null && value.isNotEmpty()) {
+                        logger.debug("UVIndexItem 필드 $key 값: $value")
+                        values[key] = value
+                    } else {
+                        logger.debug("UVIndexItem 필드 $key 값이 null 또는 비어있습니다: $value")
+                    }
                 }
-                if (!value.isNullOrEmpty()) {
-                    values[key] = value
-                } else {
-                    logger.debug("UVIndexItem 필드 $key 값이 null 또는 비어있습니다")
-                }
+            }
+            if (values.isEmpty()) {
+                logger.warn("UVIndexItem의 values 맵이 비어 있습니다: $item")
+                throw IllegalStateException("values 맵이 비어 있습니다")
             }
             UVIndexInfo(
                 date = item.date ?: throw IllegalArgumentException("날짜가 누락되었습니다"),
@@ -520,46 +530,28 @@ class WeatherService(
     private fun parseSenTaIndexItem(item: SenTaIndexItem): SenTaIndexInfo? =
         runCatching {
             val values = mutableMapOf<String, String>()
-            listOf("h1", "h2", "h3", "h4", "h5", "h6", "h7", "h8", "h9", "h10", "h11", "h12", "h13", "h14", "h15", "h16", "h17", "h18", "h19", "h20", "h21", "h22", "h23", "h24", "h25", "h26", "h27", "h28", "h29", "h30", "h31").forEach { key ->
-                val value = when (key) {
-                    "h1" -> item.h1
-                    "h2" -> item.h2
-                    "h3" -> item.h3
-                    "h4" -> item.h4
-                    "h5" -> item.h5
-                    "h6" -> item.h6
-                    "h7" -> item.h7
-                    "h8" -> item.h8
-                    "h9" -> item.h9
-                    "h10" -> item.h10
-                    "h11" -> item.h11
-                    "h12" -> item.h12
-                    "h13" -> item.h13
-                    "h14" -> item.h14
-                    "h15" -> item.h15
-                    "h16" -> item.h16
-                    "h17" -> item.h17
-                    "h18" -> item.h18
-                    "h19" -> item.h19
-                    "h20" -> item.h20
-                    "h21" -> item.h21
-                    "h22" -> item.h22
-                    "h23" -> item.h23
-                    "h24" -> item.h24
-                    "h25" -> item.h25
-                    "h26" -> item.h26
-                    "h27" -> item.h27
-                    "h28" -> item.h28
-                    "h29" -> item.h29
-                    "h30" -> item.h30
-                    "h31" -> item.h31
-                    else -> null
+            with(item) {
+                listOf(
+                    "h1" to h1, "h2" to h2, "h3" to h3, "h4" to h4,
+                    "h5" to h5, "h6" to h6, "h7" to h7, "h8" to h8,
+                    "h9" to h9, "h10" to h10, "h11" to h11, "h12" to h12,
+                    "h13" to h13, "h14" to h14, "h15" to h15, "h16" to h16,
+                    "h17" to h17, "h18" to h18, "h19" to h19, "h20" to h20,
+                    "h21" to h21, "h22" to h22, "h23" to h23, "h24" to h24,
+                    "h25" to h25, "h26" to h26, "h27" to h27, "h28" to h28,
+                    "h29" to h29, "h30" to h30, "h31" to h31
+                ).forEach { (key, value) ->
+                    if (value != null && value.isNotEmpty()) {
+                        logger.debug("SenTaIndexItem 필드 $key 값: $value")
+                        values[key] = value
+                    } else {
+                        logger.debug("SenTaIndexItem 필드 $key 값이 null 또는 비어있습니다: $value")
+                    }
                 }
-                if (!value.isNullOrEmpty()) {
-                    values[key] = value
-                } else {
-                    logger.debug("SenTaIndexItem 필드 $key 값이 null 또는 비어있습니다")
-                }
+            }
+            if (values.isEmpty()) {
+                logger.warn("SenTaIndexItem의 values 맵이 비어 있습니다: $item")
+                throw IllegalStateException("values 맵이 비어 있습니다")
             }
             SenTaIndexInfo(
                 date = item.date ?: throw IllegalArgumentException("날짜가 누락되었습니다"),
@@ -572,41 +564,27 @@ class WeatherService(
     private fun parseAirStagnationIndexItem(item: AirStagnationIndexItem): AirStagnationIndexInfo? =
         runCatching {
             val values = mutableMapOf<String, String>()
-            listOf("h3", "h6", "h9", "h12", "h15", "h18", "h21", "h24", "h27", "h30", "h33", "h36", "h39", "h42", "h45", "h48", "h51", "h54", "h57", "h60", "h63", "h66", "h69", "h72", "h75", "h78").forEach { key ->
-                val value = when (key) {
-                    "h3" -> item.h3
-                    "h6" -> item.h6
-                    "h9" -> item.h9
-                    "h12" -> item.h12
-                    "h15" -> item.h15
-                    "h18" -> item.h18
-                    "h21" -> item.h21
-                    "h24" -> item.h24
-                    "h27" -> item.h27
-                    "h30" -> item.h30
-                    "h33" -> item.h33
-                    "h36" -> item.h36
-                    "h39" -> item.h39
-                    "h42" -> item.h42
-                    "h45" -> item.h45
-                    "h48" -> item.h48
-                    "h51" -> item.h51
-                    "h54" -> item.h54
-                    "h57" -> item.h57
-                    "h60" -> item.h60
-                    "h63" -> item.h63
-                    "h66" -> item.h66
-                    "h69" -> item.h69
-                    "h72" -> item.h72
-                    "h75" -> item.h75
-                    "h78" -> item.h78
-                    else -> null
+            with(item) {
+                listOf(
+                    "h3" to h3, "h6" to h6, "h9" to h9, "h12" to h12,
+                    "h15" to h15, "h18" to h18, "h21" to h21, "h24" to h24,
+                    "h27" to h27, "h30" to h30, "h33" to h33, "h36" to h36,
+                    "h39" to h39, "h42" to h42, "h45" to h45, "h48" to h48,
+                    "h51" to h51, "h54" to h54, "h57" to h57, "h60" to h60,
+                    "h63" to h63, "h66" to h66, "h69" to h69, "h72" to h72,
+                    "h75" to h75, "h78" to h78
+                ).forEach { (key, value) ->
+                    if (value != null && value.isNotEmpty()) {
+                        logger.debug("AirStagnationIndexItem 필드 $key 값: $value")
+                        values[key] = value
+                    } else {
+                        logger.debug("AirStagnationIndexItem 필드 $key 값이 null 또는 비어있습니다: $value")
+                    }
                 }
-                if (!value.isNullOrEmpty()) {
-                    values[key] = value
-                } else {
-                    logger.debug("AirStagnationIndexItem 필드 $key 값이 null 또는 비어있습니다")
-                }
+            }
+            if (values.isEmpty()) {
+                logger.warn("AirStagnationIndexItem의 values 맵이 비어 있습니다: $item")
+                throw IllegalStateException("values 맵이 비어 있습니다")
             }
             AirStagnationIndexInfo(
                 date = item.date ?: throw IllegalArgumentException("날짜가 누락되었습니다"),
@@ -655,6 +633,7 @@ class WeatherService(
                 logger.error("재시도 실패: ${result.message}")
                 null
             }
+            else -> throw IllegalStateException("예상치 못한 재시도 결과: $result")
         }
     }
 
@@ -683,50 +662,45 @@ class WeatherService(
                 emptyList()
             }
             else -> {
-                response.response.body.items.item.mapNotNull { item ->
-                    parseWeatherItem(item)
-                }
+                response.response.body.items?.item?.mapNotNull { item: WeatherItem? ->
+                    item?.let { parseWeatherItem(it) }
+                } ?: emptyList()
             }
         }
 
-    private fun parseWeatherItem(item: WeatherItem?): WeatherInfo? =
-        item?.let {
-            runCatching {
-                WeatherInfo(
-                    baseDate = it.baseDate ?: throw IllegalArgumentException("기준날짜가 누락되었습니다"),
-                    baseTime = it.baseTime ?: throw IllegalArgumentException("기준시간이 누락되었습니다"),
-                    category = it.category ?: throw IllegalArgumentException("카테고리가 누락되었습니다"),
-                    value = it.obsrValue ?: throw IllegalArgumentException("관측값이 누락되었습니다"),
-                    unit = getUnitForCategory(it.category)
-                )
-            }.onFailure { e ->
-                logger.warn("유효하지 않은 날씨 항목을 건너뜁니다: ${e.message}")
-            }.getOrNull()
-        }
+    private fun parseWeatherItem(item: WeatherItem): WeatherInfo? =
+        runCatching {
+            WeatherInfo(
+                baseDate = item.baseDate ?: throw IllegalArgumentException("기준날짜가 누락되었습니다"),
+                baseTime = item.baseTime ?: throw IllegalArgumentException("기준시간이 누락되었습니다"),
+                category = item.category ?: throw IllegalArgumentException("카테고리가 누락되었습니다"),
+                value = item.obsrValue ?: throw IllegalArgumentException("관측값이 누락되었습니다"),
+                unit = getUnitForCategory(item.category)
+            )
+        }.onFailure { e ->
+            logger.warn("유효하지 않은 날씨 항목을 건너뜁니다: ${e.message}")
+        }.getOrNull()
 
     fun buildWeatherEntity(nx: Int, ny: Int): Weather {
-        // 기본 날씨 데이터 가져오기
         val response = getUltraShortWeather(nx, ny)
         val weatherInfoList = parseWeatherData(response)
-
-        // 실시간 데이터 가져오기
         val sidoName = "서울"
         val areaNo = "1100000000"
-        val apiTime = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
+        val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
+        val apiTime = now.minusHours(now.hour % 3L).format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
+        logger.info("SenTaIndex API 호출 시간: $apiTime")
         val realTimeDust = getRealTimeDust(sidoName)
         val uvIndexData = getUVIndex(areaNo, apiTime)
         val senTaIndexData = getSenTaIndex(areaNo, apiTime)
+        val airStagnationIndexData = getAirStagnationIndex(areaNo, apiTime)
 
-        // 현재 날짜와 시간
         val (date, time) = DateTimeUtils.getCurrentDateTimeFormatted()
-        val currentHour = DateTimeUtils.getCurrentHour()
+        val currentHour = DateTimeUtils.getCurrentHour() // 22 (22:10 KST)
 
-        // 온도 데이터
         val temperature = weatherInfoList.find { it.category == "T1H" }?.value?.let { "$it°C" } ?: "-1.8°C"
         val humidity = weatherInfoList.find { it.category == "REH" }?.value?.let { "$it%" } ?: "34%"
         val windSpeed = weatherInfoList.find { it.category == "WSD" }?.value?.let { "${it}m/s" } ?: "1km/초(남서) m/s 0"
 
-        // 날씨 조건
         val weatherCondition = weatherInfoList.find { it.category == "PTY" }?.value?.let {
             when (it) {
                 "0" -> "맑음"
@@ -737,7 +711,6 @@ class WeatherService(
             }
         } ?: "맑음"
 
-        // 미세먼지 데이터 (PM10)
         val airQuality = realTimeDust.firstOrNull()?.let {
             AirQuality(
                 title = "미세먼지",
@@ -748,30 +721,50 @@ class WeatherService(
             )
         } ?: createDefaultAirQuality()
 
-        // 초미세먼지 데이터 (PM2.5)
-        val uvIndex = realTimeDust.firstOrNull()?.let {
+        val uvIndex = uvIndexData.firstOrNull()?.let { uvInfo ->
+            val currentHourKey = "h${currentHour}" // h22
+            val uvValue = uvInfo.values[currentHourKey] ?: uvInfo.values["h24"] ?: "N/A"
+            val uvStatus = when (uvValue.toIntOrNull() ?: 0) {
+                in 0..2 -> "낮음"
+                in 3..5 -> "보통"
+                in 6..7 -> "높음"
+                in 8..10 -> "매우 높음"
+                11 -> "위험"
+                else -> "N/A"
+            }
             UVIndex(
-                title = "초미세먼지",
+                title = "자외선 지수",
                 icon = "yellow-smiley",
-                status = it.pm25Grade,
-                value = it.pm25Value,
-                measurement = "㎍/㎥"
+                status = uvStatus,
+                value = uvValue,
+                measurement = ""
             )
         } ?: createDefaultUVIndex()
 
-        // 시간대별 예보 (실제 데이터 기반으로 동적 생성)
         val hourlyForecast = mutableListOf<HourlyForecast>()
-        val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
-        val currentHourIndex = currentHour / 3 * 3 // 3시간 단위로 맞춤
+        val currentHourIndex = currentHour / 3 * 3 // 21 (22 / 3 * 3)
         val hours = listOf(0, 3, 6, 9, 12, 15, 18, 21)
 
         hours.forEachIndexed { index, hourOffset ->
             val forecastHour = (currentHourIndex + hourOffset) % 24
             val forecastTime = if (hourOffset == 0) "지금" else "${forecastHour}시"
             val forecastIcon = if (forecastHour in 6..18) "sun" else "moon"
-            val forecastTemp = senTaIndexData.firstOrNull()?.values?.get("h${hourOffset + 1}")?.let { "$it°C" } ?: "-${index + 1}°C"
-            val forecastHumidity = humidity // 실제 데이터로 대체 가능
-            hourlyForecast.add(HourlyForecast(forecastTime, forecastIcon, forecastTemp, forecastHumidity))
+
+
+            val senTaKeyHour = (forecastHour + 1)
+            val senTaKey = "h$senTaKeyHour"
+
+            val forecastTemp = if (senTaIndexData.isNotEmpty()) {
+                senTaIndexData.first().values[senTaKey]?.let { "$it°C" } ?: run {
+                    logger.warn("SenTaIndex 데이터에서 $senTaKey 값을 찾을 수 없습니다. 대체값 사용: $temperature")
+                    temperature
+                }
+            } else {
+                logger.warn("SenTaIndex 데이터가 비어 있습니다. 대체값 사용: $temperature")
+                temperature
+            }
+
+            hourlyForecast.add(HourlyForecast(forecastTime, forecastIcon, forecastTemp, humidity))
         }
 
         return Weather(
@@ -779,7 +772,7 @@ class WeatherService(
             time = time,
             location = "한남동 (용산구)",
             currentTemperature = temperature,
-            highLowTemperature = "-7°C / -1°C", // 실제 데이터로 대체 가능
+            highLowTemperature = "-7°C / -1°C",
             weatherCondition = weatherCondition,
             windSpeed = windSpeed,
             airQuality = airQuality,
@@ -799,11 +792,11 @@ class WeatherService(
 
     private fun createDefaultUVIndex(): UVIndex =
         UVIndex(
-            title = "초미세먼지",
+            title = "자외선 지수",
             icon = "yellow-smiley",
             status = "좋음",
             value = "8",
-            measurement = "㎍/㎥"
+            measurement = ""
         )
 
     private fun getUnitForCategory(category: String?): String =

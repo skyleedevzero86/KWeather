@@ -166,11 +166,11 @@
             <table class="forecast-table">
                 <tr>
                     <th>날짜</th>
-                    <th th:each="hour : ${#lists.sequence(0, 75, 3)}" th:text="'+' + ${hour} + '시간'"></th>
+                    <th th:each="hour : ${uvHoursSequence}" th:text="'+' + ${hour} + '시간'"></th>
                 </tr>
                 <tr th:each="uv : ${uvIndexData}">
                     <td th:text="${uv.date}"></td>
-                    <td th:each="hour : ${#lists.sequence(0, 75, 3)}">
+                    <td th:each="hour : ${uvHoursSequence}">
                         <span th:text="${uv.values['h' + hour] ?: 'N/A'}"></span>
                     </td>
                 </tr>
@@ -187,11 +187,11 @@
             <table class="forecast-table">
                 <tr>
                     <th>날짜</th>
-                    <th th:each="hour : ${#lists.sequence(1, 31, 1)}" th:text="'+' + ${hour - 1} + '시간'"></th>
+                    <th th:each="hour : ${sentaHoursSequence}" th:text="'+' + ${hour - 1} + '시간'"></th>
                 </tr>
                 <tr th:each="senta : ${senTaIndexData}">
                     <td th:text="${senta.date}"></td>
-                    <td th:each="hour : ${#lists.sequence(1, 31, 1)}">
+                    <td th:each="hour : ${sentaHoursSequence}">
                         <span th:text="${senta.values['h' + hour] ?: 'N/A'}"></span>
                     </td>
                 </tr>
@@ -208,11 +208,11 @@
             <table class="forecast-table">
                 <tr>
                     <th>날짜</th>
-                    <th th:each="hour : ${#lists.sequence(3, 78, 3)}" th:text="'+' + ${hour} + '시간'"></th>
+                    <th th:each="hour : ${asiHoursSequence}" th:text="'+' + ${hour} + '시간'"></th>
                 </tr>
                 <tr th:each="asi : ${airStagnationIndexData}">
                     <td th:text="${asi.date}"></td>
-                    <td th:each="hour : ${#lists.sequence(3, 78, 3)}">
+                    <td th:each="hour : ${asiHoursSequence}">
                         <span th:text="${asi.values['h' + hour] ?: 'N/A'}"></span>
                     </td>
                 </tr>
