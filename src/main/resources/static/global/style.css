@@ -1,3 +1,4 @@
+/* 기본 스타일 */
 body {
     background-color: #003087;
     color: white;
@@ -11,8 +12,8 @@ body {
 }
 
 .weather-container {
-    width: 100%;
-    max-width: 800px;
+    width: 90%;
+    max-width: 1400px;
     margin: 0 auto;
     background: #003087;
     border-radius: 20px;
@@ -20,6 +21,7 @@ body {
     flex-direction: column;
     gap: 30px;
     padding: 30px;
+    box-sizing: border-box;
 }
 
 .weather-header {
@@ -81,11 +83,9 @@ body {
     text-align: right;
 }
 
-.weather-condition {
-    font-size: 1.2em;
-}
-
-.humidity, .pm-value {
+.weather-condition,
+.humidity,
+.pm-value {
     font-size: 1.2em;
 }
 
@@ -95,7 +95,8 @@ body {
     gap: 20px;
 }
 
-.air-quality, .uv-index {
+.air-quality,
+.uv-index {
     flex: 1;
     text-align: center;
     padding: 20px;
@@ -116,7 +117,6 @@ body {
     font-size: 2em;
     display: block;
     margin-bottom: 10px;
-
     border: 2px solid black;
     border-radius: 5px;
     padding: 5px;
@@ -124,21 +124,32 @@ body {
     display: inline-block;
 }
 
-
 .status {
     font-size: 1em;
     margin: 5px 0;
 }
 
-.forecast-section {
+.forecast-section,
+.dust-forecast-section,
+.real-time-dust-section,
+.uv-index-forecast-section,
+.senta-index-forecast-section,
+.air-stagnation-index-forecast-section {
     text-align: center;
     padding: 20px;
     background: white;
     border-radius: 20px;
     color: black;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
 }
 
-.forecast-section h3 {
+.forecast-section h3,
+.dust-forecast-section h3,
+.real-time-dust-section h3,
+.uv-index-forecast-section h3,
+.senta-index-forecast-section h3,
+.air-stagnation-index-forecast-section h3 {
     font-size: 1.5em;
     margin-bottom: 20px;
     color: black;
@@ -180,9 +191,259 @@ body {
     color: #4a90e2;
 }
 
+/* 미세먼지 예보 슬라이드 스타일 */
+.dust-slider {
+    display: flex;
+    transition: transform 0.5s ease-in-out;
+    width: 100%;
+}
+
+.dust-forecast-item {
+    flex: 0 0 100%;
+    min-width: 100%;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 15px;
+    box-sizing: border-box;
+    overflow-x: auto;
+}
+
+.dust-forecast-item h4 {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+.dust-forecast-item p {
+    font-size: 1em;
+    margin: 5px 0;
+    text-align: left;
+}
+
+.forecast-images {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.forecast-images img {
+    max-width: 20%;
+    margin: 5px;
+    flex: 1 0 auto;
+}
+
+.image-title {
+    font-size: 1.3em;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 10px;
+    border: 2px solid black;
+    padding: 5px;
+}
+
+/* 슬라이드 버튼 스타일 */
+.slider-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    font-size: 1.5em;
+    border-radius: 5px;
+    z-index: 10;
+}
+
+.slider-btn.prev {
+    left: 10px;
+}
+
+.slider-btn.next {
+    right: 10px;
+}
+
+.slider-btn:disabled {
+    background: rgba(0, 0, 0, 0.2);
+    cursor: not-allowed;
+}
+
+/* 등급 스타일 */
+.grade-section {
+    text-align: center;
+    margin: 10px 0;
+    font-size: 1.5em;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.grade-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 auto;
+    table-layout: auto;
+}
+
+.grade-table th,
+.grade-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: center;
+    white-space: normal;
+    word-break: break-word;
+    max-width: 150px;
+}
+
+.grade-table th {
+    font-size: 1.3em;
+    border: 2px solid black;
+}
+
+.grade-title.good {
+    color: #0000FF;
+}
+
+.grade-title.moderate {
+    color: #00FF00;
+}
+
+.grade-title.bad {
+    color: #FF0000;
+}
+
+.grade-cell {
+    background: #f0f0f0;
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+
+/* 실시간 미세먼지 섹션 스타일 */
+.real-time-dust-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.real-time-dust-table th,
+.real-time-dust-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+.real-time-dust-table th {
+    font-size: 1.2em;
+    background-color: #f0f0f0;
+    border: 2px solid black;
+}
+
+/* 자외선 지수, 체감온도, 대기정체지수 테이블 스타일 */
+.forecast-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.forecast-table th,
+.forecast-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+.forecast-table th {
+    background: #f0f0f0;
+    font-weight: bold;
+}
+
+/* 등급 색상 스타일 */
+.grade-good {
+    color: #0000FF;
+    -webkit-text-stroke: 0.03em black;
+}
+
+.grade-moderate {
+    color: #00FF00;
+    -webkit-text-stroke: 0.03em black;
+}
+
+.grade-bad {
+    color: #FF0000;
+    -webkit-text-stroke: 0.03em black;
+}
+
+.grade-very-bad {
+    color: #800080;
+    -webkit-text-stroke: 0.03em black;
+}
+
+/* 아이콘 스타일 */
+.yellow-smiley::before {
+    content: "\f118";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    color: #FFD700;
+}
+
+/* 팝업 스타일 */
+.popup {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.popup-content {
+    position: relative;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 90%;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.popup-content img {
+    max-width: 100%;
+    max-height: 80vh;
+}
+
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: #000;
+    background: none;
+    border: none;
+    padding: 5px 10px;
+}
+
+.close-btn:hover {
+    color: #ff0000;
+}
+
+/* 기타 유틸리티 스타일 */
+.na-message {
+    color: #888;
+    font-style: italic;
+}
+
+/* 반응형 디자인 */
 @media (max-width: 1024px) {
     .weather-container {
-        max-width: 600px;
+        width: 95%;
+        padding: 20px;
     }
 
     .current-temp .temp-value {
@@ -192,12 +453,21 @@ body {
     .weather-header h1 {
         font-size: 1.8em;
     }
+
+    .forecast-images img {
+        max-width: 15%;
+    }
+
+    .grade-table th,
+    .grade-table td {
+        max-width: 120px;
+    }
 }
 
 @media (max-width: 768px) {
     .weather-container {
-        max-width: 450px;
-        padding: 20px;
+        width: 100%;
+        padding: 15px;
     }
 
     .current-temp .temp-value {
@@ -216,10 +486,13 @@ body {
 
     .weather-details {
         flex-direction: column;
+        align-items: center;
     }
 
-    .air-quality, .uv-index {
-        margin: 10px 0;
+    .air-quality,
+    .uv-index {
+        width: 100%;
+        margin-bottom: 10px;
     }
 
     .forecast-row {
@@ -229,12 +502,37 @@ body {
     .forecast-item {
         margin: 5px 0;
     }
+
+    .grade-table th,
+    .grade-table td {
+        padding: 5px;
+        font-size: 0.9em;
+        max-width: 100px;
+    }
+
+    .grade-table th {
+        font-size: 1.1em;
+    }
+
+    .real-time-dust-table th,
+    .real-time-dust-table td {
+        padding: 5px;
+        font-size: 0.9em;
+    }
+
+    .real-time-dust-table th {
+        font-size: 1em;
+    }
+
+    .forecast-images img {
+        max-width: 25%;
+    }
 }
 
 @media (max-width: 480px) {
     .weather-container {
-        max-width: 350px;
-        padding: 15px;
+        width: 100%;
+        padding: 10px;
     }
 
     .current-temp .temp-value {
@@ -247,5 +545,35 @@ body {
 
     .weather-info {
         gap: 8px;
+    }
+
+    .grade-table th,
+    .grade-table td {
+        padding: 3px;
+        font-size: 0.8em;
+        max-width: 80px;
+    }
+
+    .grade-table th {
+        font-size: 1em;
+    }
+
+    .real-time-dust-table th,
+    .real-time-dust-table td {
+        padding: 3px;
+        font-size: 0.8em;
+    }
+
+    .real-time-dust-table th {
+        font-size: 0.9em;
+    }
+
+    .slider-btn {
+        padding: 5px;
+        font-size: 1.2em;
+    }
+
+    .forecast-images img {
+        max-width: 30%;
     }
 }

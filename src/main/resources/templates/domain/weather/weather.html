@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Forecast</title>
+    <title>날씨 예보</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" th:href="@{/static/global/global.css}" />
     <link rel="stylesheet" th:href="@{/static/global/style.css}" />
@@ -26,7 +26,7 @@
             <div class="weather-info">
                 <div class="weather-condition" th:text="${weather.weatherCondition}"></div>
                 <div class="humidity" th:text="'습도 ' + ${weather.hourlyForecast[0].humidity}"></div>
-                <div class="pm-value" th:text="'미세조 ' + ${weather.airQuality.value}"></div>
+                <div class="pm-value" th:text="'미세먼지 ' + ${weather.airQuality.value}"></div>
             </div>
         </div>
     </div>
@@ -55,6 +55,236 @@
             </div>
         </div>
     </div>
+    <div class="dust-forecast-section">
+        <h3>미세먼지 예보</h3>
+        <div th:if="${dustForecast != null}">
+            <button th:if="${#lists.size(dustForecast) > 1}" class="slider-btn prev" onclick="moveSlide(-1)">❮</button>
+            <div class="dust-slider" id="dustSlider">
+                <div th:each="forecast, iter : ${dustForecast}" class="dust-forecast-item">
+                    <h4 th:text="${forecast.date} + ' (' + ${forecast.type} + ')'"></h4>
+                    <p th:text="'시간: ' + ${forecast.dataTime}"></p>
+                    <p class="overall-text" th:text="${forecast.overall}" th:unless="${forecast.overall == 'N/A'}"></p>
+                    <p class="cause-text" th:text="${forecast.cause}" th:unless="${forecast.cause == 'N/A'}"></p>
+                    <div class="grade-section">
+                        <table class="grade-table">
+                            <tr>
+                                <th th:if="${not #lists.isEmpty(categorizedForecast[iter.index].first) and not (categorizedForecast[iter.index].first.size() == 1 and categorizedForecast[iter.index].first[0] == 'N/A')}"
+                                    class="grade-title good">좋음</th>
+                                <th th:if="${not #lists.isEmpty(categorizedForecast[iter.index].second) and not (categorizedForecast[iter.index].second.size() == 1 and categorizedForecast[iter.index].second[0] == 'N/A')}"
+                                    class="grade-title moderate">보통</th>
+                                <th th:if="${not #lists.isEmpty(categorizedForecast[iter.index].third) and not (categorizedForecast[iter.index].third.size() == 1 and categorizedForecast[iter.index].third[0] == 'N/A')}"
+                                    class="grade-title bad">나쁨</th>
+                            </tr>
+                            <th:block th:with="forecastData=${categorizedForecast[iter.index] != null ? categorizedForecast[iter.index] : null},
+                                             maxRows=${forecastData != null ? (#lists.size(forecastData.first) > #lists.size(forecastData.second) ?
+                                              (#lists.size(forecastData.first) > #lists.size(forecastData.third) ? #lists.size(forecastData.first) : #lists.size(forecastData.third)) :
+                                              (#lists.size(forecastData.second) > #lists.size(forecastData.third) ? #lists.size(forecastData.second) : #lists.size(forecastData.third))) : 0}">
+                                <tr th:each="i : ${#numbers.sequence(0, maxRows > 0 ? maxRows - 1 : 0)}">
+                                    <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].first) and not (categorizedForecast[iter.index].first.size() == 1 and categorizedForecast[iter.index].first[0] == 'N/A')}"
+                                        th:text="${#lists.size(categorizedForecast[iter.index].first) > i ? categorizedForecast[iter.index].first[i] : ''}"
+                                        th:unless="${#lists.size(categorizedForecast[iter.index].first) > i and categorizedForecast[iter.index].first[i] == 'N/A'}"
+                                        class="grade-cell good"></td>
+                                    <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].second) and not (categorizedForecast[iter.index].second.size() == 1 and categorizedForecast[iter.index].second[0] == 'N/A')}"
+                                        th:text="${#lists.size(categorizedForecast[iter.index].second) > i ? categorizedForecast[iter.index].second[i] : ''}"
+                                        th:unless="${#lists.size(categorizedForecast[iter.index].second) > i and categorizedForecast[iter.index].second[i] == 'N/A'}"
+                                        class="grade-cell moderate"></td>
+                                    <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].third) and not (categorizedForecast[iter.index].third.size() == 1 and categorizedForecast[iter.index].third[0] == 'N/A')}"
+                                        th:text="${#lists.size(categorizedForecast[iter.index].third) > i ? categorizedForecast[iter.index].third[i] : ''}"
+                                        th:unless="${#lists.size(categorizedForecast[iter.index].third) > i and categorizedForecast[iter.index].third[i] == 'N/A'}"
+                                        class="grade-cell bad"></td>
+                                </tr>
+                            </th:block>
+                        </table>
+                    </div>
+                    <div th:if="${forecast.imageUrls != null and not #lists.isEmpty(forecast.imageUrls)}">
+                        <h5 class="image-title">예보 이미지</h5>
+                        <div class="forecast-images">
+                            <img th:each="url : ${forecast.imageUrls}" th:src="${url}" alt="예보 이미지" onclick="openPopup(this.src)" />
+                        </div>
+                    </div>
+                    <div th:if="${forecast.imageUrls == null or #lists.isEmpty(forecast.imageUrls)}">
+                        <h5 class="image-title">이미지 없음</h5>
+                    </div>
+                </div>
+            </div>
+            <button th:if="${#lists.size(dustForecast) > 1}" class="slider-btn next" onclick="moveSlide(1)">❯</button>
+        </div>
+        <div th:if="${dustForecast == null}">
+            <p>미세먼지 예보 데이터를 불러올 수 없습니다. (날짜 형식이 잘못되었거나 API 요청이 실패했습니다.)</p>
+        </div>
+    </div>
+    <div class="real-time-dust-section">
+        <h3>실시간 미세먼지</h3>
+        <div th:if="${realTimeDust != null and not #lists.isEmpty(realTimeDust)}">
+            <table class="real-time-dust-table">
+                <tr>
+                    <th>시도</th>
+                    <th>측정소</th>
+                    <th>측정 시간</th>
+                    <th>미세먼지(PM10)</th>
+                    <th>미세먼지 등급</th>
+                    <th>초미세먼지(PM2.5)</th>
+                    <th>초미세먼지 등급</th>
+                </tr>
+                <tr th:each="dust : ${realTimeDust}">
+                    <td th:text="${dust.sidoName}"></td>
+                    <td th:text="${dust.stationName}"></td>
+                    <td th:text="${dust.dataTime}"></td>
+                    <td>
+                        <span th:if="${dust.pm10Value != 'N/A'}" th:text="${dust.pm10Value} + ' μg/m³'"></span>
+                        <span th:if="${dust.pm10Value == 'N/A'}" class="na-message" th:text="'측정 중'"></span>
+                    </td>
+                    <td class="grade-cell" th:switch="${dust.pm10Grade}">
+                        <span th:case="'N/A'" class="na-message" th:text="'측정 중'"></span>
+                        <span th:case="'좋음'" class="grade-good" th:text="'좋음'"></span>
+                        <span th:case="'보통'" class="grade-moderate" th:text="'보통'"></span>
+                        <span th:case="'나쁨'" class="grade-bad" th:text="'나쁨'"></span>
+                        <span th:case="'매우나쁨'" class="grade-very-bad" th:text="'매우나쁨'"></span>
+                    </td>
+                    <td>
+                        <span th:if="${dust.pm25Value != 'N/A'}" th:text="${dust.pm25Value} + ' μg/m³'"></span>
+                        <span th:if="${dust.pm25Value == 'N/A'}" class="na-message" th:text="'측정 중'"></span>
+                    </td>
+                    <td class="grade-cell" th:switch="${dust.pm25Grade}">
+                        <span th:case="'N/A'" class="na-message" th:text="'측정 중'"></span>
+                        <span th:case="'좋음'" class="grade-good" th:text="'좋음'"></span>
+                        <span th:case="'보통'" class="grade-moderate" th:text="'보통'"></span>
+                        <span th:case="'나쁨'" class="grade-bad" th:text="'나쁨'"></span>
+                        <span th:case="'매우나쁨'" class="grade-very-bad" th:text="'매우나쁨'"></span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div th:if="${realTimeDust == null or #lists.isEmpty(realTimeDust)}">
+            <p th:text="${errorMessage != null ? errorMessage : '실시간 미세먼지 데이터를 불러올 수 없습니다.'}" style="color: red;"></p>
+        </div>
+    </div>
+    <!-- 자외선 지수 섹션 -->
+    <div class="uv-index-forecast-section">
+        <h3>자외선 지수 예보</h3>
+        <div th:if="${uvIndexData != null and not #lists.isEmpty(uvIndexData)}">
+            <table class="forecast-table">
+                <tr>
+                    <th>날짜</th>
+                    <th th:each="hour : ${#lists.sequence(0, 75, 3)}" th:text="'+' + ${hour} + '시간'"></th>
+                </tr>
+                <tr th:each="uv : ${uvIndexData}">
+                    <td th:text="${uv.date}"></td>
+                    <td th:each="hour : ${#lists.sequence(0, 75, 3)}">
+                        <span th:text="${uv.values['h' + hour] ?: 'N/A'}"></span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div th:if="${uvIndexData == null or #lists.isEmpty(uvIndexData)}">
+            <p style="color: red;">자외선 지수 데이터를 불러올 수 없습니다.</p>
+        </div>
+    </div>
+    <!-- 여름철 체감온도 섹션 -->
+    <div class="senta-index-forecast-section">
+        <h3>여름철 체감온도 예보 (5월~9월)</h3>
+        <div th:if="${senTaIndexData != null and not #lists.isEmpty(senTaIndexData)}">
+            <table class="forecast-table">
+                <tr>
+                    <th>날짜</th>
+                    <th th:each="hour : ${#lists.sequence(0, 78, 1)}" th:text="'+' + ${hour} + '시간'"></th>
+                </tr>
+                <tr th:each="senta : ${senTaIndexData}">
+                    <td th:text="${senta.date}"></td>
+                    <td th:each="hour : ${#lists.sequence(0, 78, 1)}">
+                        <span th:text="${senta.values['h' + hour] ?: 'N/A'}"></span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div th:if="${senTaIndexData == null or #lists.isEmpty(senTaIndexData)}">
+            <p style="color: red;">체감온도 데이터를 불러올 수 없습니다. (5월~9월에만 제공됩니다.)</p>
+        </div>
+    </div>
+    <!-- 대기정체지수 섹션 -->
+    <div class="air-stagnation-index-forecast-section">
+        <h3>대기정체지수 예보</h3>
+        <div th:if="${airStagnationIndexData != null and not #lists.isEmpty(airStagnationIndexData)}">
+            <table class="forecast-table">
+                <tr>
+                    <th>날짜</th>
+                    <th th:each="hour : ${#lists.sequence(3, 78, 3)}" th:text="'+' + ${hour} + '시간'"></th>
+                </tr>
+                <tr th:each="asi : ${airStagnationIndexData}">
+                    <td th:text="${asi.date}"></td>
+                    <td th:each="hour : ${#lists.sequence(3, 78, 3)}">
+                        <span th:text="${asi.values['h' + hour] ?: 'N/A'}"></span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div th:if="${airStagnationIndexData == null or #lists.isEmpty(airStagnationIndexData)}">
+            <p style="color: red;">대기정체지수 데이터를 불러올 수 없습니다.</p>
+        </div>
+    </div>
 </div>
+
+<div id="imagePopup" class="popup">
+    <div class="popup-content">
+        <button class="close-btn" onclick="closePopup()">X</button>
+        <img id="popupImage" src="" alt="확대된 이미지">
+    </div>
+</div>
+
+<script>
+    let currentSlide = 0;
+    let totalSlides = document.querySelectorAll('.dust-forecast-item').length;
+
+    function updateSlidePosition() {
+        const slider = document.getElementById('dustSlider');
+        slider.style.transform = `translateX(-${currentSlide * 100}%)`;
+
+        const prevBtn = document.querySelector('.slider-btn.prev');
+        const nextBtn = document.querySelector('.slider-btn.next');
+        if (prevBtn) prevBtn.disabled = currentSlide === 0;
+        if (nextBtn) nextBtn.disabled = currentSlide === totalSlides - 1;
+    }
+
+    function moveSlide(direction) {
+        currentSlide += direction;
+        if (currentSlide < 0) currentSlide = 0;
+        if (currentSlide >= totalSlides) currentSlide = totalSlides - 1;
+        updateSlidePosition();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.overall-text').forEach(element => {
+            element.textContent = removeParentheses(element.textContent);
+        });
+        document.querySelectorAll('.cause-text').forEach(element => {
+            element.textContent = removeParentheses(element.textContent);
+        });
+
+        if (totalSlides <= 1) {
+            const prevBtn = document.querySelector('.slider-btn.prev');
+            const nextBtn = document.querySelector('.slider-btn.next');
+            if (prevBtn) prevBtn.style.display = 'none';
+            if (nextBtn) nextBtn.style.display = 'none';
+        } else {
+            updateSlidePosition();
+        }
+    });
+
+    function removeParentheses(text) {
+        return text.replace(/\([^()]*\)/g, '').replace(/\[.*?\]/g, '').replace(/\./g, '').trim();
+    }
+
+    function openPopup(imageUrl) {
+        const popup = document.getElementById('imagePopup');
+        const popupImage = document.getElementById('popupImage');
+        popupImage.src = imageUrl;
+        popup.style.display = 'flex';
+    }
+
+    function closePopup() {
+        const popup = document.getElementById('imagePopup');
+        popup.style.display = 'none';
+    }
+</script>
 </body>
 </html>
