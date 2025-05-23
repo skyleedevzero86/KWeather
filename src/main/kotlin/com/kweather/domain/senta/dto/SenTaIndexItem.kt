@@ -34,5 +34,6 @@ data class SenTaIndexItem(
     val h28: String?,
     val h29: String?,
     val h30: String?,
-    val h31: String?
+    val h31: String?,
+    val h32: String?
 )

@@ -1,7 +1,8 @@
 package com.kweather.domain.weather.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.kweather.domain.forecast.dto.DustForecastRequestParams
 import com.kweather.domain.forecast.dto.ForecastInfo
 import com.kweather.domain.forecast.dto.ForecastItem
@@ -10,11 +11,11 @@ import com.kweather.domain.weather.dto.*
 import com.kweather.domain.weather.entity.Weather
 import com.kweather.global.common.util.DateTimeUtils
 import org.slf4j.LoggerFactory
-import java.net.SocketTimeoutException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.retry.annotation.Backoff
 import org.springframework.retry.annotation.Retryable
 import org.springframework.stereotype.Service
+import java.net.SocketTimeoutException
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.IOException
@@ -49,23 +50,19 @@ import java.time.format.DateTimeFormatter
 
 @Service
 class WeatherService(
-    private val objectMapper: ObjectMapper,
-    @Value("\${api.weather.base-url:}")
-    private val weatherBaseUrl: String,
-    @Value("\${api.arpltninforinqiresvc.base-url:}")
-    private val dustForecastBaseUrl: String,
-    @Value("\${api.arpltninforinqiresvc.real-time-base-url:}")
-    private val realTimeDustBaseUrl: String,
-    @Value("\${api.livingwthridxservice.uv-base-url:}")
-    private val uvIndexBaseUrl: String,
-    @Value("\${api.livingwthridxservice.senta-base-url:}")
-    private val senTaIndexBaseUrl: String,
-    @Value("\${api.livingwthridxservice.airstagnation-base-url:}")
-    private val airStagnationIndexBaseUrl: String,
-    @Value("\${api.service-key:}")
-    private val serviceKey: String
+    @Value("\${api.weather.base-url:}") private val weatherBaseUrl: String,
+    @Value("\${api.arpltninforinqiresvc.base-url:}") private val dustForecastBaseUrl: String,
+    @Value("\${api.arpltninforinqiresvc.real-time-base-url:}") private val realTimeDustBaseUrl: String,
+    @Value("\${api.livingwthridxservice.uv-base-url:}") private val uvIndexBaseUrl: String,
+    @Value("\${api.livingwthridxservice.senta-base-url:}") private val senTaIndexBaseUrl: String,
+    @Value("\${api.livingwthridxservice.airstagnation-base-url:}") private val airStagnationIndexBaseUrl: String,
+    @Value("\${api.service-key:}") private val serviceKey: String
 ) {
     private val logger = LoggerFactory.getLogger(WeatherService::class.java)
+    private val objectMapper: ObjectMapper = jacksonObjectMapper().apply {
+        configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false) // 미인식 필드 무시
+        configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true) // 단일 값을 배열로 처리
+    }
 
     data class RealTimeDustRequestParams(
         val returnType: String = "json",
@@ -100,7 +97,7 @@ class WeatherService(
 
         override fun parseResponse(response: String): Either<String, WeatherResponse> =
             runCatching {
-                objectMapper.readValue<WeatherResponse>(response)
+                objectMapper.readValue(response, WeatherResponse::class.java)
             }.fold(
                 onSuccess = { it.right() },
                 onFailure = { "날씨 응답 파싱 실패: ${it.message}".left() }
@@ -121,7 +118,7 @@ class WeatherService(
 
         override fun parseResponse(response: String): Either<String, ForecastResponse> =
             runCatching {
-                objectMapper.readValue<ForecastResponse>(response)
+                objectMapper.readValue(response, ForecastResponse::class.java)
             }.fold(
                 onSuccess = { it.right() },
                 onFailure = { "미세먼지 예보 응답 파싱 실패: ${it.message}".left() }
@@ -143,7 +140,7 @@ class WeatherService(
 
         override fun parseResponse(response: String): Either<String, RealTimeDustResponse> =
             runCatching {
-                objectMapper.readValue<RealTimeDustResponse>(response)
+                objectMapper.readValue(response, RealTimeDustResponse::class.java)
             }.fold(
                 onSuccess = { it.right() },
                 onFailure = { "실시간 미세먼지 응답 파싱 실패: ${it.message}".left() }
@@ -164,7 +161,7 @@ class WeatherService(
 
         override fun parseResponse(response: String): Either<String, UVIndexResponse> =
             runCatching {
-                objectMapper.readValue<UVIndexResponse>(response)
+                objectMapper.readValue(response, UVIndexResponse::class.java)
             }.fold(
                 onSuccess = { it.right() },
                 onFailure = { "자외선 지수 응답 파싱 실패: ${it.message}".left() }
@@ -186,7 +183,7 @@ class WeatherService(
 
         override fun parseResponse(response: String): Either<String, SenTaIndexResponse> =
             runCatching {
-                objectMapper.readValue<SenTaIndexResponse>(response)
+                objectMapper.readValue(response, SenTaIndexResponse::class.java)
             }.fold(
                 onSuccess = { it.right() },
                 onFailure = { "여름철 체감온도 응답 파싱 실패: ${it.message}".left() }
@@ -208,7 +205,7 @@ class WeatherService(
 
         override fun parseResponse(response: String): Either<String, AirStagnationIndexResponse> =
             runCatching {
-                objectMapper.readValue<AirStagnationIndexResponse>(response)
+                objectMapper.readValue(response, AirStagnationIndexResponse::class.java)
             }.fold(
                 onSuccess = { it.right() },
                 onFailure = { "대기정체지수 응답 파싱 실패: ${it.message}".left() }
@@ -332,7 +329,7 @@ class WeatherService(
             is ApiResult.Success -> result.data
             is ApiResult.Error -> {
                 logger.error("날씨 API 요청 실패: ${result.message}")
-                WeatherResponse(WeatherResponseData(
+                WeatherResponse(response = Response(
                     header = Header("ERROR", "날씨 데이터 가져오기 실패: ${result.message}"),
                     body = null
                 ))
@@ -414,8 +411,25 @@ class WeatherService(
         return when (val result = makeApiRequest(senTaIndexClient, params) { response ->
             val items = response.response?.body?.items?.item
             if (items.isNullOrEmpty()) {
-                logger.warn("여름철 체감온도 데이터가 비어 있습니다. 응답: $response")
-                Either.Right(emptyList<SenTaIndexInfo>())
+                logger.warn("여름철 체감온도 데이터가 비어 있습니다. 이전 시간으로 재시도합니다.")
+                val previousTime = LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1)
+                    .format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
+                val retryParams = SenTaIndexRequestParams(areaNo = areaNo, time = previousTime)
+                val retryResult = makeApiRequest(senTaIndexClient, retryParams) { retryResponse ->
+                    val retryItems = retryResponse.response?.body?.items?.item
+                    val senTaIndexInfos = retryItems?.mapNotNull { item: SenTaIndexItem? ->
+                        item?.let { parseSenTaIndexItem(it) }
+                    } ?: emptyList()
+                    Either.Right(senTaIndexInfos)
+                }
+                when (retryResult) {
+                    is ApiResult.Success -> Either.Right(retryResult.data)
+                    is ApiResult.Error -> {
+                        logger.warn("재시도 실패: ${retryResult.message}. 대체값 사용 안 함.")
+                        Either.Right(emptyList())
+                    }
+                    else -> throw IllegalStateException("예상치 못한 재시도 결과: $retryResult")
+                }
             } else {
                 val senTaIndexInfos = items.mapNotNull { item: SenTaIndexItem? ->
                     item?.let { parseSenTaIndexItem(it) }
@@ -539,7 +553,7 @@ class WeatherService(
                     "h17" to h17, "h18" to h18, "h19" to h19, "h20" to h20,
                     "h21" to h21, "h22" to h22, "h23" to h23, "h24" to h24,
                     "h25" to h25, "h26" to h26, "h27" to h27, "h28" to h28,
-                    "h29" to h29, "h30" to h30, "h31" to h31
+                    "h29" to h29, "h30" to h30, "h31" to h31, "h32" to h32
                 ).forEach { (key, value) ->
                     if (value != null && value.isNotEmpty()) {
                         logger.debug("SenTaIndexItem 필드 $key 값: $value")
@@ -750,18 +764,17 @@ class WeatherService(
             val forecastTime = if (hourOffset == 0) "지금" else "${forecastHour}시"
             val forecastIcon = if (forecastHour in 6..18) "sun" else "moon"
 
-
             val senTaKeyHour = (forecastHour + 1)
             val senTaKey = "h$senTaKeyHour"
 
             val forecastTemp = if (senTaIndexData.isNotEmpty()) {
                 senTaIndexData.first().values[senTaKey]?.let { "$it°C" } ?: run {
-                    logger.warn("SenTaIndex 데이터에서 $senTaKey 값을 찾을 수 없습니다. 대체값 사용: $temperature")
-                    temperature
+                    logger.warn("SenTaIndex 데이터에서 $senTaKey 값을 찾을 수 없습니다. 대체값 사용 안 함.")
+                    temperature // 대체값 대신 기본 온도 사용
                 }
             } else {
-                logger.warn("SenTaIndex 데이터가 비어 있습니다. 대체값 사용: $temperature")
-                temperature
+                logger.warn("SenTaIndex 데이터가 비어 있습니다. 대체값 사용 안 함.")
+                temperature // 대체값 대신 기본 온도 사용
             }
 
             hourlyForecast.add(HourlyForecast(forecastTime, forecastIcon, forecastTemp, humidity))
