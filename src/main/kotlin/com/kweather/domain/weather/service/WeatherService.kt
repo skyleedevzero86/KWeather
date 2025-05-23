@@ -215,7 +215,6 @@ class WeatherService(
             )
     }
 
-
     @Retryable(
         value = [SocketTimeoutException::class, IOException::class],
         maxAttempts = 5,
@@ -475,7 +474,35 @@ class WeatherService(
         runCatching {
             val values = mutableMapOf<String, String>()
             listOf("h0", "h3", "h6", "h9", "h12", "h15", "h18", "h21", "h24", "h27", "h30", "h33", "h36", "h39", "h42", "h45", "h48", "h51", "h54", "h57", "h60", "h63", "h66", "h69", "h72", "h75").forEach { key ->
-                val value = item.javaClass.getDeclaredField(key).apply { isAccessible = true }.get(item)?.toString()
+                val value = when (key) {
+                    "h0" -> item.h0
+                    "h3" -> item.h3
+                    "h6" -> item.h6
+                    "h9" -> item.h9
+                    "h12" -> item.h12
+                    "h15" -> item.h15
+                    "h18" -> item.h18
+                    "h21" -> item.h21
+                    "h24" -> item.h24
+                    "h27" -> item.h27
+                    "h30" -> item.h30
+                    "h33" -> item.h33
+                    "h36" -> item.h36
+                    "h39" -> item.h39
+                    "h42" -> item.h42
+                    "h45" -> item.h45
+                    "h48" -> item.h48
+                    "h51" -> item.h51
+                    "h54" -> item.h54
+                    "h57" -> item.h57
+                    "h60" -> item.h60
+                    "h63" -> item.h63
+                    "h66" -> item.h66
+                    "h69" -> item.h69
+                    "h72" -> item.h72
+                    "h75" -> item.h75
+                    else -> null
+                }
                 if (!value.isNullOrEmpty()) {
                     values[key] = value
                 } else {
@@ -493,8 +520,41 @@ class WeatherService(
     private fun parseSenTaIndexItem(item: SenTaIndexItem): SenTaIndexInfo? =
         runCatching {
             val values = mutableMapOf<String, String>()
-            listOf("h0", "h3", "h6", "h9", "h12", "h15", "h18", "h21", "h24", "h27", "h30", "h33", "h36", "h39", "h42", "h45", "h48", "h51", "h54", "h57", "h60", "h63", "h66", "h69", "h72", "h75").forEach { key ->
-                val value = item.javaClass.getDeclaredField(key).apply { isAccessible = true }.get(item)?.toString()
+            listOf("h1", "h2", "h3", "h4", "h5", "h6", "h7", "h8", "h9", "h10", "h11", "h12", "h13", "h14", "h15", "h16", "h17", "h18", "h19", "h20", "h21", "h22", "h23", "h24", "h25", "h26", "h27", "h28", "h29", "h30", "h31").forEach { key ->
+                val value = when (key) {
+                    "h1" -> item.h1
+                    "h2" -> item.h2
+                    "h3" -> item.h3
+                    "h4" -> item.h4
+                    "h5" -> item.h5
+                    "h6" -> item.h6
+                    "h7" -> item.h7
+                    "h8" -> item.h8
+                    "h9" -> item.h9
+                    "h10" -> item.h10
+                    "h11" -> item.h11
+                    "h12" -> item.h12
+                    "h13" -> item.h13
+                    "h14" -> item.h14
+                    "h15" -> item.h15
+                    "h16" -> item.h16
+                    "h17" -> item.h17
+                    "h18" -> item.h18
+                    "h19" -> item.h19
+                    "h20" -> item.h20
+                    "h21" -> item.h21
+                    "h22" -> item.h22
+                    "h23" -> item.h23
+                    "h24" -> item.h24
+                    "h25" -> item.h25
+                    "h26" -> item.h26
+                    "h27" -> item.h27
+                    "h28" -> item.h28
+                    "h29" -> item.h29
+                    "h30" -> item.h30
+                    "h31" -> item.h31
+                    else -> null
+                }
                 if (!value.isNullOrEmpty()) {
                     values[key] = value
                 } else {
@@ -513,7 +573,35 @@ class WeatherService(
         runCatching {
             val values = mutableMapOf<String, String>()
             listOf("h3", "h6", "h9", "h12", "h15", "h18", "h21", "h24", "h27", "h30", "h33", "h36", "h39", "h42", "h45", "h48", "h51", "h54", "h57", "h60", "h63", "h66", "h69", "h72", "h75", "h78").forEach { key ->
-                val value = item.javaClass.getDeclaredField(key).apply { isAccessible = true }.get(item)?.toString()
+                val value = when (key) {
+                    "h3" -> item.h3
+                    "h6" -> item.h6
+                    "h9" -> item.h9
+                    "h12" -> item.h12
+                    "h15" -> item.h15
+                    "h18" -> item.h18
+                    "h21" -> item.h21
+                    "h24" -> item.h24
+                    "h27" -> item.h27
+                    "h30" -> item.h30
+                    "h33" -> item.h33
+                    "h36" -> item.h36
+                    "h39" -> item.h39
+                    "h42" -> item.h42
+                    "h45" -> item.h45
+                    "h48" -> item.h48
+                    "h51" -> item.h51
+                    "h54" -> item.h54
+                    "h57" -> item.h57
+                    "h60" -> item.h60
+                    "h63" -> item.h63
+                    "h66" -> item.h66
+                    "h69" -> item.h69
+                    "h72" -> item.h72
+                    "h75" -> item.h75
+                    "h78" -> item.h78
+                    else -> null
+                }
                 if (!value.isNullOrEmpty()) {
                     values[key] = value
                 } else {
@@ -617,27 +705,90 @@ class WeatherService(
         }
 
     fun buildWeatherEntity(nx: Int, ny: Int): Weather {
+        // 기본 날씨 데이터 가져오기
         val response = getUltraShortWeather(nx, ny)
         val weatherInfoList = parseWeatherData(response)
 
+        // 실시간 데이터 가져오기
+        val sidoName = "서울"
+        val areaNo = "1100000000"
+        val apiTime = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
+        val realTimeDust = getRealTimeDust(sidoName)
+        val uvIndexData = getUVIndex(areaNo, apiTime)
+        val senTaIndexData = getSenTaIndex(areaNo, apiTime)
+
+        // 현재 날짜와 시간
         val (date, time) = DateTimeUtils.getCurrentDateTimeFormatted()
-        val temperature = weatherInfoList.find { it.category == "T1H" }?.value ?: "-1.8°C"
+        val currentHour = DateTimeUtils.getCurrentHour()
+
+        // 온도 데이터
+        val temperature = weatherInfoList.find { it.category == "T1H" }?.value?.let { "$it°C" } ?: "-1.8°C"
+        val humidity = weatherInfoList.find { it.category == "REH" }?.value?.let { "$it%" } ?: "34%"
+        val windSpeed = weatherInfoList.find { it.category == "WSD" }?.value?.let { "${it}m/s" } ?: "1km/초(남서) m/s 0"
+
+        // 날씨 조건
+        val weatherCondition = weatherInfoList.find { it.category == "PTY" }?.value?.let {
+            when (it) {
+                "0" -> "맑음"
+                "1" -> "비"
+                "2" -> "비/눈"
+                "3" -> "눈"
+                else -> "맑음"
+            }
+        } ?: "맑음"
+
+        // 미세먼지 데이터 (PM10)
+        val airQuality = realTimeDust.firstOrNull()?.let {
+            AirQuality(
+                title = "미세먼지",
+                icon = "yellow-smiley",
+                status = it.pm10Grade,
+                value = it.pm10Value,
+                measurement = "㎍/㎥"
+            )
+        } ?: createDefaultAirQuality()
+
+        // 초미세먼지 데이터 (PM2.5)
+        val uvIndex = realTimeDust.firstOrNull()?.let {
+            UVIndex(
+                title = "초미세먼지",
+                icon = "yellow-smiley",
+                status = it.pm25Grade,
+                value = it.pm25Value,
+                measurement = "㎍/㎥"
+            )
+        } ?: createDefaultUVIndex()
+
+        // 시간대별 예보 (실제 데이터 기반으로 동적 생성)
+        val hourlyForecast = mutableListOf<HourlyForecast>()
+        val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
+        val currentHourIndex = currentHour / 3 * 3 // 3시간 단위로 맞춤
+        val hours = listOf(0, 3, 6, 9, 12, 15, 18, 21)
+
+        hours.forEachIndexed { index, hourOffset ->
+            val forecastHour = (currentHourIndex + hourOffset) % 24
+            val forecastTime = if (hourOffset == 0) "지금" else "${forecastHour}시"
+            val forecastIcon = if (forecastHour in 6..18) "sun" else "moon"
+            val forecastTemp = senTaIndexData.firstOrNull()?.values?.get("h${hourOffset + 1}")?.let { "$it°C" } ?: "-${index + 1}°C"
+            val forecastHumidity = humidity // 실제 데이터로 대체 가능
+            hourlyForecast.add(HourlyForecast(forecastTime, forecastIcon, forecastTemp, forecastHumidity))
+        }
 
         return Weather(
             date = date,
             time = time,
             location = "한남동 (용산구)",
             currentTemperature = temperature,
-            highLowTemperature = "-7°C / -1°C",
-            weatherCondition = "맑음",
-            windSpeed = "1km/초(남서) m/s 0",
-            airQuality = createAirQuality(),
-            uvIndex = createUVIndex(),
-            hourlyForecast = createHourlyForecast()
+            highLowTemperature = "-7°C / -1°C", // 실제 데이터로 대체 가능
+            weatherCondition = weatherCondition,
+            windSpeed = windSpeed,
+            airQuality = airQuality,
+            uvIndex = uvIndex,
+            hourlyForecast = hourlyForecast
         )
     }
 
-    private fun createAirQuality(): AirQuality =
+    private fun createDefaultAirQuality(): AirQuality =
         AirQuality(
             title = "미세먼지",
             icon = "yellow-smiley",
@@ -646,22 +797,13 @@ class WeatherService(
             measurement = "㎍/㎥"
         )
 
-    private fun createUVIndex(): UVIndex =
+    private fun createDefaultUVIndex(): UVIndex =
         UVIndex(
             title = "초미세먼지",
             icon = "yellow-smiley",
             status = "좋음",
             value = "8",
             measurement = "㎍/㎥"
-        )
-
-    private fun createHourlyForecast(): List<HourlyForecast> =
-        listOf(
-            HourlyForecast("지금", "moon", "-1.8°C", "34%"),
-            HourlyForecast("0시", "moon", "-6°C", "55%"),
-            HourlyForecast("3시", "moon", "-6°C", "60%"),
-            HourlyForecast("6시", "moon", "-7°C", "67%"),
-            HourlyForecast("9시", "sun", "-6°C", "55%")
         )
 
     private fun getUnitForCategory(category: String?): String =
