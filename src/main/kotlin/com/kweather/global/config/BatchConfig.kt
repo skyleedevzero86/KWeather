@@ -21,8 +21,7 @@ class BatchConfig(
     private val transactionManager: PlatformTransactionManager,
     private val regionReader: RegionReader,
     private val regionProcessor: RegionProcessor,
-    private val regionWriter: RegionWriter,
-    private val restTemplate: RestTemplate
+    private val regionWriter: RegionWriter
 ) {
 
     @Bean

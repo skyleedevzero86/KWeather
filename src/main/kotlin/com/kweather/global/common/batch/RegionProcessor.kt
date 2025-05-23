@@ -2,61 +2,43 @@ package com.kweather.global.common.batch
 
 import com.kweather.domain.region.dto.RegionDto
 import com.kweather.domain.region.entity.Region
-import com.kweather.domain.region.entity.Sido
-import com.kweather.domain.region.entity.Sgg
-import com.kweather.domain.region.entity.Umd
-import com.kweather.domain.region.entity.Ri
-import com.kweather.domain.region.repository.SidoRepository
-import com.kweather.domain.region.repository.SggRepository
-import com.kweather.domain.region.repository.UmdRepository
-import com.kweather.domain.region.repository.RiRepository
+import com.kweather.domain.region.service.HierarchyService
+import com.kweather.global.common.constants.BatchConstants
 import org.slf4j.LoggerFactory
 import org.springframework.batch.item.ItemProcessor
 import org.springframework.stereotype.Component
 
 @Component
 class RegionProcessor(
-    private val sidoRepository: SidoRepository,
-    private val sggRepository: SggRepository,
-    private val umdRepository: UmdRepository,
-    private val riRepository: RiRepository
+    private val hierarchyService: HierarchyService
 ) : ItemProcessor<RegionDto, Region?> {
 
     private val logger = LoggerFactory.getLogger(RegionProcessor::class.java)
 
     override fun process(item: RegionDto): Region? {
-        try {
-            // Validate required fields
-            if (item.sidoCd == null || item.sggCd == null || item.umdCd == null || item.riCd == null || item.regionCd == null) {
-                logger.warn("Skipping region item due to missing required fields: {}", item)
+        return try {
+            if (!item.isValid()) {
+                logger.warn(BatchConstants.LogMessages.INVALID_DATA_SKIP, item)
                 return null
             }
 
-            // 계층 구조 생성
-            val sido = sidoRepository.findById(item.sidoCd)
-                .orElseGet { sidoRepository.save(Sido(item.sidoCd)) }
+            // HierarchyService에서 참조 데이터 확인
+            val sido = item.sidoCd?.let { hierarchyService.getSido(it) }
+            val sgg = item.sggCd?.let { hierarchyService.getSgg(it) }
+            val umd = item.umdCd?.let { hierarchyService.getUmd(it) }
+            val ri = item.riCd?.let { hierarchyService.getRi(it) }
 
-            val sgg = sggRepository.findById(item.sggCd).orElseGet {
-                val newSgg = Sgg(item.sggCd, sido)
-                sggRepository.save(newSgg)
+            if (sido == null || sgg == null || umd == null || ri == null) {
+                logger.warn("참조 데이터 누락, 스킵: regionCd=${item.regionCd}, sido=${item.sidoCd}, sgg=${item.sggCd}, umd=${item.umdCd}, ri=${item.riCd}")
+                return null
             }
 
-            val umd = umdRepository.findById(item.umdCd).orElseGet {
-                val newUmd = Umd(item.umdCd, sgg)
-                umdRepository.save(newUmd)
-            }
-
-            val ri = riRepository.findById(item.riCd).orElseGet {
-                val newRi = Ri(item.riCd, umd)
-                riRepository.save(newRi)
-            }
-
-            return Region(
-                regionCd = item.regionCd,
-                sido = sido,
-                sgg = sgg,
-                umd = umd,
-                ri = ri,
+            Region(
+                regionCd = item.regionCd!!,
+                sidoCd = item.sidoCd!!,
+                sggCd = item.sggCd!!,
+                umdCd = item.umdCd!!,
+                riCd = item.riCd!!,
                 locatjuminCd = item.locatjuminCd,
                 locatjijukCd = item.locatjijukCd,
                 locataddNm = item.locataddNm,
@@ -67,8 +49,8 @@ class RegionProcessor(
                 adptDe = item.adptDe
             )
         } catch (e: Exception) {
-            logger.error("Error processing region item: regionCd=${item.regionCd}", e)
-            return null
+            logger.error("${BatchConstants.LogMessages.PROCESSING_ERROR}, regionCd=${item.regionCd}, error=${e.message}", e)
+            null
         }
     }
 }
