@@ -159,6 +159,69 @@
             <p th:text="${errorMessage != null ? errorMessage : '실시간 미세먼지 데이터를 불러올 수 없습니다.'}" style="color: red;"></p>
         </div>
     </div>
+    <!-- 자외선 지수 섹션 -->
+    <div class="uv-index-forecast-section">
+        <h3>자외선 지수 예보</h3>
+        <div th:if="${uvIndexData != null and not #lists.isEmpty(uvIndexData)}">
+            <table class="forecast-table">
+                <tr>
+                    <th>날짜</th>
+                    <th th:each="hour : ${#lists.sequence(0, 75, 3)}" th:text="'+' + ${hour} + '시간'"></th>
+                </tr>
+                <tr th:each="uv : ${uvIndexData}">
+                    <td th:text="${uv.date}"></td>
+                    <td th:each="hour : ${#lists.sequence(0, 75, 3)}">
+                        <span th:text="${uv.values['h' + hour] ?: 'N/A'}"></span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div th:if="${uvIndexData == null or #lists.isEmpty(uvIndexData)}">
+            <p style="color: red;">자외선 지수 데이터를 불러올 수 없습니다.</p>
+        </div>
+    </div>
+    <!-- 여름철 체감온도 섹션 -->
+    <div class="senta-index-forecast-section">
+        <h3>여름철 체감온도 예보 (5월~9월)</h3>
+        <div th:if="${senTaIndexData != null and not #lists.isEmpty(senTaIndexData)}">
+            <table class="forecast-table">
+                <tr>
+                    <th>날짜</th>
+                    <th th:each="hour : ${#lists.sequence(0, 78, 1)}" th:text="'+' + ${hour} + '시간'"></th>
+                </tr>
+                <tr th:each="senta : ${senTaIndexData}">
+                    <td th:text="${senta.date}"></td>
+                    <td th:each="hour : ${#lists.sequence(0, 78, 1)}">
+                        <span th:text="${senta.values['h' + hour] ?: 'N/A'}"></span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div th:if="${senTaIndexData == null or #lists.isEmpty(senTaIndexData)}">
+            <p style="color: red;">체감온도 데이터를 불러올 수 없습니다. (5월~9월에만 제공됩니다.)</p>
+        </div>
+    </div>
+    <!-- 대기정체지수 섹션 -->
+    <div class="air-stagnation-index-forecast-section">
+        <h3>대기정체지수 예보</h3>
+        <div th:if="${airStagnationIndexData != null and not #lists.isEmpty(airStagnationIndexData)}">
+            <table class="forecast-table">
+                <tr>
+                    <th>날짜</th>
+                    <th th:each="hour : ${#lists.sequence(3, 78, 3)}" th:text="'+' + ${hour} + '시간'"></th>
+                </tr>
+                <tr th:each="asi : ${airStagnationIndexData}">
+                    <td th:text="${asi.date}"></td>
+                    <td th:each="hour : ${#lists.sequence(3, 78, 3)}">
+                        <span th:text="${asi.values['h' + hour] ?: 'N/A'}"></span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div th:if="${airStagnationIndexData == null or #lists.isEmpty(airStagnationIndexData)}">
+            <p style="color: red;">대기정체지수 데이터를 불러올 수 없습니다.</p>
+        </div>
+    </div>
 </div>
 
 <div id="imagePopup" class="popup">
@@ -222,14 +285,6 @@
         const popup = document.getElementById('imagePopup');
         popup.style.display = 'none';
     }
-
-    document.getElementById('imagePopup').addEventListener('click', function(event) {
-        event.stopPropagation();
-    });
-
-    document.querySelector('.popup-content').addEventListener('click', function(event) {
-        event.stopPropagation();
-    });
 </script>
 </body>
 </html>

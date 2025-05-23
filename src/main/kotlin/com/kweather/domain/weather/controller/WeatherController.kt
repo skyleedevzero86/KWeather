@@ -1,5 +1,6 @@
 package com.kweather.domain.weather.controller
 
+import com.kweather.domain.airstagnation.dto.AirStagnationIndexInfo
 import com.kweather.domain.weather.entity.Weather
 import com.kweather.domain.weather.model.AirQuality
 import com.kweather.domain.weather.model.HourlyForecast
@@ -13,12 +14,14 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import org.slf4j.LoggerFactory
+import com.kweather.domain.weather.model.WeatherDataProvider
+import com.kweather.domain.realtime.dto.RealTimeDustInfo
+import com.kweather.domain.senta.dto.SenTaIndexInfo
+import com.kweather.domain.uvi.dto.UVIndexInfo
+import org.springframework.beans.factory.annotation.Value
 import arrow.core.Option
 import arrow.core.Some
 import arrow.core.None
-import com.kweather.domain.weather.model.WeatherDataProvider
-import com.kweather.domain.realtime.dto.RealTimeDustInfo
-import org.springframework.beans.factory.annotation.Value
 
 @Controller
 class WeatherController(
@@ -28,7 +31,9 @@ class WeatherController(
     @Value("\${weather.default.region.district:용산구}")
     private val defaultRegionDistrict: String,
     @Value("\${weather.default.sido:서울}")
-    private val defaultSido: String
+    private val defaultSido: String,
+    @Value("\${weather.default.area-no:1100000000}")
+    private val defaultAreaNo: String
 ) {
     private val logger = LoggerFactory.getLogger(WeatherController::class.java)
 
@@ -47,9 +52,18 @@ class WeatherController(
 
         override fun getRealTimeDustData(sidoName: String): List<RealTimeDustInfo> =
             emptyList() // 기본 제공자는 빈 리스트 반환
+
+        override fun getUVIndexData(areaNo: String, time: String): List<UVIndexInfo> =
+            emptyList()
+
+        override fun getSenTaIndexData(areaNo: String, time: String): List<SenTaIndexInfo> =
+            emptyList()
+
+        override fun getAirStagnationIndexData(areaNo: String, time: String): List<AirStagnationIndexInfo> =
+            emptyList()
     }
 
-    // 실시간 API 기반 날씨 정보 제공자 (향후 확장용)
+    // 실시간 API 기반 날씨 정보 제공자
     private inner class LiveWeatherDataProvider : WeatherDataProvider {
         override fun getWeatherData(date: String, time: String): Weather =
             runCatching {
@@ -74,6 +88,35 @@ class WeatherController(
                 logger.error("Failed to get real-time dust data: ${e.message}", e)
                 emptyList()
             }
+
+        override fun getUVIndexData(areaNo: String, time: String): List<UVIndexInfo> =
+            runCatching {
+                weatherService.getUVIndex(areaNo, time)
+            }.getOrElse { e ->
+                logger.error("Failed to get UV index data: ${e.message}", e)
+                emptyList()
+            }
+
+        override fun getSenTaIndexData(areaNo: String, time: String): List<SenTaIndexInfo> =
+            runCatching {
+                val currentMonth = LocalDateTime.now(ZoneId.of("Asia/Seoul")).monthValue
+                if (currentMonth in 5..9) { // 5월~9월에만 조회
+                    weatherService.getSenTaIndex(areaNo, time)
+                } else {
+                    emptyList()
+                }
+            }.getOrElse { e ->
+                logger.error("Failed to get sensible temperature index data: ${e.message}", e)
+                emptyList()
+            }
+
+        override fun getAirStagnationIndexData(areaNo: String, time: String): List<AirStagnationIndexInfo> =
+            runCatching {
+                weatherService.getAirStagnationIndex(areaNo, time)
+            }.getOrElse { e ->
+                logger.error("Failed to get air stagnation index data: ${e.message}", e)
+                emptyList()
+            }
     }
 
     @GetMapping("/")
@@ -87,18 +130,24 @@ class WeatherController(
         val dateTimeInfo = getCurrentDateTimeInfo()
         val (date, time, hour) = dateTimeInfo
 
-        // 날씨 데이터 제공자 선택 (설정에 따라 다른 제공자 사용 가능)
+        // 날씨 데이터 제공자 선택
         val weatherDataProvider = createWeatherDataProvider(useRealTimeData = true)
 
         // 날씨 데이터 및 미세먼지 예보 조회
         val weatherData = weatherDataProvider.getWeatherData(date, time)
         val currentDate = getCurrentFormattedDate()
+        val apiTime = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
         val informCode = determineInformCode(hour)
         val dustForecast = weatherDataProvider.getDustForecastData(currentDate, informCode)
 
         // 실시간 미세먼지 데이터 조회
         val realTimeDust = weatherDataProvider.getRealTimeDustData(defaultSido)
         val errorMessage = if (realTimeDust.isEmpty()) "실시간 미세먼지 데이터를 불러올 수 없습니다. API 키가 유효하지 않을 수 있습니다. 설정을 확인해 주세요." else null
+
+        // 자외선 지수, 체감온도, 대기정체지수 조회
+        val uvIndexData = weatherDataProvider.getUVIndexData(defaultAreaNo, apiTime)
+        val senTaIndexData = weatherDataProvider.getSenTaIndexData(defaultAreaNo, apiTime)
+        val airStagnationIndexData = weatherDataProvider.getAirStagnationIndexData(defaultAreaNo, apiTime)
 
         // 미세먼지 예보 데이터 가공
         val categorizedForecast = processDustForecastData(dustForecast)
@@ -107,7 +156,7 @@ class WeatherController(
         val timeOfDay = determineTimeOfDay(hour)
 
         // 모델에 데이터 추가
-        addAttributesToModel(model, weatherData, dustForecast, realTimeDust, categorizedForecast, timeOfDay, errorMessage)
+        addAttributesToModel(model, weatherData, dustForecast, realTimeDust, uvIndexData, senTaIndexData, airStagnationIndexData, categorizedForecast, timeOfDay, errorMessage)
 
         return "domain/weather/weather"
     }
@@ -204,6 +253,9 @@ class WeatherController(
         weatherData: Weather,
         dustForecast: List<com.kweather.domain.forecast.dto.ForecastInfo>,
         realTimeDust: List<RealTimeDustInfo>,
+        uvIndexData: List<UVIndexInfo>,
+        senTaIndexData: List<SenTaIndexInfo>,
+        airStagnationIndexData: List<AirStagnationIndexInfo>,
         categorizedForecast: List<Triple<List<String>, List<String>, List<String>>>,
         timeOfDay: String,
         errorMessage: String?
@@ -212,6 +264,9 @@ class WeatherController(
         model.addAttribute("weather", weatherData)
         model.addAttribute("dustForecast", dustForecast.toOption().orNull())
         model.addAttribute("realTimeDust", realTimeDust.toOption().orNull())
+        model.addAttribute("uvIndexData", uvIndexData.toOption().orNull())
+        model.addAttribute("senTaIndexData", senTaIndexData.toOption().orNull())
+        model.addAttribute("airStagnationIndexData", airStagnationIndexData.toOption().orNull())
         model.addAttribute("categorizedForecast", categorizedForecast.toOption().orNull())
         model.addAttribute("errorMessage", errorMessage)
     }

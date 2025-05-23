@@ -29,9 +29,21 @@ import arrow.core.flatMap
 import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.right
+import com.kweather.domain.airstagnation.dto.AirStagnationIndexInfo
+import com.kweather.domain.airstagnation.dto.AirStagnationIndexItem
+import com.kweather.domain.airstagnation.dto.AirStagnationIndexRequestParams
+import com.kweather.domain.airstagnation.dto.AirStagnationIndexResponse
 import com.kweather.domain.realtime.dto.RealTimeDustInfo
 import com.kweather.domain.realtime.dto.RealTimeDustItem
 import com.kweather.domain.realtime.dto.RealTimeDustResponse
+import com.kweather.domain.senta.dto.SenTaIndexInfo
+import com.kweather.domain.senta.dto.SenTaIndexItem
+import com.kweather.domain.senta.dto.SenTaIndexRequestParams
+import com.kweather.domain.senta.dto.SenTaIndexResponse
+import com.kweather.domain.uvi.dto.UVIndexInfo
+import com.kweather.domain.uvi.dto.UVIndexItem
+import com.kweather.domain.uvi.dto.UVIndexRequestParams
+import com.kweather.domain.uvi.dto.UVIndexResponse
 import com.kweather.domain.weather.model.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -45,6 +57,12 @@ class WeatherService(
     private val dustForecastBaseUrl: String,
     @Value("\${api.arpltninforinqiresvc.real-time-base-url:}")
     private val realTimeDustBaseUrl: String,
+    @Value("\${api.livingwthridxservice.uv-base-url:}")
+    private val uvIndexBaseUrl: String,
+    @Value("\${api.livingwthridxservice.senta-base-url:}")
+    private val senTaIndexBaseUrl: String,
+    @Value("\${api.livingwthridxservice.airstagnation-base-url:}")
+    private val airStagnationIndexBaseUrl: String,
     @Value("\${api.service-key:}")
     private val serviceKey: String
 ) {
@@ -133,10 +151,75 @@ class WeatherService(
             )
     }
 
+    private inner class UVIndexApiClient : ApiClient<UVIndexRequestParams, UVIndexResponse> {
+        override fun buildUrl(params: UVIndexRequestParams): String {
+            val url = "${uvIndexBaseUrl}?serviceKey=${serviceKey}" +
+                    "&pageNo=${params.pageNo}" +
+                    "&numOfRows=${params.numOfRows}" +
+                    "&dataType=${params.dataType}" +
+                    "&areaNo=${params.areaNo}" +
+                    "&time=${params.time}"
+            logger.info("자외선 지수 API URL 생성 완료: $url")
+            return url
+        }
+
+        override fun parseResponse(response: String): Either<String, UVIndexResponse> =
+            runCatching {
+                objectMapper.readValue<UVIndexResponse>(response)
+            }.fold(
+                onSuccess = { it.right() },
+                onFailure = { "자외선 지수 응답 파싱 실패: ${it.message}".left() }
+            )
+    }
+
+    private inner class SenTaIndexApiClient : ApiClient<SenTaIndexRequestParams, SenTaIndexResponse> {
+        override fun buildUrl(params: SenTaIndexRequestParams): String {
+            val url = "${senTaIndexBaseUrl}?serviceKey=${serviceKey}" +
+                    "&pageNo=${params.pageNo}" +
+                    "&numOfRows=${params.numOfRows}" +
+                    "&dataType=${params.dataType}" +
+                    "&areaNo=${params.areaNo}" +
+                    "&time=${params.time}" +
+                    "&requestCode=${params.requestCode}"
+            logger.info("여름철 체감온도 API URL 생성 완료: $url")
+            return url
+        }
+
+        override fun parseResponse(response: String): Either<String, SenTaIndexResponse> =
+            runCatching {
+                objectMapper.readValue<SenTaIndexResponse>(response)
+            }.fold(
+                onSuccess = { it.right() },
+                onFailure = { "여름철 체감온도 응답 파싱 실패: ${it.message}".left() }
+            )
+    }
+
+    private inner class AirStagnationIndexApiClient : ApiClient<AirStagnationIndexRequestParams, AirStagnationIndexResponse> {
+        override fun buildUrl(params: AirStagnationIndexRequestParams): String {
+            val url = "${airStagnationIndexBaseUrl}?serviceKey=${serviceKey}" +
+                    "&pageNo=${params.pageNo}" +
+                    "&numOfRows=${params.numOfRows}" +
+                    "&dataType=${params.dataType}" +
+                    "&areaNo=${params.areaNo}" +
+                    "&time=${params.time}" +
+                    (params.requestCode?.let { "&requestCode=$it" } ?: "")
+            logger.info("대기정체지수 API URL 생성 완료: $url")
+            return url
+        }
+
+        override fun parseResponse(response: String): Either<String, AirStagnationIndexResponse> =
+            runCatching {
+                objectMapper.readValue<AirStagnationIndexResponse>(response)
+            }.fold(
+                onSuccess = { it.right() },
+                onFailure = { "대기정체지수 응답 파싱 실패: ${it.message}".left() }
+            )
+    }
+
     @Retryable(
         value = [SocketTimeoutException::class, IOException::class],
-        maxAttempts = 3,
-        backoff = Backoff(delay = 2000, multiplier = 1.5)
+        maxAttempts = 5, // 재시도 횟수를 5로 증가
+        backoff = Backoff(delay = 2000, multiplier = 1.5) // 2초 지연, 1.5배 증가
     )
     private fun <P, T, R> makeApiRequest(
         client: ApiClient<P, T>,
@@ -295,6 +378,65 @@ class WeatherService(
         }
     }
 
+    fun getUVIndex(areaNo: String, time: String): List<UVIndexInfo> {
+        val params = UVIndexRequestParams(areaNo = areaNo, time = time)
+        val uvIndexClient = UVIndexApiClient()
+
+        return when (val result = makeApiRequest(uvIndexClient, params) { response: UVIndexResponse ->
+            val uvIndexInfos = response.response?.body?.items?.mapNotNull { item ->
+                item?.let { parseUVIndexItem(it) }
+            } ?: emptyList<UVIndexInfo>()
+
+            Either.Right(uvIndexInfos)
+        }) {
+            is ApiResult.Success<List<UVIndexInfo>> -> result.data
+            is ApiResult.Error -> {
+                logger.error("자외선 지수 API 요청 실패: ${result.message}")
+                emptyList()
+            }
+        }
+    }
+
+    fun getSenTaIndex(areaNo: String, time: String): List<SenTaIndexInfo> {
+        val params = SenTaIndexRequestParams(areaNo = areaNo, time = time)
+        val senTaIndexClient = SenTaIndexApiClient()
+
+        return when (val result = makeApiRequest(senTaIndexClient, params) { response: SenTaIndexResponse ->
+            val senTaIndexInfos = response.response?.body?.items?.mapNotNull { item ->
+                item?.let { parseSenTaIndexItem(it) }
+            } ?: emptyList<SenTaIndexInfo>()
+
+            Either.Right(senTaIndexInfos)
+        }) {
+            is ApiResult.Success<List<SenTaIndexInfo>> -> result.data
+            is ApiResult.Error -> {
+                logger.error("여름철 체감온도 API 요청 실패: ${result.message}")
+                emptyList()
+            }
+        }
+    }
+
+    fun getAirStagnationIndex(areaNo: String, time: String): List<AirStagnationIndexInfo> {
+        // time을 HHmm 형식으로 변환
+        val formattedTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmm"))
+        val params = AirStagnationIndexRequestParams(areaNo = areaNo, time = formattedTime, pageNo = 1, numOfRows = 10, dataType = "json")
+        val airStagnationIndexClient = AirStagnationIndexApiClient()
+
+        return when (val result = makeApiRequest(airStagnationIndexClient, params) { response: AirStagnationIndexResponse ->
+            val airStagnationIndexInfos = response.response?.body?.items?.mapNotNull { item ->
+                item?.let { parseAirStagnationIndexItem(it) }
+            } ?: emptyList<AirStagnationIndexInfo>()
+
+            Either.Right(airStagnationIndexInfos)
+        }) {
+            is ApiResult.Success<List<AirStagnationIndexInfo>> -> result.data
+            is ApiResult.Error -> {
+                logger.error("대기정체지수 API 요청 실패: ${result.message}")
+                emptyList()
+            }
+        }
+    }
+
     private fun parseRealTimeDustItem(item: RealTimeDustItem): RealTimeDustInfo? =
         runCatching {
             RealTimeDustInfo(
@@ -317,6 +459,51 @@ class WeatherService(
         "4" -> "매우나쁨"
         else -> "N/A"
     }
+
+    private fun parseUVIndexItem(item: UVIndexItem): UVIndexInfo? =
+        runCatching {
+            val values = mutableMapOf<String, String>()
+            listOf("h0", "h3", "h6", "h9", "h12", "h15", "h18", "h21", "h24", "h27", "h30", "h33", "h36", "h39", "h42", "h45", "h48", "h51", "h54", "h57", "h60", "h63", "h66", "h69", "h72", "h75").forEach { key ->
+                val value = item.javaClass.getDeclaredField(key).get(item)?.toString()
+                if (!value.isNullOrEmpty()) values[key] = value
+            }
+            UVIndexInfo(
+                date = item.date ?: throw IllegalArgumentException("날짜가 누락되었습니다"),
+                values = values
+            )
+        }.onFailure { e ->
+            logger.warn("유효하지 않은 자외선 지수 항목을 건너뜁니다: ${e.message}")
+        }.getOrNull()
+
+    private fun parseSenTaIndexItem(item: SenTaIndexItem): SenTaIndexInfo? =
+        runCatching {
+            val values = mutableMapOf<String, String>()
+            listOf("h0", "h3", "h6", "h9", "h12", "h15", "h18", "h21", "h24", "h27", "h30", "h33", "h36", "h39", "h42", "h45", "h48", "h51", "h54", "h57", "h60", "h63", "h66", "h69", "h72", "h75").forEach { key ->
+                val value = item.javaClass.getDeclaredField(key).get(item)?.toString()
+                if (!value.isNullOrEmpty()) values[key] = value
+            }
+            SenTaIndexInfo(
+                date = item.date ?: throw IllegalArgumentException("날짜가 누락되었습니다"),
+                values = values
+            )
+        }.onFailure { e ->
+            logger.warn("유효하지 않은 체감온도 항목을 건너뜁니다: ${e.message}")
+        }.getOrNull()
+
+    private fun parseAirStagnationIndexItem(item: AirStagnationIndexItem): AirStagnationIndexInfo? =
+        runCatching {
+            val values = mutableMapOf<String, String>()
+            listOf("h3", "h6", "h9", "h12", "h15", "h18", "h21", "h24", "h27", "h30", "h33", "h36", "h39", "h42", "h45", "h48", "h51", "h54", "h57", "h60", "h63", "h66", "h69", "h72", "h75", "h78").forEach { key ->
+                val value = item.javaClass.getDeclaredField(key).get(item)?.toString()
+                if (!value.isNullOrEmpty()) values[key] = value
+            }
+            AirStagnationIndexInfo(
+                date = item.date ?: throw IllegalArgumentException("날짜가 누락되었습니다"),
+                values = values
+            )
+        }.onFailure { e ->
+            logger.warn("유효하지 않은 대기정체지수 항목을 건너뜁니다: ${e.message}")
+        }.getOrNull()
 
     private fun parseForecastItem(item: ForecastItem, defaultInformCode: String): ForecastInfo? =
         runCatching {
@@ -481,6 +668,15 @@ class WeatherService(
         }
         if (realTimeDustBaseUrl.isBlank()) {
             logger.warn("실시간 미세먼지 기본 URL이 비어있습니다. API 호출이 실패할 수 있습니다.")
+        }
+        if (uvIndexBaseUrl.isBlank()) {
+            logger.warn("자외선 지수 기본 URL이 비어있습니다. API 호출이 실패할 수 있습니다.")
+        }
+        if (senTaIndexBaseUrl.isBlank()) {
+            logger.warn("여름철 체감온도 기본 URL이 비어있습니다. API 호출이 실패할 수 있습니다.")
+        }
+        if (airStagnationIndexBaseUrl.isBlank()) {
+            logger.warn("대기정체지수 기본 URL이 비어있습니다. API 호출이 실패할 수 있습니다.")
         }
     }
 }
