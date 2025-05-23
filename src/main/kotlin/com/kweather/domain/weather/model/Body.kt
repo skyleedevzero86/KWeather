@@ -1,16 +1,12 @@
 package com.kweather.domain.weather.model
 
-import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class Body<T>(
-    @JsonProperty("dataType")
-    val dataType: String?,
-    @JsonProperty("items")
-    val items: Items<T>?,
-    @JsonProperty("pageNo")
-    val pageNo: Int?,
-    @JsonProperty("numOfRows")
-    val numOfRows: Int?,
-    @JsonProperty("totalCount")
-    val totalCount: Int?
+    val totalCount: Int? = null,
+    val items: List<T>? = null,
+    val pageNo: Int? = null,
+    val numOfRows: Int? = null,
+    val dataType: String? = null
 )

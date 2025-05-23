@@ -67,7 +67,7 @@ dependencies {
     implementation("org.apache.httpcomponents.core5:httpcore5:5.2.1")
     implementation("org.apache.httpcomponents.core5:httpcore5-h2:5.2.1")
 
-    implementation("io.arrow-kt:arrow-core:1.2.0")
+    implementation("io.arrow-kt:arrow-core:1.2.4")
     implementation ("org.springframework.retry:spring-retry:2.0.6")
     implementation ("org.springframework:spring-aspects:6.1.12")
 }
