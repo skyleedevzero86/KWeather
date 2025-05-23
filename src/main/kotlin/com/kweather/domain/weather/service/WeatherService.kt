@@ -26,7 +26,6 @@ import java.time.ZoneId
 import java.nio.charset.StandardCharsets
 import arrow.core.Either
 import arrow.core.flatMap
-import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.right
 import com.kweather.domain.airstagnation.dto.AirStagnationIndexInfo
@@ -216,10 +215,11 @@ class WeatherService(
             )
     }
 
+
     @Retryable(
         value = [SocketTimeoutException::class, IOException::class],
-        maxAttempts = 5, // 재시도 횟수를 5로 증가
-        backoff = Backoff(delay = 2000, multiplier = 1.5) // 2초 지연, 1.5배 증가
+        maxAttempts = 5,
+        backoff = Backoff(delay = 2000, multiplier = 1.5)
     )
     private fun <P, T, R> makeApiRequest(
         client: ApiClient<P, T>,
@@ -233,9 +233,10 @@ class WeatherService(
             val urlString = client.buildUrl(params)
             logger.info("최종 요청 URL: $urlString")
 
-            val response = fetchDataFromApi(urlString).getOrElse { error ->
-                return ApiResult.Error("데이터 가져오기 실패: $error")
-            }
+            val response = fetchDataFromApi(urlString).fold(
+                { error -> return ApiResult.Error("데이터 가져오기 실패: $error") },
+                { it }
+            )
 
             logger.info("응답 수신 완료: ${response.take(500)}")
 
@@ -348,10 +349,9 @@ class WeatherService(
             val forecastInfos = response.response?.body?.items?.mapNotNull { item: ForecastItem? ->
                 item?.let { parseForecastItem(it, informCode) }
             } ?: emptyList<ForecastInfo>()
-
             Either.Right(forecastInfos)
         }) {
-            is ApiResult.Success<List<ForecastInfo>> -> result.data
+            is ApiResult.Success -> result.data
             is ApiResult.Error -> {
                 logger.error("미세먼지 예보 API 요청 실패: ${result.message}")
                 throw IllegalStateException("미세먼지 예보 데이터 가져오기 실패: ${result.message}")
@@ -367,10 +367,9 @@ class WeatherService(
             val dustInfos = response.response?.body?.items?.mapNotNull { item ->
                 item?.let { parseRealTimeDustItem(it) }
             } ?: emptyList<RealTimeDustInfo>()
-
             Either.Right(dustInfos)
         }) {
-            is ApiResult.Success<List<RealTimeDustInfo>> -> result.data
+            is ApiResult.Success -> result.data
             is ApiResult.Error -> {
                 logger.error("실시간 미세먼지 API 요청 실패: ${result.message}")
                 emptyList()
@@ -386,10 +385,9 @@ class WeatherService(
             val uvIndexInfos = response.response?.body?.items?.mapNotNull { item ->
                 item?.let { parseUVIndexItem(it) }
             } ?: emptyList<UVIndexInfo>()
-
             Either.Right(uvIndexInfos)
         }) {
-            is ApiResult.Success<List<UVIndexInfo>> -> result.data
+            is ApiResult.Success -> result.data
             is ApiResult.Error -> {
                 logger.error("자외선 지수 API 요청 실패: ${result.message}")
                 emptyList()
@@ -405,10 +403,9 @@ class WeatherService(
             val senTaIndexInfos = response.response?.body?.items?.mapNotNull { item ->
                 item?.let { parseSenTaIndexItem(it) }
             } ?: emptyList<SenTaIndexInfo>()
-
             Either.Right(senTaIndexInfos)
         }) {
-            is ApiResult.Success<List<SenTaIndexInfo>> -> result.data
+            is ApiResult.Success -> result.data
             is ApiResult.Error -> {
                 logger.error("여름철 체감온도 API 요청 실패: ${result.message}")
                 emptyList()
@@ -417,19 +414,33 @@ class WeatherService(
     }
 
     fun getAirStagnationIndex(areaNo: String, time: String): List<AirStagnationIndexInfo> {
-        // time을 HHmm 형식으로 변환
-        val formattedTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmm"))
-        val params = AirStagnationIndexRequestParams(areaNo = areaNo, time = formattedTime, pageNo = 1, numOfRows = 10, dataType = "json")
+        val params = AirStagnationIndexRequestParams(areaNo = areaNo, time = time, pageNo = 1, numOfRows = 10, dataType = "json")
         val airStagnationIndexClient = AirStagnationIndexApiClient()
 
         return when (val result = makeApiRequest(airStagnationIndexClient, params) { response: AirStagnationIndexResponse ->
-            val airStagnationIndexInfos = response.response?.body?.items?.mapNotNull { item ->
-                item?.let { parseAirStagnationIndexItem(it) }
-            } ?: emptyList<AirStagnationIndexInfo>()
-
-            Either.Right(airStagnationIndexInfos)
+            if (response.response?.header?.resultCode == "03" && response.response.header.resultMsg == "NO_DATA") {
+                logger.warn("대기정체지수 데이터 없음: time=$time, 이전 시간으로 재시도")
+                val previousTime = LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1)
+                    .format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
+                val retryParams = AirStagnationIndexRequestParams(areaNo = areaNo, time = previousTime, pageNo = 1, numOfRows = 10, dataType = "json")
+                val retryResult = makeApiRequest(airStagnationIndexClient, retryParams) { retryResponse: AirStagnationIndexResponse ->
+                    val airStagnationIndexInfos = retryResponse.response?.body?.items?.mapNotNull { item ->
+                        item?.let { parseAirStagnationIndexItem(it) }
+                    } ?: emptyList<AirStagnationIndexInfo>()
+                    Either.Right(airStagnationIndexInfos)
+                }
+                when (retryResult) {
+                    is ApiResult.Success -> Either.Right(retryResult.data)
+                    is ApiResult.Error -> Either.Right(emptyList<AirStagnationIndexInfo>())
+                }
+            } else {
+                val airStagnationIndexInfos = response.response?.body?.items?.mapNotNull { item ->
+                    item?.let { parseAirStagnationIndexItem(it) }
+                } ?: emptyList<AirStagnationIndexInfo>()
+                Either.Right(airStagnationIndexInfos)
+            }
         }) {
-            is ApiResult.Success<List<AirStagnationIndexInfo>> -> result.data
+            is ApiResult.Success -> result.data
             is ApiResult.Error -> {
                 logger.error("대기정체지수 API 요청 실패: ${result.message}")
                 emptyList()
@@ -464,8 +475,12 @@ class WeatherService(
         runCatching {
             val values = mutableMapOf<String, String>()
             listOf("h0", "h3", "h6", "h9", "h12", "h15", "h18", "h21", "h24", "h27", "h30", "h33", "h36", "h39", "h42", "h45", "h48", "h51", "h54", "h57", "h60", "h63", "h66", "h69", "h72", "h75").forEach { key ->
-                val value = item.javaClass.getDeclaredField(key).get(item)?.toString()
-                if (!value.isNullOrEmpty()) values[key] = value
+                val value = item.javaClass.getDeclaredField(key).apply { isAccessible = true }.get(item)?.toString()
+                if (!value.isNullOrEmpty()) {
+                    values[key] = value
+                } else {
+                    logger.debug("UVIndexItem 필드 $key 값이 null 또는 비어있습니다")
+                }
             }
             UVIndexInfo(
                 date = item.date ?: throw IllegalArgumentException("날짜가 누락되었습니다"),
@@ -479,8 +494,12 @@ class WeatherService(
         runCatching {
             val values = mutableMapOf<String, String>()
             listOf("h0", "h3", "h6", "h9", "h12", "h15", "h18", "h21", "h24", "h27", "h30", "h33", "h36", "h39", "h42", "h45", "h48", "h51", "h54", "h57", "h60", "h63", "h66", "h69", "h72", "h75").forEach { key ->
-                val value = item.javaClass.getDeclaredField(key).get(item)?.toString()
-                if (!value.isNullOrEmpty()) values[key] = value
+                val value = item.javaClass.getDeclaredField(key).apply { isAccessible = true }.get(item)?.toString()
+                if (!value.isNullOrEmpty()) {
+                    values[key] = value
+                } else {
+                    logger.debug("SenTaIndexItem 필드 $key 값이 null 또는 비어있습니다")
+                }
             }
             SenTaIndexInfo(
                 date = item.date ?: throw IllegalArgumentException("날짜가 누락되었습니다"),
@@ -494,8 +513,12 @@ class WeatherService(
         runCatching {
             val values = mutableMapOf<String, String>()
             listOf("h3", "h6", "h9", "h12", "h15", "h18", "h21", "h24", "h27", "h30", "h33", "h36", "h39", "h42", "h45", "h48", "h51", "h54", "h57", "h60", "h63", "h66", "h69", "h72", "h75", "h78").forEach { key ->
-                val value = item.javaClass.getDeclaredField(key).get(item)?.toString()
-                if (!value.isNullOrEmpty()) values[key] = value
+                val value = item.javaClass.getDeclaredField(key).apply { isAccessible = true }.get(item)?.toString()
+                if (!value.isNullOrEmpty()) {
+                    values[key] = value
+                } else {
+                    logger.debug("AirStagnationIndexItem 필드 $key 값이 null 또는 비어있습니다")
+                }
             }
             AirStagnationIndexInfo(
                 date = item.date ?: throw IllegalArgumentException("날짜가 누락되었습니다"),
