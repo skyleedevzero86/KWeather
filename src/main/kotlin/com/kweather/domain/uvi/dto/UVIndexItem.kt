@@ -1,6 +1,5 @@
 package com.kweather.domain.uvi.dto
 
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 @JsonIgnoreProperties(ignoreUnknown = true)

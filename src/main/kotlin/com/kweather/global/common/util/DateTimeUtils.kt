@@ -8,6 +8,10 @@ import java.util.*
 
 object DateTimeUtils {
 
+    fun getCurrentApiTime(): String {
+        return LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
+    }
+
     fun getCurrentDateTimeFormatted(): Pair<String, String> {
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
         val year = now.year
