@@ -1,9 +1,10 @@
 package com.kweather.domain.realtime.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.kweather.domain.weather.model.Response
+import com.kweather.domain.weather.model.Header
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class RealTimeDustResponse(
-    val response: Response<RealTimeDustItem>? = null
+data class ResponseBody(
+    val header: Header?,
+    val body: Body?
 )

@@ -1,10 +1,9 @@
 package com.kweather.domain.weather.model
 
-import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class Header(
-    @JsonProperty("resultCode")
     val resultCode: String?,
-    @JsonProperty("resultMsg")
     val resultMsg: String?
 )
