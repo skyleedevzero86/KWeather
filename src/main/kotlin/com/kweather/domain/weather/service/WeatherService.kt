@@ -52,7 +52,7 @@ class WeatherService(
 
     data class RealTimeDustRequestParams(
         val returnType: String = "json",
-        val numOfRows: Int = 50, // 요청 크기를 100에서 50으로 줄임
+        val numOfRows: Int = 50,
         val pageNo: Int = 1,
         val sidoName: String,
         val ver: String = "1.0"
@@ -193,8 +193,8 @@ class WeatherService(
             URL(urlString).openConnection().let { conn ->
                 (conn as HttpURLConnection).apply {
                     requestMethod = "GET"
-                    connectTimeout = 15000 // 타임아웃을 15초로 증가
-                    readTimeout = 15000   // 타임아웃을 15초로 증가
+                    connectTimeout = 15000
+                    readTimeout = 15000
                     setRequestProperty("User-Agent", "KWeather/1.0 (your.email@example.com)")
                 }
 
@@ -290,7 +290,7 @@ class WeatherService(
             is ApiResult.Success<List<RealTimeDustInfo>> -> result.data
             is ApiResult.Error -> {
                 logger.error("실시간 미세먼지 API 요청 실패: ${result.message}")
-                emptyList() // 실패 시 빈 리스트 반환
+                emptyList()
             }
         }
     }
@@ -300,9 +300,9 @@ class WeatherService(
             RealTimeDustInfo(
                 sidoName = item.sidoName ?: throw IllegalArgumentException("시도명이 누락되었습니다"),
                 stationName = item.stationName ?: throw IllegalArgumentException("측정소명이 누락되었습니다"),
-                pm10Value = item.pm10Value ?: "N/A",
+                pm10Value = item.pm10Value?.takeIf { it != "-" } ?: "N/A",
                 pm10Grade = convertGrade(item.pm10Grade),
-                pm25Value = item.pm25Value ?: "N/A",
+                pm25Value = item.pm25Value?.takeIf { it != "-" } ?: "N/A",
                 pm25Grade = convertGrade(item.pm25Grade),
                 dataTime = item.dataTime ?: throw IllegalArgumentException("측정시간이 누락되었습니다")
             )
