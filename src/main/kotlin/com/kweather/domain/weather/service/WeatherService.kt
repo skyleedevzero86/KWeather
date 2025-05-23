@@ -24,7 +24,8 @@ import java.net.URL
 import java.net.URLEncoder
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.nio.charset.StandardCharsets
+import java.time.format.DateTimeFormatter
+import java.time.LocalDate
 import arrow.core.Either
 import arrow.core.flatMap
 import arrow.core.left
@@ -45,8 +46,7 @@ import com.kweather.domain.uvi.dto.UVIndexItem
 import com.kweather.domain.uvi.dto.UVIndexRequestParams
 import com.kweather.domain.uvi.dto.UVIndexResponse
 import com.kweather.domain.weather.model.*
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import java.nio.charset.StandardCharsets
 
 @Service
 class WeatherService(
@@ -297,14 +297,37 @@ class WeatherService(
     }
 
     fun getDustForecast(searchDate: String, informCode: String): List<ForecastInfo> {
-        val params = DustForecastRequestParams(searchDate, informCode)
+        val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
+        val currentHour = now.hour
+        val targetDate = if (currentHour < 6) {
+            now.minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        } else {
+            searchDate
+        }
+        val params = DustForecastRequestParams(targetDate, informCode)
         val dustClient = DustForecastApiClient()
 
         return when (val result = makeApiRequest(dustClient, params) { response ->
-            val forecastInfos = response.response?.body?.items?.mapNotNull { item ->
-                item?.let { parseForecastItem(it, informCode) }
-            } ?: emptyList()
-            Either.Right(forecastInfos)
+            if (response.response?.header?.resultCode == "03" && response.response.header.resultMsg == "NO_DATA") {
+                logger.info("미세먼지 예보 데이터 없음, 전날 데이터로 재시도")
+                val previousDate = LocalDate.parse(targetDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                    .minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                val retryParams = DustForecastRequestParams(previousDate, informCode)
+                when (val retryResult = makeApiRequest(dustClient, retryParams) { retryResponse ->
+                    val forecastInfos = retryResponse.response?.body?.items?.mapNotNull { item ->
+                        item?.let { parseForecastItem(it, informCode) }
+                    } ?: emptyList()
+                    Either.Right(forecastInfos)
+                }) {
+                    is ApiResult.Success -> Either.Right(retryResult.data)
+                    is ApiResult.Error -> Either.Right(emptyList())
+                }
+            } else {
+                val forecastInfos = response.response?.body?.items?.mapNotNull { item ->
+                    item?.let { parseForecastItem(it, informCode) }
+                } ?: emptyList()
+                Either.Right(forecastInfos)
+            }
         }) {
             is ApiResult.Success -> result.data
             is ApiResult.Error -> {
