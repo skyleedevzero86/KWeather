@@ -201,7 +201,8 @@ class WeatherService(
                     "&numOfRows=${params.numOfRows}" +
                     "&dataType=${params.dataType}" +
                     "&areaNo=${params.areaNo}" +
-                    "&time=${params.time}"
+                    "&time=${params.time}" +
+                    (params.requestCode?.let { "&requestCode=$it" } ?: "")
             logger.info("대기정체지수 API URL 생성 완료: $url")
             return url
         }
@@ -217,8 +218,8 @@ class WeatherService(
 
     @Retryable(
         value = [SocketTimeoutException::class, IOException::class],
-        maxAttempts = 3,
-        backoff = Backoff(delay = 2000, multiplier = 1.5)
+        maxAttempts = 5, // 재시도 횟수를 5로 증가
+        backoff = Backoff(delay = 2000, multiplier = 1.5) // 2초 지연, 1.5배 증가
     )
     private fun <P, T, R> makeApiRequest(
         client: ApiClient<P, T>,
@@ -416,7 +417,9 @@ class WeatherService(
     }
 
     fun getAirStagnationIndex(areaNo: String, time: String): List<AirStagnationIndexInfo> {
-        val params = AirStagnationIndexRequestParams(areaNo = areaNo, time = time)
+        // time을 HHmm 형식으로 변환
+        val formattedTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmm"))
+        val params = AirStagnationIndexRequestParams(areaNo = areaNo, time = formattedTime, pageNo = 1, numOfRows = 10, dataType = "json")
         val airStagnationIndexClient = AirStagnationIndexApiClient()
 
         return when (val result = makeApiRequest(airStagnationIndexClient, params) { response: AirStagnationIndexResponse ->

@@ -140,8 +140,10 @@ body {
     background: white;
     border-radius: 20px;
     color: black;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 1번에서 추가 */
+    margin-bottom: 20px; /* 1번에서 추가 */
+    position: relative; /* 2번 dust-forecast-section에서 추가 */
+    overflow: hidden; /* 2번 dust-forecast-section에서 추가 */
 }
 
 .forecast-section h3,
@@ -324,7 +326,7 @@ body {
 .real-time-dust-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
+    margin-top: 10px; /* 1번에서 margin-top으로 변경 */
 }
 
 .real-time-dust-table th,
@@ -338,6 +340,10 @@ body {
     font-size: 1.2em;
     background-color: #f0f0f0;
     border: 2px solid black;
+}
+
+.real-time-dust-table td {
+    font-size: 1em; /* 2번에서 추가 */
 }
 
 /* 자외선 지수, 체감온도, 대기정체지수 테이블 스타일 */
@@ -433,6 +439,24 @@ body {
     color: #ff0000;
 }
 
+/* 스플래시 스타일 (2번에서 추가) */
+.splash-icon {
+    font-size: 50px;
+    margin-bottom: 20px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.splash-text {
+    color: #000000;
+    font-size: 24px;
+    text-align: center;
+}
+
 /* 기타 유틸리티 스타일 */
 .na-message {
     color: #888;
@@ -486,13 +510,14 @@ body {
 
     .weather-details {
         flex-direction: column;
-        align-items: center;
+        align-items: center; /* 1번에서 추가 */
     }
 
     .air-quality,
     .uv-index {
-        width: 100%;
-        margin-bottom: 10px;
+        width: 100%; /* 1번에서 추가 */
+        margin-bottom: 10px; /* 1번에서 추가 */
+        margin: 10px 0; /* 2번에서 추가 (중복 병합) */
     }
 
     .forecast-row {

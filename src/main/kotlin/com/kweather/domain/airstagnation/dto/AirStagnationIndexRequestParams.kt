@@ -5,5 +5,6 @@ data class AirStagnationIndexRequestParams(
     val time: String,
     val pageNo: Int = 1,
     val numOfRows: Int = 10,
-    val dataType: String = "json"
+    val dataType: String = "json",
+    val requestCode: String? = null
 )
