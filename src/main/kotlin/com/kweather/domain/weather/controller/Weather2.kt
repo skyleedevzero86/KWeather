@@ -1,7 +1,7 @@
 package com.kweather.domain.weather.controller
 
 import com.kweather.domain.forecast.dto.ForecastInfo
-import com.kweather.domain.weather.service.WeatherService
+import com.kweather.domain.weather.service.GeneralWeatherService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -12,7 +12,7 @@ import java.time.format.DateTimeParseException
 
 @RestController
 class Weather2(
-    private val weatherService: WeatherService
+    private val weatherService: GeneralWeatherService
 ) {
 
     @GetMapping("/weather/dust-forecast")
