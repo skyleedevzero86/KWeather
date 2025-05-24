@@ -8,9 +8,9 @@ import com.kweather.domain.uvi.dto.UVIndexInfo
 import com.kweather.domain.weather.entity.Weather
 import com.kweather.domain.weather.model.AirQuality
 import com.kweather.domain.weather.model.HourlyForecast
-import com.kweather.domain.weather.model.UVIndex
+import com.kweather.domain.uvi.dto.UVIndex
 import com.kweather.domain.weather.model.WeatherDataProvider
-import com.kweather.domain.weather.service.GeneralWeatherService
+import com.kweather.domain.weather.dto.PrecipitationInfo
 import com.kweather.global.common.util.DateTimeUtils
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -26,6 +26,7 @@ import arrow.core.None
 import com.kweather.domain.airstagnation.service.AirStagnationIndexService
 import com.kweather.domain.senta.service.SenTaIndexService
 import com.kweather.domain.uvi.service.UVIndexService
+import com.kweather.domain.weather.service.GeneralWeatherService
 
 @Controller
 class WeatherController(
@@ -63,6 +64,12 @@ class WeatherController(
 
         override fun getAirStagnationIndexData(areaNo: String, time: String): List<AirStagnationIndexInfo> =
             emptyList()
+
+        override fun getPrecipitationData(areaNo: String, time: String): List<PrecipitationInfo> {
+            val today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            val values = (0..23).associate { "h$it" to "${(it % 5).toDouble()} mm" }
+            return listOf(PrecipitationInfo(today, values))
+        }
     }
 
     private inner class LiveWeatherDataProvider : WeatherDataProvider {
@@ -118,6 +125,12 @@ class WeatherController(
                 logger.error("대기정체지수 데이터 가져오기 실패: ${e.message}", e)
                 emptyList()
             }
+
+        override fun getPrecipitationData(areaNo: String, time: String): List<PrecipitationInfo> {
+            val today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            val values = (0..23).associate { "h$it" to "${(it % 5).toDouble()} mm" }
+            return listOf(PrecipitationInfo(today, values))
+        }
     }
 
     @GetMapping("/")
@@ -144,15 +157,17 @@ class WeatherController(
         val uvIndexData = weatherDataProvider.getUVIndexData(defaultAreaNo, apiTime)
         val senTaIndexData = weatherDataProvider.getSenTaIndexData(defaultAreaNo, apiTime)
         val airStagnationIndexData = weatherDataProvider.getAirStagnationIndexData(defaultAreaNo, apiTime)
+        val precipitationData = weatherDataProvider.getPrecipitationData(defaultAreaNo, apiTime)
 
-        // 숫자 시퀀스 생성
-        val uvHoursSequence = (0..75 step 3).toList() // 자외선 지수 (0, 3, 6, ..., 75)
-        val sentaHoursSequence = (1..31).toList() // 여름철 체감온도 (1, 2, ..., 31)
-        val asiHoursSequence = (3..78 step 3).toList() // 대기정체지수 (3, 6, ..., 78)
+        val uvHoursSequence = (0..75 step 3).toList()
+        val sentaHoursSequence = (1..31).toList()
+        val asiHoursSequence = (3..78 step 3).toList()
+        val precipHoursSequence = (0..23).toList()
 
         logger.debug("UVIndex 데이터: $uvIndexData")
         logger.debug("SenTaIndex 데이터: $senTaIndexData")
         logger.debug("AirStagnationIndex 데이터: $airStagnationIndexData")
+        logger.debug("Precipitation 데이터: $precipitationData")
 
         logger.info("weatherData: $weatherData")
         logger.info("dustForecast: $dustForecast")
@@ -161,10 +176,11 @@ class WeatherController(
         val categorizedForecast = processDustForecastData(dustForecast)
         val timeOfDay = determineTimeOfDay(hour)
 
-        addAttributesToModel(model, weatherData, dustForecast, realTimeDust, uvIndexData, senTaIndexData, airStagnationIndexData, categorizedForecast, timeOfDay, errorMessage)
+        addAttributesToModel(model, weatherData, dustForecast, realTimeDust, uvIndexData, senTaIndexData, airStagnationIndexData, precipitationData, categorizedForecast, timeOfDay, errorMessage)
         model.addAttribute("uvHoursSequence", uvHoursSequence)
         model.addAttribute("sentaHoursSequence", sentaHoursSequence)
         model.addAttribute("asiHoursSequence", asiHoursSequence)
+        model.addAttribute("precipHoursSequence", precipHoursSequence)
 
         return "domain/weather/weather"
     }
@@ -233,6 +249,7 @@ class WeatherController(
         uvIndexData: List<UVIndexInfo>,
         senTaIndexData: List<SenTaIndexInfo>,
         airStagnationIndexData: List<AirStagnationIndexInfo>,
+        precipitationData: List<PrecipitationInfo>,
         categorizedForecast: List<Triple<List<String>, List<String>, List<String>>>,
         timeOfDay: String,
         errorMessage: String?
@@ -244,6 +261,7 @@ class WeatherController(
         model.addAttribute("uvIndexData", uvIndexData.toOption().orNull())
         model.addAttribute("senTaIndexData", senTaIndexData.toOption().orNull())
         model.addAttribute("airStagnationIndexData", airStagnationIndexData.toOption().orNull())
+        model.addAttribute("precipitationData", precipitationData.toOption().orNull())
         model.addAttribute("categorizedForecast", categorizedForecast.toOption().orNull())
         model.addAttribute("errorMessage", errorMessage)
     }

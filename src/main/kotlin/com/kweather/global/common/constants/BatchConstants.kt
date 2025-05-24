@@ -2,7 +2,7 @@ package com.kweather.global.common.constants
 
 object BatchConstants {
     const val DEFAULT_CHUNK_SIZE = 100
-    const val DEFAULT_PAGE_SIZE = 50
+    const val DEFAULT_PAGE_SIZE = 1000
     const val DEFAULT_SKIP_LIMIT = 100
     const val API_TIMEOUT_MS = 15000
     const val MAX_RETRY_ATTEMPTS = 3

@@ -3,7 +3,7 @@ package com.kweather.domain.region.entity
 import jakarta.persistence.*
 
 @Entity
-@Table(name = "regions")
+@Table(name = "region")
 data class Region(
     @Id
     @Column(name = "region_cd", length = 10)

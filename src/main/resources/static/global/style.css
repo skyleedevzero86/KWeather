@@ -134,16 +134,17 @@ body {
 .real-time-dust-section,
 .uv-index-forecast-section,
 .senta-index-forecast-section,
-.air-stagnation-index-forecast-section {
+.air-stagnation-index-forecast-section,
+.precipitation-forecast-section {
     text-align: center;
     padding: 20px;
     background: white;
     border-radius: 20px;
     color: black;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 1번에서 추가 */
-    margin-bottom: 20px; /* 1번에서 추가 */
-    position: relative; /* 2번 dust-forecast-section에서 추가 */
-    overflow: hidden; /* 2번 dust-forecast-section에서 추가 */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
 }
 
 .forecast-section h3,
@@ -151,7 +152,8 @@ body {
 .real-time-dust-section h3,
 .uv-index-forecast-section h3,
 .senta-index-forecast-section h3,
-.air-stagnation-index-forecast-section h3 {
+.air-stagnation-index-forecast-section h3,
+.precipitation-forecast-section h3 {
     font-size: 1.5em;
     margin-bottom: 20px;
     color: black;
@@ -326,7 +328,7 @@ body {
 .real-time-dust-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px; /* 1번에서 margin-top으로 변경 */
+    margin-top: 10px;
 }
 
 .real-time-dust-table th,
@@ -343,26 +345,35 @@ body {
 }
 
 .real-time-dust-table td {
-    font-size: 1em; /* 2번에서 추가 */
+    font-size: 1em;
 }
 
-/* 자외선 지수, 체감온도, 대기정체지수 테이블 스타일 */
+/* 자외선 지수, 체감온도, 대기정체지수, 강수량 테이블 스타일 */
 .forecast-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 10px;
+    table-layout: auto; /* 내용에 따라 동적 조정 */
+    overflow-x: auto; /* 내용이 넘치면 스크롤 */
+    max-width: 100%; /* 최대 너비 제한 */
+    display: block; /* 테이블이 블록 요소로 동작하도록 */
 }
 
 .forecast-table th,
 .forecast-table td {
-    padding: 10px;
+    padding: 5px;
     border: 1px solid #ddd;
     text-align: center;
+    word-wrap: break-word;
+    min-width: 60px; /* 최소 너비 증가 */
 }
 
 .forecast-table th {
     background: #f0f0f0;
     font-weight: bold;
+    white-space: nowrap;
+    height: 50px;
+    padding: 10px;
 }
 
 /* 등급 색상 스타일 */
@@ -439,7 +450,7 @@ body {
     color: #ff0000;
 }
 
-/* 스플래시 스타일 (2번에서 추가) */
+/* 스플래시 스타일 */
 .splash-icon {
     font-size: 50px;
     margin-bottom: 20px;
@@ -482,6 +493,12 @@ body {
         max-width: 15%;
     }
 
+    .forecast-table th,
+    .forecast-table td {
+        padding: 4px;
+        min-width: 50px;
+    }
+
     .grade-table th,
     .grade-table td {
         max-width: 120px;
@@ -510,14 +527,14 @@ body {
 
     .weather-details {
         flex-direction: column;
-        align-items: center; /* 1번에서 추가 */
+        align-items: center;
     }
 
     .air-quality,
     .uv-index {
-        width: 100%; /* 1번에서 추가 */
-        margin-bottom: 10px; /* 1번에서 추가 */
-        margin: 10px 0; /* 2번에서 추가 (중복 병합) */
+        width: 100%;
+        margin-bottom: 10px;
+        margin: 10px 0;
     }
 
     .forecast-row {
@@ -526,6 +543,16 @@ body {
 
     .forecast-item {
         margin: 5px 0;
+    }
+
+    .forecast-table {
+        font-size: 0.9em;
+    }
+
+    .forecast-table th,
+    .forecast-table td {
+        padding: 3px;
+        min-width: 40px;
     }
 
     .grade-table th,
@@ -572,6 +599,16 @@ body {
         gap: 8px;
     }
 
+    .forecast-table {
+        font-size: 0.8em;
+    }
+
+    .forecast-table th,
+    .forecast-table td {
+        padding: 2px;
+        min-width: 30px;
+    }
+
     .grade-table th,
     .grade-table td {
         padding: 3px;
@@ -603,6 +640,7 @@ body {
     }
 }
 
+/* 위치 관련 스타일 */
 .location-btn {
     background: none;
     border: 1px solid #4a90e2;
@@ -612,10 +650,12 @@ body {
     cursor: pointer;
     margin-left: 10px;
 }
+
 .location-btn:hover {
     background: #4a90e2;
     color: white;
 }
+
 #locationPopup {
     display: none;
     position: fixed;
@@ -628,6 +668,7 @@ body {
     align-items: center;
     z-index: 1000;
 }
+
 #locationPopupContent {
     background-color: #fff;
     padding: 20px;
@@ -636,6 +677,7 @@ body {
     position: relative;
     width: 300px;
 }
+
 .close-btn {
     position: absolute;
     top: 10px;
@@ -646,17 +688,21 @@ body {
     background: none;
     border: none;
 }
+
 .close-btn:hover {
     color: #ff0000;
 }
+
 .select-group {
     margin-bottom: 10px;
 }
+
 .select-group select {
     width: 100%;
     padding: 5px;
     margin-top: 5px;
 }
+
 #confirmBtn {
     background: #4a90e2;
     color: white;
@@ -666,9 +712,11 @@ body {
     cursor: pointer;
     width: 100%;
 }
+
 #confirmBtn:hover {
     background: #357abd;
 }
+
 .weather-header .location-row {
     display: flex;
     align-items: center;

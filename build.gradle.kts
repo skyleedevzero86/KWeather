@@ -70,6 +70,7 @@ dependencies {
     implementation("io.arrow-kt:arrow-core:1.2.4")
     implementation ("org.springframework.retry:spring-retry:2.0.6")
     implementation ("org.springframework:spring-aspects:6.1.12")
+    implementation ("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.4")
 }
 
 kotlin {

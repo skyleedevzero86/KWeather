@@ -8,101 +8,22 @@
     <link rel="stylesheet" th:href="@{/static/global/global.css}" />
     <link rel="stylesheet" th:href="@{/static/global/style.css}" />
     <style>
-        .location-btn {
-            background: none;
-            border: 1px solid #4a90e2;
-            color: #4a90e2;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-left: 10px;
-        }
-        .location-btn:hover {
-            background: #4a90e2;
-            color: white;
-        }
-        #locationPopup {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
+        .precipitation-forecast-section table {
             width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            border-collapse: separate; /* 테이블 간격을 조정하기 위해 separate 사용 */
+            border-spacing: 2px; /* 셀 간의 간격 조정 */
+            margin-top: 10px;
         }
-        #locationPopupContent {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            color: black;
-            position: relative;
-            width: 300px;
+        .precipitation-forecast-section th, .precipitation-forecast-section td {
+            border: 1px solid #ddd;
+            padding: 12px; /* 패딩을 늘려서 셀 내부 간격 조정 */
+            text-align: center;
         }
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 1.5em;
-            cursor: pointer;
-            color: #000;
-            background: none;
-            border: none;
+        .precipitation-forecast-section th {
+            background-color: #f2f2f2;
         }
-        .close-btn:hover {
-            color: #ff0000;
-        }
-        .select-group {
-            margin-bottom: 10px;
-        }
-        .select-group select {
-            width: 100%;
-            padding: 5px;
-            margin-top: 5px;
-        }
-        #confirmBtn {
-            background: #4a90e2;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
-        }
-        #confirmBtn:hover {
-            background: #357abd;
-        }
-        .weather-header .location-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .popup {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .popup-content {
-            position: relative;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            max-width: 90%;
-            max-height: 90vh;
-            overflow: auto;
-        }
-        .popup-content img {
-            max-width: 100%;
-            max-height: 80vh;
+        .na-message {
+            color: red;
         }
     </style>
 </head>
@@ -112,7 +33,7 @@
         <p class="datetime">
             <span class="date" th:text="${weather.date}"></span>
             <span class="time" th:text="${weather.time}"></span>
-            <span class="timeofday" th:text="${timeOfDay}"></span>
+            <span class="timeofday" th:text="'오후'"></span>
         </p>
         <div class="location-row">
             <h1 id="locationTitle" th:text="${weather.location}"></h1>
@@ -181,15 +102,15 @@
                                               (#lists.size(forecastData.first) > #lists.size(forecastData.third) ? #lists.size(forecastData.first) : #lists.size(forecastData.third)) :
                                               (#lists.size(forecastData.second) > #lists.size(forecastData.third) ? #lists.size(forecastData.second) : #lists.size(forecastData.third))) : 0}">
                                 <tr th:each="i : ${#numbers.sequence(0, maxRows > 0 ? maxRows - 1 : 0)}">
-                                    <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].first) and not (categorizedForecast[iter.index].first.size() == 1 and categorizedForecast[iter.index].first[0] == 'N/A')}"
+                                    <td th:if="${categorizedForecast[iter.index] != null and not #lists.isEmpty(categorizedForecast[iter.index].first) and not (categorizedForecast[iter.index].first.size() == 1 and categorizedForecast[iter.index].first[0] == 'N/A')}"
                                         th:text="${#lists.size(categorizedForecast[iter.index].first) > i ? categorizedForecast[iter.index].first[i] : ''}"
                                         th:unless="${#lists.size(categorizedForecast[iter.index].first) > i and categorizedForecast[iter.index].first[i] == 'N/A'}"
                                         class="grade-cell good"></td>
-                                    <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].second) and not (categorizedForecast[iter.index].second.size() == 1 and categorizedForecast[iter.index].second[0] == 'N/A')}"
+                                    <td th:if="${categorizedForecast[iter.index] != null and not #lists.isEmpty(categorizedForecast[iter.index].second) and not (categorizedForecast[iter.index].second.size() == 1 and categorizedForecast[iter.index].second[0] == 'N/A')}"
                                         th:text="${#lists.size(categorizedForecast[iter.index].second) > i ? categorizedForecast[iter.index].second[i] : ''}"
                                         th:unless="${#lists.size(categorizedForecast[iter.index].second) > i and categorizedForecast[iter.index].second[i] == 'N/A'}"
                                         class="grade-cell moderate"></td>
-                                    <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].third) and not (categorizedForecast[iter.index].third.size() == 1 and categorizedForecast[iter.index].third[0] == 'N/A')}"
+                                    <td th:if="${categorizedForecast[iter.index] != null and not #lists.isEmpty(categorizedForecast[iter.index].third) and not (categorizedForecast[iter.index].third.size() == 1 and categorizedForecast[iter.index].third[0] == 'N/A')}"
                                         th:text="${#lists.size(categorizedForecast[iter.index].third) > i ? categorizedForecast[iter.index].third[i] : ''}"
                                         th:unless="${#lists.size(categorizedForecast[iter.index].third) > i and categorizedForecast[iter.index].third[i] == 'N/A'}"
                                         class="grade-cell bad"></td>
@@ -330,6 +251,30 @@
         </div>
         <div th:if="${airStagnationIndexData == null or #lists.isEmpty(airStagnationIndexData)}">
             <p style="color: red;">대기정체지수 데이터를 불러올 수 없습니다.</p>
+        </div>
+    </div>
+    <div class="precipitation-forecast-section">
+        <h3>강수량 예보</h3>
+        <div th:if="${precipitationData != null and not #lists.isEmpty(precipitationData)}">
+            <table class="forecast-table">
+                <tr>
+                    <th>날짜</th>
+                    <th th:each="hour : ${precipHoursSequence}" th:text="'+' + ${hour} + '시간'"></th>
+                </tr>
+                <tr th:each="precip : ${precipitationData}">
+                    <td th:text="${precip.date}"></td>
+                    <td th:each="hour : ${precipHoursSequence}">
+                        <span th:switch="${precip.values['h' + hour]}">
+                            <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="*" th:text="${precip.values['h' + hour]}"></span>
+                        </span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div th:if="${precipitationData == null or #lists.isEmpty(precipitationData)}">
+            <p style="color: red;">강수량 데이터를 불러올 수 없습니다.</p>
         </div>
     </div>
 </div>
