@@ -22,17 +22,15 @@ object ApiClientUtility {
         configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
     }
 
-    // API 요청 인터페이스 정의
     interface ApiClient<P, T> {
         fun buildUrl(params: P): String
         fun parseResponse(response: String): Either<String, T>
     }
 
-    // API 요청 실행
     @Retryable(
         value = [SocketTimeoutException::class, IOException::class],
         maxAttempts = 5,
-        backoff = Backoff(delay = 2000, multiplier = 1.5)
+        backoff = Backoff(delay = 2000, multiplier = 2.0)
     )
     fun <P, T, R> makeApiRequest(
         client: ApiClient<P, T>,
@@ -50,7 +48,6 @@ object ApiClientUtility {
                 logger.error("XML 오류 응답 수신: $response")
                 return ApiResult.Error("API에서 XML 오류 응답을 반환했습니다")
             }
-            // parseResponse와 transform을 명시적으로 처리
             when (val parseResult = client.parseResponse(response)) {
                 is Either.Left -> ApiResult.Error(parseResult.value)
                 is Either.Right -> when (val transformResult = transform(parseResult.value)) {
@@ -64,19 +61,18 @@ object ApiClientUtility {
         }
     }
 
-    // HTTP 요청 실행
     @Retryable(
         value = [SocketTimeoutException::class],
         maxAttempts = 3,
-        backoff = Backoff(delay = 2000, multiplier = 1.5)
+        backoff = Backoff(delay = 2000, multiplier = 2.0)
     )
     private fun fetchDataFromApi(urlString: String): Either<String, String> =
         Either.catch {
             URL(urlString).openConnection().let { conn ->
                 (conn as HttpURLConnection).apply {
                     requestMethod = "GET"
-                    connectTimeout = 15000
-                    readTimeout = 15000
+                    connectTimeout = 30000
+                    readTimeout = 30000
                     setRequestProperty("User-Agent", "KWeather/1.0")
                 }
                 val responseCode = conn.responseCode
@@ -92,7 +88,6 @@ object ApiClientUtility {
             "HTTP 요청 실패: ${e.message}"
         }
 
-    // 리소스 안전하게 닫기
     private inline fun <T : AutoCloseable, R> use(resource: T, block: (T) -> R): R {
         try {
             return block(resource)
@@ -105,6 +100,5 @@ object ApiClientUtility {
         }
     }
 
-    // ObjectMapper 인스턴스 제공
     fun getObjectMapper(): ObjectMapper = objectMapper
 }
