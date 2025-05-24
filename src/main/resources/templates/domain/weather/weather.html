@@ -171,7 +171,11 @@
                 <tr th:each="uv : ${uvIndexData}">
                     <td th:text="${uv.date}"></td>
                     <td th:each="hour : ${uvHoursSequence}">
-                        <span th:text="${uv.values['h' + hour] ?: 'N/A'}"></span>
+                        <span th:switch="${uv.values['h' + hour]}">
+                            <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="*" th:text="${uv.values['h' + hour]}"></span>
+                        </span>
                     </td>
                 </tr>
             </table>
@@ -192,7 +196,11 @@
                 <tr th:each="senta : ${senTaIndexData}">
                     <td th:text="${senta.date}"></td>
                     <td th:each="hour : ${sentaHoursSequence}">
-                        <span th:text="${senta.values['h' + hour] ?: 'N/A'}"></span>
+                        <span th:switch="${senta.values['h' + hour]}">
+                            <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="*" th:text="${senta.values['h' + hour]}"></span>
+                        </span>
                     </td>
                 </tr>
             </table>
@@ -213,7 +221,11 @@
                 <tr th:each="asi : ${airStagnationIndexData}">
                     <td th:text="${asi.date}"></td>
                     <td th:each="hour : ${asiHoursSequence}">
-                        <span th:text="${asi.values['h' + hour] ?: 'N/A'}"></span>
+                        <span th:switch="${asi.values['h' + hour]}">
+                            <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="*" th:text="${asi.values['h' + hour]}"></span>
+                        </span>
                     </td>
                 </tr>
             </table>

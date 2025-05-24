@@ -84,32 +84,33 @@ class UVIndexService(
         runCatching {
             logger.debug("파싱 전 UVIndexItem: $item")
             val values = mutableMapOf<String, String>().apply {
-                item.h0?.let { put("h0", it) }
-                item.h3?.let { put("h3", it) }
-                item.h6?.let { put("h6", it) }
-                item.h9?.let { put("h9", it) }
-                item.h12?.let { put("h12", it) }
-                item.h15?.let { put("h15", it) }
-                item.h18?.let { put("h18", it) }
-                item.h21?.let { put("h21", it) }
-                item.h24?.let { put("h24", it) }
-                item.h27?.let { put("h27", it) }
-                item.h30?.let { put("h30", it) }
-                item.h33?.let { put("h33", it) }
-                item.h36?.let { put("h36", it) }
-                item.h39?.let { put("h39", it) }
-                item.h42?.let { put("h42", it) }
-                item.h45?.let { put("h45", it) }
-                item.h48?.let { put("h48", it) }
-                item.h51?.let { put("h51", it) }
-                item.h54?.let { put("h54", it) }
-                item.h57?.let { put("h57", it) }
-                item.h60?.let { put("h60", it) }
-                item.h63?.let { put("h63", it) }
-                item.h66?.let { put("h66", it) }
-                item.h69?.let { put("h69", it) }
-                item.h72?.let { put("h72", it) }
-                item.h75?.let { put("h75", it) }
+                // 빈 문자열이나 null 값은 추가하지 않음
+                if (!item.h0.isNullOrBlank()) put("h0", item.h0)
+                if (!item.h3.isNullOrBlank()) put("h3", item.h3)
+                if (!item.h6.isNullOrBlank()) put("h6", item.h6)
+                if (!item.h9.isNullOrBlank()) put("h9", item.h9)
+                if (!item.h12.isNullOrBlank()) put("h12", item.h12)
+                if (!item.h15.isNullOrBlank()) put("h15", item.h15)
+                if (!item.h18.isNullOrBlank()) put("h18", item.h18)
+                if (!item.h21.isNullOrBlank()) put("h21", item.h21)
+                if (!item.h24.isNullOrBlank()) put("h24", item.h24)
+                if (!item.h27.isNullOrBlank()) put("h27", item.h27)
+                if (!item.h30.isNullOrBlank()) put("h30", item.h30)
+                if (!item.h33.isNullOrBlank()) put("h33", item.h33)
+                if (!item.h36.isNullOrBlank()) put("h36", item.h36)
+                if (!item.h39.isNullOrBlank()) put("h39", item.h39)
+                if (!item.h42.isNullOrBlank()) put("h42", item.h42)
+                if (!item.h45.isNullOrBlank()) put("h45", item.h45)
+                if (!item.h48.isNullOrBlank()) put("h48", item.h48)
+                if (!item.h51.isNullOrBlank()) put("h51", item.h51)
+                if (!item.h54.isNullOrBlank()) put("h54", item.h54)
+                if (!item.h57.isNullOrBlank()) put("h57", item.h57)
+                if (!item.h60.isNullOrBlank()) put("h60", item.h60)
+                if (!item.h63.isNullOrBlank()) put("h63", item.h63)
+                if (!item.h66.isNullOrBlank()) put("h66", item.h66)
+                if (!item.h69.isNullOrBlank()) put("h69", item.h69)
+                if (!item.h72.isNullOrBlank()) put("h72", item.h72)
+                if (!item.h75.isNullOrBlank()) put("h75", item.h75)
             }
             if (values.isEmpty()) {
                 logger.warn("파싱된 values가 비어 있습니다: $values")

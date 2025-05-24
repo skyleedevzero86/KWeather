@@ -21,16 +21,17 @@ class SenTaIndexService(
 ) {
     private val logger = LoggerFactory.getLogger(SenTaIndexService::class.java)
 
-    // API 클라이언트 구현
     private inner class SenTaIndexApiClient : ApiClientUtility.ApiClient<SenTaIndexRequestParams, SenTaIndexResponse> {
         override fun buildUrl(params: SenTaIndexRequestParams): String {
-            return "${senTaIndexBaseUrl}?serviceKey=$serviceKey" +
+            val url = "${senTaIndexBaseUrl}?serviceKey=$serviceKey" +
                     "&pageNo=${params.pageNo}" +
                     "&numOfRows=${params.numOfRows}" +
                     "&dataType=${params.dataType}" +
                     "&areaNo=${params.areaNo}" +
                     "&time=${params.time}" +
                     "&requestCode=${params.requestCode}"
+            logger.info("생성된 체감온도 API URL: $url")
+            return url
         }
 
         override fun parseResponse(response: String): Either<String, SenTaIndexResponse> =
@@ -38,15 +39,14 @@ class SenTaIndexService(
                 ApiClientUtility.getObjectMapper().readValue(response, SenTaIndexResponse::class.java)
             }.fold(
                 onSuccess = { Either.Right(it) },
-                onFailure = { Either.Left("여름철 체감온도 응답 파싱 실패: ${it.message}") }
+                onFailure = { Either.Left("체감온도 응답 파싱 실패: ${it.message}") }
             )
     }
 
-    // 여름철 체감온도 데이터 가져오기
     fun getSenTaIndex(areaNo: String, time: String): List<SenTaIndexInfo> {
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
         if (now.monthValue !in 5..9) {
-            logger.info("여름철 체감온도 데이터는 5~9월에만 제공됩니다. 현재 월: ${now.monthValue}")
+            logger.info("체감온도 데이터는 5~9월에만 제공됩니다. 현재 월: ${now.monthValue}")
             return emptyList()
         }
 
@@ -54,14 +54,17 @@ class SenTaIndexService(
         val senTaIndexClient = SenTaIndexApiClient()
 
         return when (val result = ApiClientUtility.makeApiRequest(senTaIndexClient, params) { response ->
-            val items = response.response?.body?.items
+            logger.info("체감온도 API 원시 응답: $response")
+            val items = response.response?.body?.items?.item
             if (items.isNullOrEmpty()) {
                 logger.info("체감온도 데이터 없음, 이전 시간으로 재시도")
                 val previousTime = LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1)
                     .format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
                 val retryParams = SenTaIndexRequestParams(areaNo = areaNo, time = previousTime)
                 when (val retryResult = ApiClientUtility.makeApiRequest(senTaIndexClient, retryParams) { retryResponse ->
-                    val senTaIndexInfos = retryResponse.response?.body?.items?.mapNotNull { item ->
+                    logger.info("재시도 체감온도 API 원시 응답: $retryResponse")
+                    val retryItems = retryResponse.response?.body?.items?.item
+                    val senTaIndexInfos = retryItems?.mapNotNull { item ->
                         item?.let { parseSenTaIndexItem(it) }
                     } ?: emptyList()
                     Either.Right(senTaIndexInfos)
@@ -74,17 +77,20 @@ class SenTaIndexService(
                 Either.Right(senTaIndexInfos)
             }
         }) {
-            is ApiResult.Success -> result.data
+            is ApiResult.Success -> {
+                logger.info("체감온도 데이터 성공적으로 가져옴: ${result.data}")
+                result.data
+            }
             is ApiResult.Error -> {
-                logger.error("여름철 체감온도 API 요청 실패: ${result.message}")
+                logger.error("체감온도 API 요청 실패: ${result.message}")
                 emptyList()
             }
         }
     }
 
-    // 여름철 체감온도 항목 파싱
     private fun parseSenTaIndexItem(item: SenTaIndexItem): SenTaIndexInfo? =
         runCatching {
+            logger.debug("파싱 전 SenTaIndexItem: $item")
             val values = mutableMapOf<String, String>()
             with(item) {
                 listOf(
@@ -96,25 +102,30 @@ class SenTaIndexService(
                     "h21" to h21, "h22" to h22, "h23" to h23, "h24" to h24,
                     "h25" to h25, "h26" to h26, "h27" to h27, "h28" to h28,
                     "h29" to h29, "h30" to h30, "h31" to h31, "h32" to h32
-                ).forEach { (key, value) -> value?.takeIf { it.isNotEmpty() }?.let { values[key] = it } }
+                ).forEach { (key, value) -> value?.takeIf { it.isNotBlank() }?.let { values[key] = it } }
             }
-            if (values.isEmpty()) return null
+            if (values.isEmpty()) {
+                logger.warn("파싱된 values가 비어 있습니다: $item")
+                return null
+            }
             SenTaIndexInfo(
-                date = item.date ?: return null,
+                date = item.date ?: run {
+                    logger.warn("date 필드가 null입니다: $item")
+                    return null
+                },
                 values = values
             )
         }.onFailure { e ->
-            logger.warn("체감온도 항목 파싱 실패: ${e.message}")
+            logger.warn("체감온도 항목 파싱 실패: ${e.message}", e)
         }.getOrNull()
 
     init {
         validateConfiguration()
     }
 
-    // 설정값 검증
     private fun validateConfiguration() {
         if (serviceKey.isBlank() || senTaIndexBaseUrl.isBlank()) {
-            logger.error("여름철 체감온도 서비스: 필수 설정값이 누락되었습니다")
+            logger.error("체감온도 서비스: 필수 설정값이 누락되었습니다")
         }
     }
 }
