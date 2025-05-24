@@ -14,6 +14,7 @@ import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
 import com.kweather.domain.weather.model.ApiResult
+import java.util.stream.Collectors
 
 object ApiClientUtility {
     private val logger = LoggerFactory.getLogger(ApiClientUtility::class.java)
@@ -81,7 +82,9 @@ object ApiClientUtility {
                 } else {
                     BufferedReader(InputStreamReader(conn.errorStream))
                 }
-                use(reader) { r -> r.lines().collect(java.util.stream.Collectors.joining()) }
+                val response = use(reader) { r -> r.lines().collect(Collectors.joining()) }
+                logger.info("API 응답: 코드=$responseCode, 본문=$response") // 추가
+                response
             }
         }.mapLeft { e ->
             logger.error("HTTP 요청 실패: ${e.message}", e)
