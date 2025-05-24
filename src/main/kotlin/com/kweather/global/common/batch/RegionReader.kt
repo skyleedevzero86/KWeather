@@ -79,41 +79,71 @@ class RegionReader(
             )
     }
 
-    fun reader(pageNo: Int = 1, numOfRows: Int = BatchConstants.DEFAULT_PAGE_SIZE): ItemReader<RegionDto> {
+    fun reader(maxPage: Int = BatchConstants.DEFAULT_MAX_PAGE, numOfRows: Int = BatchConstants.DEFAULT_PAGE_SIZE): ItemReader<RegionDto> {
         val allRegions = mutableListOf<RegionDto>()
-        val params = RegionRequestParams(pageNo, numOfRows)
         val regionClient = RegionApiClient()
 
-        return when (val result = makeApiRequest(regionClient, params) { response ->
-            logger.debug("StanReginCd 컨테이너: ${response.stanReginCd}")
+        // 1부터 maxPage까지 순회
+        for (currentPage in 1..maxPage) {
+            val params = RegionRequestParams(pageNo = currentPage, numOfRows = numOfRows)
+            logger.info(BatchConstants.LogMessages.API_REQUEST_START, currentPage)
 
-            // 배열의 두 번째 요소에서 row 데이터 추출
-            val regions: List<RegionDto> = response.stanReginCd
-                ?.find { it.row != null } // row가 있는 컨테이너 찾기
-                ?.row
-                ?.filter { it.isValid() }
-                ?: emptyList()
+            when (val result = makeApiRequest(regionClient, params) { response ->
+                logger.debug("StanReginCd 컨테이너: ${response.stanReginCd}")
 
-            logger.info("유효한 지역 데이터 ${regions.size}개 추출")
-            regions.right()
-        }) {
-            is ApiResult.Success -> {
-                allRegions.addAll(result.data)
-                if (allRegions.isEmpty()) {
-                    logger.warn(BatchConstants.LogMessages.API_REQUEST_FAILED)
-                    allRegions.addAll(regionCacheLoader.loadRegionsFromCache())
+                // 배열의 두 번째 요소에서 row 데이터 추출
+                val regions: List<RegionDto> = response.stanReginCd
+                    ?.find { it.row != null }
+                    ?.row
+                    ?.filter { it.isValid() }
+                    ?: emptyList()
+
+                logger.info(BatchConstants.LogMessages.API_RESPONSE_SUCCESS, currentPage, regions.size)
+                regions.right()
+            }) {
+                is ApiResult.Success -> {
+                    if (result.data.isEmpty()) {
+                        logger.info(BatchConstants.LogMessages.NO_MORE_DATA, currentPage)
+                        break // 더 이상 데이터가 없으면 루프 종료
+                    }
+                    // 중복 확인 및 페이지별 데이터 즉시 저장
+                    try {
+                        logger.info(BatchConstants.LogMessages.HIERARCHY_DATA_PRELOAD)
+                        hierarchyService.loadHierarchyData(result.data)
+                        logger.info(BatchConstants.LogMessages.HIERARCHY_DATA_PRELOAD_COMPLETE)
+                        logger.info(BatchConstants.LogMessages.DATA_SAVE_SUCCESS, result.data.size)
+                        allRegions.addAll(result.data)
+                    } catch (e: Exception) {
+                        logger.error(BatchConstants.LogMessages.DATA_SAVE_FAILED, e)
+                        continue // 저장 실패 시 다음 페이지로 진행
+                    }
                 }
-                logger.info(BatchConstants.LogMessages.HIERARCHY_DATA_PRELOAD)
-                hierarchyService.loadHierarchyData(allRegions)
-                logger.info(BatchConstants.LogMessages.HIERARCHY_DATA_PRELOAD_COMPLETE)
-                logger.info(BatchConstants.LogMessages.TOTAL_DATA_LOADED, allRegions.size)
-                ListItemReader(allRegions)
-            }
-            is ApiResult.Error -> {
-                logger.error("API 요청 실패: ${result.message}")
-                handleApiFailure()
+                is ApiResult.Error -> {
+                    logger.error("페이지 {} 요청 실패: {}", currentPage, result.message)
+                    continue // API 요청 실패 시 다음 페이지로 진행
+                }
             }
         }
+
+        // 모든 페이지 처리 후 데이터가 없으면 캐시에서 로드
+        if (allRegions.isEmpty()) {
+            logger.warn(BatchConstants.LogMessages.API_REQUEST_FAILED)
+            allRegions.addAll(regionCacheLoader.loadRegionsFromCache())
+            if (allRegions.isNotEmpty()) {
+                try {
+                    logger.info(BatchConstants.LogMessages.HIERARCHY_DATA_PRELOAD)
+                    hierarchyService.loadHierarchyData(allRegions)
+                    logger.info(BatchConstants.LogMessages.HIERARCHY_DATA_PRELOAD_COMPLETE)
+                    logger.info(BatchConstants.LogMessages.CACHE_LOAD_SUCCESS, allRegions.size)
+                } catch (e: Exception) {
+                    logger.error(BatchConstants.LogMessages.DATA_SAVE_FAILED, e)
+                    return ListItemReader(emptyList())
+                }
+            }
+        }
+
+        logger.info(BatchConstants.LogMessages.TOTAL_DATA_LOADED, allRegions.size)
+        return ListItemReader(allRegions)
     }
 
     private fun handleApiFailure(): ItemReader<RegionDto> {

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.kweather.domain.region.dto.RegionDto
 import com.kweather.global.common.constants.BatchConstants
-import com.kweather.global.common.exception.CacheLoadException
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Component

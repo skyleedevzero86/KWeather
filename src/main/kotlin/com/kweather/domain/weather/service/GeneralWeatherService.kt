@@ -10,6 +10,7 @@ import com.kweather.domain.realtime.dto.RealTimeDustInfo
 import com.kweather.domain.realtime.dto.RealTimeDustItem
 import com.kweather.domain.realtime.dto.RealTimeDustResponse
 import com.kweather.domain.senta.service.SenTaIndexService
+import com.kweather.domain.uvi.dto.UVIndex
 import com.kweather.domain.uvi.service.UVIndexService
 import com.kweather.domain.weather.dto.*
 import com.kweather.domain.weather.entity.Weather
