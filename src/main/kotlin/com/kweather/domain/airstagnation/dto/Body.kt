@@ -1,12 +1,13 @@
 package com.kweather.domain.airstagnation.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Body(
-    val dataType: String?,
-    val items: List<AirStagnationIndexItem>?,
-    val pageNo: Int?,
-    val numOfRows: Int?,
-    val totalCount: Int?
+    @JsonProperty("dataType") val dataType: String?,
+    @JsonProperty("items") val items: Items?,
+    @JsonProperty("pageNo") val pageNo: Int?,
+    @JsonProperty("numOfRows") val numOfRows: Int?,
+    @JsonProperty("totalCount") val totalCount: Int?
 )
