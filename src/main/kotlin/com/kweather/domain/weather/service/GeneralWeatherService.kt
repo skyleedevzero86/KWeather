@@ -38,7 +38,6 @@ class GeneralWeatherService(
 ) {
     private val logger = LoggerFactory.getLogger(GeneralWeatherService::class.java)
 
-    // 실시간 미세먼지 요청 파라미터
     data class RealTimeDustRequestParams(
         val returnType: String = "json",
         val numOfRows: Int = 50,
@@ -47,17 +46,16 @@ class GeneralWeatherService(
         val ver: String = "1.0"
     )
 
-    // 날씨 API 클라이언트
     private inner class WeatherApiClient : ApiClientUtility.ApiClient<WeatherRequestParams, WeatherResponse> {
         override fun buildUrl(params: WeatherRequestParams): String {
             val formatter = DateTimeFormatter.ofPattern("yyyyMMdd")
             val date = LocalDate.parse(params.baseDate, formatter)
-            val nextDate = date.plusDays(1).format(formatter)
+            val targetDate = date.minusDays(1).format(formatter) // 과거 데이터 요청
 
             return "${weatherBaseUrl}?serviceKey=$serviceKey" +
                     "&numOfRows=1000" +
                     "&pageNo=1" +
-                    "&base_date=$nextDate" +
+                    "&base_date=$targetDate" +
                     "&base_time=${params.baseTime}" +
                     "&nx=${params.nx}" +
                     "&ny=${params.ny}" +
@@ -73,7 +71,6 @@ class GeneralWeatherService(
             )
     }
 
-    // 미세먼지 예보 API 클라이언트
     private inner class DustForecastApiClient : ApiClientUtility.ApiClient<DustForecastRequestParams, ForecastResponse> {
         override fun buildUrl(params: DustForecastRequestParams): String {
             return "${dustForecastBaseUrl}?serviceKey=$serviceKey" +
@@ -93,7 +90,6 @@ class GeneralWeatherService(
             )
     }
 
-    // 실시간 미세먼지 API 클라이언트
     private inner class RealTimeDustApiClient : ApiClientUtility.ApiClient<RealTimeDustRequestParams, RealTimeDustResponse> {
         override fun buildUrl(params: RealTimeDustRequestParams): String {
             val encodedSidoName = URLEncoder.encode(params.sidoName, StandardCharsets.UTF_8.toString())
@@ -114,7 +110,6 @@ class GeneralWeatherService(
             )
     }
 
-    // 초단기 날씨 데이터 가져오기
     fun getUltraShortWeather(nx: Int, ny: Int): WeatherResponse {
         val baseDate = DateTimeUtils.getBaseDate()
         val baseTime = DateTimeUtils.getBaseTime()
@@ -141,7 +136,6 @@ class GeneralWeatherService(
         }
     }
 
-    // 미세먼지 예보 데이터 가져오기
     fun getDustForecast(searchDate: String, informCode: String): List<ForecastInfo> {
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
         val currentHour = now.hour
@@ -183,7 +177,6 @@ class GeneralWeatherService(
         }
     }
 
-    // 실시간 미세먼지 데이터 가져오기
     fun getRealTimeDust(sidoName: String): List<RealTimeDustInfo> {
         val params = RealTimeDustRequestParams(sidoName = sidoName)
         val realTimeDustClient = RealTimeDustApiClient()
@@ -202,7 +195,6 @@ class GeneralWeatherService(
         }
     }
 
-    // 날씨 데이터 파싱
     fun parseWeatherData(response: WeatherResponse): List<WeatherInfo> =
         when {
             response.response?.header?.resultCode != "00" -> {
@@ -225,7 +217,6 @@ class GeneralWeatherService(
             }
         }
 
-    // 날씨 항목 파싱
     private fun parseWeatherItem(item: WeatherItem): WeatherInfo? =
         runCatching {
             WeatherInfo(
@@ -239,7 +230,6 @@ class GeneralWeatherService(
             logger.warn("날씨 항목 파싱 실패: ${e.message}")
         }.getOrNull()
 
-    // 실시간 미세먼지 항목 파싱
     private fun parseRealTimeDustItem(item: RealTimeDustItem): RealTimeDustInfo? =
         runCatching {
             RealTimeDustInfo(
@@ -255,7 +245,6 @@ class GeneralWeatherService(
             logger.warn("실시간 미세먼지 항목 파싱 실패: ${e.message}")
         }.getOrNull()
 
-    // 미세먼지 등급 변환
     private fun convertGrade(grade: String?): String = when (grade) {
         "1" -> "좋음"
         "2" -> "보통"
@@ -264,7 +253,6 @@ class GeneralWeatherService(
         else -> "N/A"
     }
 
-    // 미세먼지 예보 항목 파싱
     private fun parseForecastItem(item: ForecastItem, defaultInformCode: String): ForecastInfo? =
         runCatching {
             ForecastInfo(
@@ -283,7 +271,6 @@ class GeneralWeatherService(
             logger.warn("예보 항목 파싱 실패: ${e.message}")
         }.getOrNull()
 
-    // 이전 시간으로 재시도
     private fun retryWithEarlierTime(nx: Int, ny: Int, baseDate: String): WeatherResponse? {
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
         val retryTime = calculateRetryTime(now.hour, now.minute)
@@ -301,7 +288,6 @@ class GeneralWeatherService(
         }
     }
 
-    // 재시도 시간 계산
     private fun calculateRetryTime(hour: Int, minute: Int): String =
         when {
             hour >= 12 && minute >= 5 -> "0000"
@@ -309,14 +295,13 @@ class GeneralWeatherService(
             else -> String.format("%02d30", if (minute < 45) hour else if (hour == 0) 23 else hour - 1)
         }
 
-    // 날씨 엔티티 생성
     fun buildWeatherEntity(nx: Int, ny: Int): Weather {
         val response = getUltraShortWeather(nx, ny)
         val weatherInfoList = parseWeatherData(response)
         val sidoName = "서울"
         val areaNo = "1100000000"
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
-        val apiTime = now.minusHours(now.hour % 3L).format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
+        val apiTime = now.minusHours(1).format(DateTimeFormatter.ofPattern("yyyyMMddHH")) // 1시간 전 시간 사용
         val realTimeDust = getRealTimeDust(sidoName)
         val uvIndexData = uvIndexService.getUVIndex(areaNo, apiTime)
         val senTaIndexData = senTaIndexService.getSenTaIndex(areaNo, apiTime)
@@ -396,7 +381,6 @@ class GeneralWeatherService(
         )
     }
 
-    // 기본 미세먼지 데이터 생성
     private fun createDefaultAirQuality(): AirQuality =
         AirQuality(
             title = "미세먼지",
@@ -406,7 +390,6 @@ class GeneralWeatherService(
             measurement = "㎍/㎥"
         )
 
-    // 기본 자외선 지수 데이터 생성
     private fun createDefaultUVIndex(): UVIndex =
         UVIndex(
             title = "자외선 지수",
@@ -416,7 +399,6 @@ class GeneralWeatherService(
             measurement = ""
         )
 
-    // 카테고리별 단위 설정
     private fun getUnitForCategory(category: String?): String =
         when (category) {
             "T1H" -> "°C"
@@ -431,7 +413,6 @@ class GeneralWeatherService(
         validateConfiguration()
     }
 
-    // 설정값 검증
     private fun validateConfiguration() {
         if (serviceKey.isBlank() || weatherBaseUrl.isBlank() || dustForecastBaseUrl.isBlank() || realTimeDustBaseUrl.isBlank()) {
             logger.error("날씨 및 미세먼지 서비스: 필수 설정값이 누락되었습니다")
