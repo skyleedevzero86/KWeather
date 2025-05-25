@@ -1,46 +1,109 @@
 package com.kweather.global.common.util
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.springframework.stereotype.Component
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
+import arrow.core.flatMap
 import org.apache.hc.client5.http.classic.methods.HttpGet
 import org.apache.hc.client5.http.impl.classic.HttpClients
 import org.apache.hc.core5.http.io.entity.EntityUtils
+import org.slf4j.LoggerFactory
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Component
 class GeoUtil {
 
+    private val logger = LoggerFactory.getLogger(GeoUtil::class.java)
+    private val objectMapper = jacksonObjectMapper()
+
+    // Strategy Pattern을 위한 인터페이스
+    interface ApiKeyProvider {
+        fun getApiKey(): String
+    }
+
+    // 환경변수에서 API 키를 가져오는 전략
+    private val apiKeyProvider = object : ApiKeyProvider {
+        override fun getApiKey(): String =
+            System.getenv("KAKAO_API_KEY") ?: "06b18721985d194ccecb60a6fd6ab132"
+    }
+
     fun fetchGeoCoordinates(address: String): Either<String, Pair<String, String>> {
-        return try {
-            val apiKey = "KakaoAK ${System.getenv("KAKAO_API_KEY") ?: "06b18721985d194ccecb60a6fd6ab132"}"
-            val url = "https://dapi.kakao.com/v2/local/search/address.json?query=${address}"
-            val httpClient = HttpClients.createDefault()
-            val request = HttpGet(url)
-            request.addHeader("Authorization", apiKey)
+        logger.info("주소 좌표 조회 시작: $address")
 
-            // HttpClient 5.x의 execute 메서드를 람다로 처리
-            val coordinates = httpClient.execute(request) { response ->
-                val entity = response.entity
-                val json = EntityUtils.toString(entity)
-                val mapper = jacksonObjectMapper()
-                val result = mapper.readTree(json)
+        val result = createHttpRequest(address)
+            .flatMap { request -> executeRequest(request) }
+            .flatMap { jsonResponse -> parseCoordinates(jsonResponse) }
 
-                // documents가 비어 있는 경우 예외 처리
-                if (result["documents"].isEmpty) {
-                    throw Exception("주소에 해당하는 좌표를 찾을 수 없습니다.")
-                }
+        result.fold(
+            { error -> logger.error("좌표 조회 실패: $error") },
+            { (lat, lng) -> logger.info("좌표 조회 성공 - 위도: $lat, 경도: $lng") }
+        )
 
-                val documents = result["documents"].get(0)
-                val x = documents["x"].asText()
-                val y = documents["y"].asText()
-                Pair(x, y)
-            }
+        return result
+    }
 
-            coordinates.right() // Pair<String, String>을 Either의 right로 감쌈
-        } catch (e: Exception) {
-            "위치 조회 실패: ${e.message}".left() // String을 Either의 left로 감쌈
+    private fun createHttpRequest(address: String): Either<String, HttpGet> = try {
+        val encodedAddress = URLEncoder.encode(address, StandardCharsets.UTF_8.toString())
+        val apiKey = "KakaoAK ${apiKeyProvider.getApiKey()}"
+        val url = "https://dapi.kakao.com/v2/local/search/address.json?query=$encodedAddress"
+
+        val request = HttpGet(url).apply {
+            addHeader("Authorization", apiKey)
         }
+
+        logger.info("HTTP 요청 생성 완료: $url")
+        request.right()
+    } catch (e: Exception) {
+        logger.error("HTTP 요청 생성 실패: ${e.message}", e)
+        "HTTP 요청 생성 실패: ${e.message}".left()
+    }
+
+    private fun executeRequest(request: HttpGet): Either<String, String> = try {
+        HttpClients.createDefault().use { httpClient ->
+            httpClient.execute(request).use { response ->
+                val statusCode = response.code
+                if (statusCode != 200) {
+                    "HTTP 응답 오류: $statusCode".left()
+                } else {
+                    val json = EntityUtils.toString(response.entity)
+                    logger.info("API 응답 수신 완료")
+                    json.right()
+                }
+            }
+        }
+    } catch (e: Exception) {
+        logger.error("HTTP 요청 실행 실패: ${e.message}", e)
+        "HTTP 요청 실행 실패: ${e.message}".left()
+    }
+
+    private fun parseCoordinates(jsonResponse: String): Either<String, Pair<String, String>> = try {
+        val result = objectMapper.readTree(jsonResponse)
+        val documents = result["documents"]
+
+        when {
+            documents == null -> "응답 데이터 형식 오류: documents 필드 없음".left()
+            documents.isEmpty -> "검색 결과 없음: 해당 주소를 찾을 수 없습니다".left()
+            else -> extractCoordinatesFromDocument(documents[0])
+        }
+    } catch (e: Exception) {
+        logger.error("JSON 파싱 실패: ${e.message}", e)
+        "JSON 파싱 실패: ${e.message}".left()
+    }
+
+    private fun extractCoordinatesFromDocument(document: JsonNode): Either<String, Pair<String, String>> = try {
+        val x = document["x"]?.asText()
+        val y = document["y"]?.asText()
+
+        when {
+            x.isNullOrBlank() || y.isNullOrBlank() -> "좌표 데이터 누락".left()
+            else -> Pair(y, x).right() // Kakao API에서 x는 경도, y는 위도
+        }
+    } catch (e: Exception) {
+        logger.error("좌표 추출 실패: ${e.message}", e)
+        "좌표 추출 실패: ${e.message}".left()
     }
 }
