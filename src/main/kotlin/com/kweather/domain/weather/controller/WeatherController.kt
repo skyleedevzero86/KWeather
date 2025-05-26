@@ -107,7 +107,6 @@ class WeatherController(
             listOf(normalizeSido(it[0]), it[1], it[2])
         } ?: listOf(normalizeSido(defaultSido), defaultRegionDistrict, defaultRegionName)
 
-        // WeatherDataProvider 대신 GeneralWeatherService 사용
         val weatherData = generalWeatherService.buildWeatherEntity(60, 127, finalSido)
 
         val currentDate = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
@@ -123,7 +122,7 @@ class WeatherController(
         val realTimeDust = weatherDataProvider.getRealTimeDustData(finalSido)
         val errorMessage = if (realTimeDust.isEmpty()) "실시간 미세먼지 데이터 오류" else null
 
-        logger.info("realTimeDust 데이터: $realTimeDust") // 디버깅 로그 추가
+        logger.info("realTimeDust 데이터: $realTimeDust")
 
         val uvIndexData = weatherDataProvider.getUVIndexData(defaultAreaNo, apiTime)
         val senTaIndexData = weatherDataProvider.getSenTaIndexData(defaultAreaNo, apiTime)
@@ -135,13 +134,18 @@ class WeatherController(
         val asiHoursSequence = (3..78 step 3).toList()
         val precipHoursSequence = (0..23).toList()
 
+        // 개선된 categorizedForecast 로직
         val categorizedForecast = dustForecast.map { forecast ->
-            val regions = forecast.grade.split(",").map { it.trim().split(":") }
-                .filter { it.size == 2 }.associate { it[0] to it[1] }
+            val regions = forecast.grade.split(",").map { it.trim() }
+                .filter { it.contains(":") }
+                .map { it.split(":") }
+                .filter { it.size == 2 }
+                .associate { it[0].trim() to it[1].trim() }
+
             Triple(
-                regions.filterValues { it == "좋음" }.keys.toList().ifEmpty { listOf("N/A") },
-                regions.filterValues { it == "보통" }.keys.toList().ifEmpty { listOf("N/A") },
-                regions.filterValues { it == "나쁨" }.keys.toList().ifEmpty { listOf("N/A") }
+                regions.filterValues { it == "좋음" }.keys.toList().ifEmpty { listOf("없음") },
+                regions.filterValues { it == "보통" }.keys.toList().ifEmpty { listOf("없음") },
+                regions.filterValues { it == "나쁨" }.keys.toList().ifEmpty { listOf("없음") }
             )
         }
 
