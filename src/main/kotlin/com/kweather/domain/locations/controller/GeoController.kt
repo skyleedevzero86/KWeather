@@ -21,8 +21,8 @@ class GeoController(private val geoService: GeoService) {
                 )
             },
             { (latitude, longitude) ->
-                println("위도: $latitude")
-                println("경도: $longitude")
+                println("위도: ${latitude.toDouble().toInt()}")
+                println("경도: ${longitude.toDouble().toInt()}")
                 mapOf(
                     "latitude" to latitude,
                     "longitude" to longitude

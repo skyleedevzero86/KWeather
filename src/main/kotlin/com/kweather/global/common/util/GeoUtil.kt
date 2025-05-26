@@ -2,6 +2,7 @@ package com.kweather.global.common.util
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import arrow.core.Either
 import arrow.core.left
@@ -15,7 +16,11 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 @Component
-class GeoUtil {
+class GeoUtil(
+    @Value("\${kakao.api.key}") private val kakaoApiKey: String,
+    @Value("\${kakao.api.base-url}") private val baseUrl: String,
+    @Value("\${kakao.api.endpoint}") private val endpoint: String
+) {
 
     private val logger = LoggerFactory.getLogger(GeoUtil::class.java)
     private val objectMapper = jacksonObjectMapper()
@@ -25,10 +30,9 @@ class GeoUtil {
         fun getApiKey(): String
     }
 
-    // 환경변수에서 API 키를 가져오는 전략
+    // 설정에서 API 키를 가져오는 전략
     private val apiKeyProvider = object : ApiKeyProvider {
-        override fun getApiKey(): String =
-            System.getenv("KAKAO_API_KEY") ?: "06b18721985d194ccecb60a6fd6ab132"
+        override fun getApiKey(): String = kakaoApiKey
     }
 
     fun fetchGeoCoordinates(address: String): Either<String, Pair<String, String>> {
@@ -49,7 +53,7 @@ class GeoUtil {
     private fun createHttpRequest(address: String): Either<String, HttpGet> = try {
         val encodedAddress = URLEncoder.encode(address, StandardCharsets.UTF_8.toString())
         val apiKey = "KakaoAK ${apiKeyProvider.getApiKey()}"
-        val url = "https://dapi.kakao.com/v2/local/search/address.json?query=$encodedAddress"
+        val url = "$baseUrl$endpoint?query=$encodedAddress"
 
         val request = HttpGet(url).apply {
             addHeader("Authorization", apiKey)

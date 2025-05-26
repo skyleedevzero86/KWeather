@@ -8,7 +8,6 @@ import com.kweather.domain.uvi.dto.UVIndexInfo
 import com.kweather.domain.weather.entity.Weather
 import com.kweather.domain.weather.model.AirQuality
 import com.kweather.domain.weather.model.HourlyForecast
-import com.kweather.domain.uvi.dto.UVIndex
 import com.kweather.domain.weather.model.WeatherDataProvider
 import com.kweather.domain.weather.dto.PrecipitationInfo
 import com.kweather.global.common.util.DateTimeUtils
@@ -17,6 +16,8 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.client.RestTemplate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -27,6 +28,8 @@ import com.kweather.domain.airstagnation.service.AirStagnationIndexService
 import com.kweather.domain.senta.service.SenTaIndexService
 import com.kweather.domain.uvi.service.UVIndexService
 import com.kweather.domain.weather.service.GeneralWeatherService
+import com.kweather.domain.region.service.RegionService
+import com.kweather.domain.uvi.dto.UVIndex
 
 @Controller
 class WeatherController(
@@ -34,36 +37,33 @@ class WeatherController(
     private val uvIndexService: UVIndexService,
     private val senTaIndexService: SenTaIndexService,
     private val airStagnationIndexService: AirStagnationIndexService,
+    private val regionService: RegionService,
     @Value("\${weather.default.region.name:한남동}") private val defaultRegionName: String,
     @Value("\${weather.default.region.district:용산구}") private val defaultRegionDistrict: String,
-    @Value("\${weather.default.sido:서울}") private val defaultSido: String,
+    @Value("\${weather.default.sido:서울특별시}") private val defaultSido: String,
     @Value("\${weather.default.area-no:1100000000}") private val defaultAreaNo: String
 ) {
     private val logger = LoggerFactory.getLogger(WeatherController::class.java)
+    private val restTemplate = RestTemplate()
 
     private inner class DefaultWeatherDataProvider : WeatherDataProvider {
         override fun getWeatherData(date: String, time: String): Weather =
             createDefaultWeatherData(date, time)
 
         override fun getDustForecastData(date: String, informCode: String): List<ForecastInfo> =
-            runCatching {
-                generalWeatherService.getDustForecast(date, informCode)
-            }.getOrElse { e ->
-                logger.error("미세먼지 예보 데이터 가져오기 실패: ${e.message}", e)
-                emptyList()
-            }
+            runCatching { generalWeatherService.getDustForecast(date, informCode) }
+                .getOrElse { e ->
+                    logger.error("미세먼지 예보 데이터 가져오기 실패: ${e.message}", e)
+                    emptyList()
+                }
 
-        override fun getRealTimeDustData(sidoName: String): List<RealTimeDustInfo> =
-            emptyList()
+        override fun getRealTimeDustData(sidoName: String): List<RealTimeDustInfo> = emptyList()
 
-        override fun getUVIndexData(areaNo: String, time: String): List<UVIndexInfo> =
-            emptyList()
+        override fun getUVIndexData(areaNo: String, time: String): List<UVIndexInfo> = emptyList()
 
-        override fun getSenTaIndexData(areaNo: String, time: String): List<SenTaIndexInfo> =
-            emptyList()
+        override fun getSenTaIndexData(areaNo: String, time: String): List<SenTaIndexInfo> = emptyList()
 
-        override fun getAirStagnationIndexData(areaNo: String, time: String): List<AirStagnationIndexInfo> =
-            emptyList()
+        override fun getAirStagnationIndexData(areaNo: String, time: String): List<AirStagnationIndexInfo> = emptyList()
 
         override fun getPrecipitationData(areaNo: String, time: String): List<PrecipitationInfo> {
             val today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
@@ -74,57 +74,48 @@ class WeatherController(
 
     private inner class LiveWeatherDataProvider : WeatherDataProvider {
         override fun getWeatherData(date: String, time: String): Weather =
-            runCatching {
-                generalWeatherService.buildWeatherEntity(60, 127)
-            }.getOrElse { e ->
-                logger.error("실시간 날씨 데이터 가져오기 실패: ${e.message}", e)
-                createDefaultWeatherData(date, time)
-            }
+            runCatching { generalWeatherService.buildWeatherEntity(60, 127) }
+                .getOrElse { e ->
+                    logger.error("실시간 날씨 데이터 가져오기 실패: ${e.message}", e)
+                    createDefaultWeatherData(date, time)
+                }
 
         override fun getDustForecastData(date: String, informCode: String): List<ForecastInfo> =
-            runCatching {
-                generalWeatherService.getDustForecast(date, informCode)
-            }.getOrElse { e ->
-                logger.error("미세먼지 예보 데이터 가져오기 실패: ${e.message}", e)
-                emptyList()
-            }
+            runCatching { generalWeatherService.getDustForecast(date, informCode) }
+                .getOrElse { e ->
+                    logger.error("미세먼지 예보 데이터 가져오기 실패: ${e.message}", e)
+                    emptyList()
+                }
 
         override fun getRealTimeDustData(sidoName: String): List<RealTimeDustInfo> =
-            runCatching {
-                generalWeatherService.getRealTimeDust(sidoName)
-            }.getOrElse { e ->
-                logger.error("실시간 미세먼지 데이터 가져오기 실패: ${e.message}", e)
-                emptyList()
-            }
+            runCatching { generalWeatherService.getRealTimeDust(sidoName) }
+                .getOrElse { e ->
+                    logger.error("실시간 미세먼지 데이터 가져오기 실패: ${e.message}", e)
+                    emptyList()
+                }
 
         override fun getUVIndexData(areaNo: String, time: String): List<UVIndexInfo> =
-            runCatching {
-                uvIndexService.getUVIndex(areaNo, time)
-            }.getOrElse { e ->
-                logger.error("자외선 지수 데이터 가져오기 실패: ${e.message}", e)
-                emptyList()
-            }
+            runCatching { uvIndexService.getUVIndex(areaNo, time) }
+                .getOrElse { e ->
+                    logger.error("자외선 지수 데이터 가져오기 실패: ${e.message}", e)
+                    emptyList()
+                }
 
         override fun getSenTaIndexData(areaNo: String, time: String): List<SenTaIndexInfo> =
             runCatching {
                 val currentMonth = LocalDateTime.now(ZoneId.of("Asia/Seoul")).monthValue
-                if (currentMonth in 5..9) {
-                    senTaIndexService.getSenTaIndex(areaNo, time)
-                } else {
-                    emptyList()
-                }
+                if (currentMonth in 5..9) senTaIndexService.getSenTaIndex(areaNo, time) else emptyList()
             }.getOrElse { e ->
                 logger.error("여름철 체감온도 데이터 가져오기 실패: ${e.message}", e)
                 emptyList()
             }
 
         override fun getAirStagnationIndexData(areaNo: String, time: String): List<AirStagnationIndexInfo> =
-            runCatching {
-                airStagnationIndexService.getAirStagnationIndex(areaNo, time)
-            }.getOrElse { e ->
-                logger.error("대기정체지수 데이터 가져오기 실패: ${e.message}", e)
-                emptyList()
-            }
+            runCatching { airStagnationIndexService.getAirStagnationIndex(areaNo, time) }
+                .getOrElse { e ->
+                    logger.error("대기정체지수 데이터 가져오기 실패: ${e.message}", e)
+                    emptyList()
+                }
 
         override fun getPrecipitationData(areaNo: String, time: String): List<PrecipitationInfo> {
             val today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
@@ -139,19 +130,82 @@ class WeatherController(
     }
 
     @GetMapping("/weather")
-    fun getWeather(model: Model): String {
+    fun getWeather(@RequestParam(value = "location", required = false) location: String?, model: Model): String {
         val dateTimeInfo = getCurrentDateTimeInfo()
         val (date, time, hour) = dateTimeInfo
 
         val weatherDataProvider = createWeatherDataProvider(useRealTimeData = true)
 
-        val weatherData = weatherDataProvider.getWeatherData(date, time)
+        // 기본 위치 또는 요청된 위치 설정
+        val (finalSido, finalSgg, finalUmd) = if (location != null) {
+            val parts = location.split(" ")
+            // 시도 값을 정규화
+            val normalizedSido = when (parts[0]) {
+                "서울" -> "서울특별시"
+                "경기" -> "경기도"
+                "인천" -> "인천광역시"
+                "강원" -> "강원특별자치도"
+                "충북" -> "충청북도"
+                "충남" -> "충청남도"
+                "대전" -> "대전광역시"
+                "세종" -> "세종특별자치시"
+                "전북" -> "전북특별자치도"
+                "전남" -> "전라남도"
+                "광주" -> "광주광역시"
+                "경북" -> "경상북도"
+                "경남" -> "경상남도"
+                "대구" -> "대구광역시"
+                "부산" -> "부산광역시"
+                "울산" -> "울산광역시"
+                "제주" -> "제주특별자치도"
+                else -> parts[0]
+            }
+            Triple(normalizedSido, parts[1], parts[2])
+        } else {
+            val normalizedDefaultSido = when (defaultSido) {
+                "서울" -> "서울특별시"
+                "경기" -> "경기도"
+                "인천" -> "인천광역시"
+                "강원" -> "강원특별자치도"
+                "충북" -> "충청북도"
+                "충남" -> "충청남도"
+                "대전" -> "대전광역시"
+                "세종" -> "세종특별자치시"
+                "전북" -> "전북특별자치도"
+                "전남" -> "전라남도"
+                "광주" -> "광주광역시"
+                "경북" -> "경상북도"
+                "경남" -> "경상남도"
+                "대구" -> "대구광역시"
+                "부산" -> "부산광역시"
+                "울산" -> "울산광역시"
+                "제주" -> "제주특별자치도"
+                else -> defaultSido
+            }
+            Triple(normalizedDefaultSido, defaultRegionDistrict, defaultRegionName)
+        }
+
+        // Weather 객체를 수동으로 생성하여 location 업데이트
+        val baseWeatherData = weatherDataProvider.getWeatherData(date, time)
+        val weatherData = Weather(
+            date = baseWeatherData.date,
+            time = baseWeatherData.time,
+            location = "$finalUmd ($finalSgg)",
+            currentTemperature = baseWeatherData.currentTemperature,
+            highLowTemperature = baseWeatherData.highLowTemperature,
+            weatherCondition = baseWeatherData.weatherCondition,
+            windSpeed = baseWeatherData.windSpeed,
+            airQuality = baseWeatherData.airQuality,
+            uvIndex = baseWeatherData.uvIndex,
+            hourlyForecast = baseWeatherData.hourlyForecast
+        )
+
         val currentDate = getCurrentFormattedDate()
         val apiTime = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
         val informCode = determineInformCode(hour)
         val dustForecast = weatherDataProvider.getDustForecastData(currentDate, informCode)
 
-        val realTimeDust = weatherDataProvider.getRealTimeDustData(defaultSido)
+        val realTimeDust = weatherDataProvider.getRealTimeDustData(finalSido)
         val errorMessage = if (realTimeDust.isEmpty()) "실시간 미세먼지 데이터를 불러올 수 없습니다. API 키가 유효하지 않을 수 있습니다. 설정을 확인해 주세요." else null
 
         val uvIndexData = weatherDataProvider.getUVIndexData(defaultAreaNo, apiTime)
@@ -175,6 +229,23 @@ class WeatherController(
 
         val categorizedForecast = processDustForecastData(dustForecast)
         val timeOfDay = determineTimeOfDay(hour)
+
+        // 지역 데이터는 REST API를 통해 가져옴
+        val sidos = restTemplate.getForObject("http://localhost:8090/api/regions/sidos", List::class.java) as List<String>
+        val sggs = if (sidos.contains(finalSido)) restTemplate.getForObject("http://localhost:8090/api/regions/sggs?sido=$finalSido", List::class.java) as List<String> else emptyList()
+        val umds = if (sggs.contains(finalSgg)) restTemplate.getForObject("http://localhost:8090/api/regions/umds?sido=$finalSido&sgg=$finalSgg", List::class.java) as List<String> else emptyList()
+
+        logger.info("finalSido: $finalSido")
+        logger.info("finalSgg: $finalSgg, sggs: $sggs")
+        logger.info("finalUmd: $finalUmd, umds: $umds")
+
+        // 모델에 데이터 추가
+        model.addAttribute("sidos", sidos)
+        model.addAttribute("selectedSido", finalSido)
+        model.addAttribute("sggs", sggs)
+        model.addAttribute("selectedSgg", finalSgg)
+        model.addAttribute("umds", umds)
+        model.addAttribute("selectedUmd", finalUmd)
 
         addAttributesToModel(model, weatherData, dustForecast, realTimeDust, uvIndexData, senTaIndexData, airStagnationIndexData, precipitationData, categorizedForecast, timeOfDay, errorMessage)
         model.addAttribute("uvHoursSequence", uvHoursSequence)
@@ -227,11 +298,7 @@ class WeatherController(
             .map { it.trim() }
             .mapNotNull { regionGrade ->
                 val parts = regionGrade.split(":")
-                if (parts.size == 2) {
-                    parts[0].trim() to parts[1].trim()
-                } else {
-                    null
-                }
+                if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
             }
             .toMap()
 

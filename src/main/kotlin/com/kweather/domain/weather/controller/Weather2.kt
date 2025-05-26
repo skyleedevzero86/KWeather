@@ -1,6 +1,7 @@
 package com.kweather.domain.weather.controller
 
 import com.kweather.domain.forecast.dto.ForecastInfo
+import com.kweather.domain.locations.service.GeoService
 import com.kweather.domain.weather.service.GeneralWeatherService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -12,7 +13,8 @@ import java.time.format.DateTimeParseException
 
 @RestController
 class Weather2(
-    private val weatherService: GeneralWeatherService
+    private val weatherService: GeneralWeatherService,
+    private val geoService: GeoService
 ) {
 
     @GetMapping("/weather/dust-forecast")
@@ -62,5 +64,26 @@ class Weather2(
         is DateTimeParseException -> 400
         is IllegalStateException -> 500
         else -> 500
+    }
+    @GetMapping("/weather/geo")
+    fun getGeoCoordinates(@RequestParam address: String): Map<String, String> {
+        return geoService.getCoordinates(address).fold(
+            { errorMessage ->
+                println("오류 발생: $errorMessage")
+                mapOf(
+                    "latitude" to "0.0",
+                    "longitude" to "0.0",
+                    "error" to errorMessage
+                )
+            },
+            { (latitude, longitude) ->
+                println("위도: ${latitude.toDouble().toInt()}")
+                println("경도: ${longitude.toDouble().toInt()}")
+                mapOf(
+                    "latitude" to latitude,
+                    "longitude" to longitude
+                )
+            }
+        )
     }
 }

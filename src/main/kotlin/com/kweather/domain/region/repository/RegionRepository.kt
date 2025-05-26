@@ -3,14 +3,17 @@ package com.kweather.domain.region.repository
 import com.kweather.domain.region.entity.Region
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
-import org.springframework.data.repository.query.Param
-import org.springframework.stereotype.Repository
 
-@Repository
-interface RegionRepository : JpaRepository<Region, String> {
+interface RegionRepository : JpaRepository<Region, String> { // Long에서 String으로 변경
 
-    @Query("SELECT r FROM Region r WHERE r.regionCd IN (:regionCodes)")
-    fun findAllByRegionCdIn(regionCodes: Set<String>): List<Region>
+    @Query("SELECT DISTINCT r.locataddNm FROM Region r WHERE r.locataddNm IS NOT NULL")
+    fun findDistinctSidoNames(): List<String?>
 
-    fun existsByRegionCd(regionCd: String): Boolean
+    @Query("SELECT DISTINCT r.locataddNm FROM Region r WHERE r.locataddNm LIKE :sido% AND r.locataddNm IS NOT NULL")
+    fun findSggsBySido(sido: String): List<String?>
+
+    @Query("SELECT r FROM Region r WHERE r.locataddNm LIKE :fullName% AND r.locataddNm IS NOT NULL AND r.locallowNm IS NOT NULL")
+    fun findUmdsBySidoAndSgg(fullName: String): List<Region>
+
+    fun findAllByRegionCdIn(regionCds: List<String>): List<Region> // List<Long>에서 List<String>으로 변경
 }

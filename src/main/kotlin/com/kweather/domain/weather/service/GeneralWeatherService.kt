@@ -52,8 +52,7 @@ class GeneralWeatherService(
             val formatter = DateTimeFormatter.ofPattern("yyyyMMdd")
             val date = LocalDate.parse(params.baseDate, formatter)
             val targetDate = date.minusDays(1).format(formatter) // 과거 데이터 요청
-
-            return "${weatherBaseUrl}?serviceKey=$serviceKey" +
+            val urls = "${weatherBaseUrl}?serviceKey=$serviceKey" +
                     "&numOfRows=1000" +
                     "&pageNo=1" +
                     "&base_date=$targetDate" +
@@ -61,6 +60,8 @@ class GeneralWeatherService(
                     "&nx=${params.nx}" +
                     "&ny=${params.ny}" +
                     "&dataType=JSON"
+            logger.info("weatherBaseUrl: $urls")
+            return urls
         }
 
         override fun parseResponse(response: String): Either<String, WeatherResponse> =
@@ -74,12 +75,14 @@ class GeneralWeatherService(
 
     private inner class DustForecastApiClient : ApiClientUtility.ApiClient<DustForecastRequestParams, ForecastResponse> {
         override fun buildUrl(params: DustForecastRequestParams): String {
-            return "${dustForecastBaseUrl}?serviceKey=$serviceKey" +
+             val urls = "${dustForecastBaseUrl}?serviceKey=$serviceKey" +
                     "&returnType=json" +
-                    "&numOfRows=100" +
+                    "&numOfRows=1000" +
                     "&pageNo=1" +
                     "&searchDate=${params.searchDate}" +
                     "&dataTerm=DAILY"
+            logger.info("미세먼지 예보: $urls")
+            return urls
         }
 
         override fun parseResponse(response: String): Either<String, ForecastResponse> =
@@ -94,12 +97,15 @@ class GeneralWeatherService(
     private inner class RealTimeDustApiClient : ApiClientUtility.ApiClient<RealTimeDustRequestParams, RealTimeDustResponse> {
         override fun buildUrl(params: RealTimeDustRequestParams): String {
             val encodedSidoName = URLEncoder.encode(params.sidoName, StandardCharsets.UTF_8.toString())
-            return "${realTimeDustBaseUrl}?serviceKey=$serviceKey" +
+
+            val urls = "${realTimeDustBaseUrl}?serviceKey=$serviceKey" +
                     "&returnType=${params.returnType}" +
                     "&numOfRows=${params.numOfRows}" +
                     "&pageNo=${params.pageNo}" +
                     "&sidoName=$encodedSidoName" +
                     "&ver=${params.ver}"
+            return urls
+            logger.info("실시간 미세먼지: $urls")
         }
 
         override fun parseResponse(response: String): Either<String, RealTimeDustResponse> =
