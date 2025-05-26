@@ -9,22 +9,23 @@
     <link rel="stylesheet" th:href="@{/static/global/style.css}" />
 </head>
 <body>
-<div class="weather-container">
-    <div class="weather-header">
+<div class="weather-container" role="main">
+    <!-- 날씨 헤더 -->
+    <section class="weather-header" aria-label="현재 날씨 정보">
         <p class="datetime">
             <span class="date" th:text="${weather.date}"></span>
             <span class="time" th:text="${weather.time}"></span>
-            <span class="timeofday" th:text="'오후'"></span>
+            <span class="timeofday" th:text="${timeOfDay}"></span>
         </p>
         <div class="location-row">
             <h1 id="locationTitle" th:text="${weather.location}"></h1>
-            <button class="location-btn" onclick="openLocationPopup()">변경</button>
+            <button class="location-btn" onclick="openLocationPopup()" aria-label="위치 변경">변경</button>
         </div>
         <div class="weather-main">
             <div class="current-temp">
-                <span class="moon-icon" th:classappend="${weather.hourlyForecast[0].icon}"></span>
-                <span th:text="${weather.currentTemperature}" class="temp-value"></span>
-                <div class="temp-range" th:text="${weather.highLowTemperature}"></div>
+                <span class="weather-icon" th:classappend="${weather.hourlyForecast[0].icon}" aria-hidden="true"></span>
+                <span th:text="${weather.currentTemperature}" class="temp-value" aria-label="현재 온도"></span>
+                <div class="temp-range" th:text="${weather.highLowTemperature}" aria-label="최고/최저 온도"></div>
             </div>
             <div class="weather-info">
                 <div class="weather-condition" th:text="${weather.weatherCondition}"></div>
@@ -32,36 +33,42 @@
                 <div class="pm-value" th:text="'미세먼지 ' + ${weather.airQuality.value}"></div>
             </div>
         </div>
-    </div>
-    <div class="weather-details">
+    </section>
+
+    <!-- 날씨 상세 정보 -->
+    <section class="weather-details" aria-label="날씨 상세 정보">
         <div class="air-quality">
             <h3 th:text="${weather.airQuality.title}"></h3>
-            <span class="icon" th:classappend="${weather.airQuality.icon}"></span>
+            <span class="icon" th:classappend="${weather.airQuality.icon}" aria-hidden="true"></span>
             <p class="status" th:text="${weather.airQuality.status}"></p>
             <p th:text="${weather.airQuality.value} + ' ' + ${weather.airQuality.measurement}"></p>
         </div>
         <div class="uv-index">
             <h3 th:text="${weather.uvIndex.title}"></h3>
-            <span class="icon" th:classappend="${weather.uvIndex.icon}"></span>
+            <span class="icon" th:classappend="${weather.uvIndex.icon}" aria-hidden="true"></span>
             <p class="status" th:text="${weather.uvIndex.status}"></p>
             <p th:text="${weather.uvIndex.value} + ' ' + ${weather.uvIndex.measurement}"></p>
         </div>
-    </div>
-    <div class="forecast-section">
+    </section>
+
+    <!-- 시간대별 날씨 예보 -->
+    <section class="forecast-section" aria-label="시간대별 날씨 예보">
         <h3>시간대별 날씨</h3>
         <div class="forecast-row">
             <div th:each="forecast : ${weather.hourlyForecast}" class="forecast-item">
                 <span class="time" th:text="${forecast.time}"></span>
-                <span class="icon" th:classappend="${forecast.icon}"></span>
+                <span class="icon" th:classappend="${forecast.icon}" aria-hidden="true"></span>
                 <span class="temp" th:text="${forecast.temperature}"></span>
                 <span class="humid" th:text="${forecast.humidity}"></span>
             </div>
         </div>
-    </div>
-    <div class="dust-forecast-section">
+    </section>
+
+    <!-- 미세먼지 예보 -->
+    <section class="dust-forecast-section" aria-label="미세먼지 예보">
         <h3>미세먼지 예보</h3>
         <div th:if="${dustForecast != null}">
-            <button th:if="${#lists.size(dustForecast) > 1}" class="slider-btn prev" onclick="moveSlide(-1)">❮</button>
+            <button th:if="${#lists.size(dustForecast) > 1}" class="slider-btn prev" onclick="moveSlide(-1)" aria-label="이전 슬라이드">❮</button>
             <div class="dust-slider" id="dustSlider">
                 <div th:each="forecast, iter : ${dustForecast}" class="dust-forecast-item">
                     <h4 th:text="${forecast.date} + ' (' + ${forecast.type} + ')'"></h4>
@@ -78,25 +85,14 @@
                                 <th th:if="${not #lists.isEmpty(categorizedForecast[iter.index].third) and not (categorizedForecast[iter.index].third.size() == 1 and categorizedForecast[iter.index].third[0] == 'N/A')}"
                                     class="grade-title bad">나쁨</th>
                             </tr>
-                            <th:block th:with="forecastData=${categorizedForecast[iter.index] != null ? categorizedForecast[iter.index] : null},
-                                             maxRows=${forecastData != null ? (#lists.size(forecastData.first) > #lists.size(forecastData.second) ?
-                                              (#lists.size(forecastData.first) > #lists.size(forecastData.third) ? #lists.size(forecastData.first) : #lists.size(forecastData.third)) :
-                                              (#lists.size(forecastData.second) > #lists.size(forecastData.third) ? #lists.size(forecastData.second) : #lists.size(forecastData.third))) : 0}">
-                                <tr th:each="i : ${#numbers.sequence(0, maxRows > 0 ? maxRows - 1 : 0)}">
-                                    <td th:if="${categorizedForecast[iter.index] != null and not #lists.isEmpty(categorizedForecast[iter.index].first) and not (categorizedForecast[iter.index].first.size() == 1 and categorizedForecast[iter.index].first[0] == 'N/A')}"
-                                        th:text="${#lists.size(categorizedForecast[iter.index].first) > i ? categorizedForecast[iter.index].first[i] : ''}"
-                                        th:unless="${#lists.size(categorizedForecast[iter.index].first) > i and categorizedForecast[iter.index].first[i] == 'N/A'}"
-                                        class="grade-cell good"></td>
-                                    <td th:if="${categorizedForecast[iter.index] != null and not #lists.isEmpty(categorizedForecast[iter.index].second) and not (categorizedForecast[iter.index].second.size() == 1 and categorizedForecast[iter.index].second[0] == 'N/A')}"
-                                        th:text="${#lists.size(categorizedForecast[iter.index].second) > i ? categorizedForecast[iter.index].second[i] : ''}"
-                                        th:unless="${#lists.size(categorizedForecast[iter.index].second) > i and categorizedForecast[iter.index].second[i] == 'N/A'}"
-                                        class="grade-cell moderate"></td>
-                                    <td th:if="${categorizedForecast[iter.index] != null and not #lists.isEmpty(categorizedForecast[iter.index].third) and not (categorizedForecast[iter.index].third.size() == 1 and categorizedForecast[iter.index].third[0] == 'N/A')}"
-                                        th:text="${#lists.size(categorizedForecast[iter.index].third) > i ? categorizedForecast[iter.index].third[i] : ''}"
-                                        th:unless="${#lists.size(categorizedForecast[iter.index].third) > i and categorizedForecast[iter.index].third[i] == 'N/A'}"
-                                        class="grade-cell bad"></td>
-                                </tr>
-                            </th:block>
+                            <tr th:each="i : ${#numbers.sequence(0, categorizedForecast[iter.index].first.size() - 1)}">
+                                <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].first)}"
+                                    th:text="${categorizedForecast[iter.index].first[i]}" class="grade-cell good"></td>
+                                <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].second)}"
+                                    th:text="${categorizedForecast[iter.index].second[i]}" class="grade-cell moderate"></td>
+                                <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].third)}"
+                                    th:text="${categorizedForecast[iter.index].third[i]}" class="grade-cell bad"></td>
+                            </tr>
                         </table>
                     </div>
                     <div th:if="${forecast.imageUrls != null and not #lists.isEmpty(forecast.imageUrls)}">
@@ -105,21 +101,24 @@
                             <img th:each="url : ${forecast.imageUrls}" th:src="${url}" alt="예보 이미지" onclick="openPopup(this.src)" />
                         </div>
                     </div>
-                    <div th:if="${forecast.imageUrls == null or #lists.isEmpty(forecast.imageUrls)}">
+                    <div th:unless="${forecast.imageUrls != null and not #lists.isEmpty(forecast.imageUrls)}">
                         <h5 class="image-title">이미지 없음</h5>
                     </div>
                 </div>
             </div>
-            <button th:if="${#lists.size(dustForecast) > 1}" class="slider-btn next" onclick="moveSlide(1)">❯</button>
+            <button th:if="${#lists.size(dustForecast) > 1}" class="slider-btn next" onclick="moveSlide(1)" aria-label="다음 슬라이드">❯</button>
         </div>
-        <div th:if="${dustForecast == null}">
+        <div th:unless="${dustForecast != null}">
             <p>미세먼지 예보 데이터를 불러올 수 없습니다. (날짜 형식이 잘못되었거나 API 요청이 실패했습니다.)</p>
         </div>
-    </div>
-    <div class="real-time-dust-section">
+    </section>
+
+    <!-- 실시간 미세먼지 -->
+    <section class="real-time-dust-section" aria-label="실시간 미세먼지">
         <h3>실시간 미세먼지</h3>
         <div th:if="${realTimeDust != null and not #lists.isEmpty(realTimeDust)}">
             <table class="real-time-dust-table">
+                <thead>
                 <tr>
                     <th>시도</th>
                     <th>측정소</th>
@@ -129,13 +128,15 @@
                     <th>초미세먼지(PM2.5)</th>
                     <th>초미세먼지 등급</th>
                 </tr>
+                </thead>
+                <tbody>
                 <tr th:each="dust : ${realTimeDust}">
                     <td th:text="${dust.sidoName}"></td>
                     <td th:text="${dust.stationName}"></td>
                     <td th:text="${dust.dataTime}"></td>
                     <td>
                         <span th:if="${dust.pm10Value != 'N/A'}" th:text="${dust.pm10Value} + ' μg/m³'"></span>
-                        <span th:if="${dust.pm10Value == 'N/A'}" class="na-message" th:text="'측정 중'"></span>
+                        <span th:unless="${dust.pm10Value != 'N/A'}" class="na-message" th:text="'측정 중'"></span>
                     </td>
                     <td class="grade-cell" th:switch="${dust.pm10Grade}">
                         <span th:case="'N/A'" class="na-message" th:text="'측정 중'"></span>
@@ -146,7 +147,7 @@
                     </td>
                     <td>
                         <span th:if="${dust.pm25Value != 'N/A'}" th:text="${dust.pm25Value} + ' μg/m³'"></span>
-                        <span th:if="${dust.pm25Value == 'N/A'}" class="na-message" th:text="'측정 중'"></span>
+                        <span th:unless="${dust.pm25Value != 'N/A'}" class="na-message" th:text="'측정 중'"></span>
                     </td>
                     <td class="grade-cell" th:switch="${dust.pm25Grade}">
                         <span th:case="'N/A'" class="na-message" th:text="'측정 중'"></span>
@@ -156,198 +157,214 @@
                         <span th:case="'매우나쁨'" class="grade-very-bad" th:text="'매우나쁨'"></span>
                     </td>
                 </tr>
+                </tbody>
             </table>
         </div>
-        <div th:if="${realTimeDust == null or #lists.isEmpty(realTimeDust)}">
-            <p th:text="${errorMessage != null ? errorMessage : '실시간 미세먼지 데이터를 불러올 수 없습니다.'}" style="color: red;"></p>
+        <div th:unless="${realTimeDust != null and not #lists.isEmpty(realTimeDust)}">
+            <p th:text="${errorMessage ?: '실시간 미세먼지 데이터를 불러올 수 없습니다.'}" style="color: red;"></p>
         </div>
-    </div>
-    <div class="uv-index-forecast-section">
+    </section>
+
+    <!-- 자외선 지수 예보 -->
+    <section class="uv-index-forecast-section" aria-label="자외선 지수 예보">
         <h3>자외선 지수 예보</h3>
         <div th:if="${uvIndexData != null and not #lists.isEmpty(uvIndexData)}">
             <table class="forecast-table">
+                <thead>
                 <tr>
                     <th>날짜</th>
                     <th th:each="hour : ${uvHoursSequence}" th:text="'+' + ${hour} + '시간'"></th>
                 </tr>
+                </thead>
+                <tbody>
                 <tr th:each="uv : ${uvIndexData}">
                     <td th:text="${uv.date}"></td>
                     <td th:each="hour : ${uvHoursSequence}">
-                        <span th:switch="${uv.values['h' + hour]}">
-                            <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
-                            <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
-                            <span th:case="*" th:text="${uv.values['h' + hour]}"></span>
-                        </span>
+                            <span th:switch="${uv.values['h' + hour]}">
+                                <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
+                                <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
+                                <span th:case="*" th:text="${uv.values['h' + hour]}"></span>
+                            </span>
                     </td>
                 </tr>
+                </tbody>
             </table>
         </div>
-        <div th:if="${uvIndexData == null or #lists.isEmpty(uvIndexData)}">
+        <div th:unless="${uvIndexData != null and not #lists.isEmpty(uvIndexData)}">
             <p style="color: red;">자외선 지수 데이터를 불러올 수 없습니다.</p>
         </div>
-    </div>
-    <div class="senta-index-forecast-section">
+    </section>
+
+    <!-- 여름철 체감온도 예보 -->
+    <section class="senta-index-forecast-section" aria-label="여름철 체감온도 예보">
         <h3>여름철 체감온도 예보 (5월~9월)</h3>
         <div th:if="${senTaIndexData != null and not #lists.isEmpty(senTaIndexData)}">
             <table class="forecast-table">
+                <thead>
                 <tr>
                     <th>날짜</th>
                     <th th:each="hour : ${sentaHoursSequence}" th:text="'+' + ${hour - 1} + '시간'"></th>
                 </tr>
+                </thead>
+                <tbody>
                 <tr th:each="senta : ${senTaIndexData}">
                     <td th:text="${senta.date}"></td>
                     <td th:each="hour : ${sentaHoursSequence}">
-                        <span th:switch="${senta.values['h' + hour]}">
-                            <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
-                            <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
-                            <span th:case="*" th:text="${senta.values['h' + hour]}"></span>
-                        </span>
+                            <span th:switch="${senta.values['h' + hour]}">
+                                <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
+                                <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
+                                <span th:case="*" th:text="${senta.values['h' + hour]}"></span>
+                            </span>
                     </td>
                 </tr>
+                </tbody>
             </table>
         </div>
-        <div th:if="${senTaIndexData == null or #lists.isEmpty(senTaIndexData)}">
+        <div th:unless="${senTaIndexData != null and not #lists.isEmpty(senTaIndexData)}">
             <p style="color: red;">체감온도 데이터를 불러올 수 없습니다. (5월~9월에만 제공됩니다.)</p>
         </div>
-    </div>
-    <div class="air-stagnation-index-forecast-section">
+    </section>
+
+    <!-- 대기정체지수 예보 -->
+    <section class="air-stagnation-index-forecast-section" aria-label="대기정체지수 예보">
         <h3>대기정체지수 예보</h3>
         <div th:if="${airStagnationIndexData != null and not #lists.isEmpty(airStagnationIndexData)}">
             <table class="forecast-table">
+                <thead>
                 <tr>
                     <th>날짜</th>
                     <th th:each="hour : ${asiHoursSequence}" th:text="'+' + ${hour} + '시간'"></th>
                 </tr>
+                </thead>
+                <tbody>
                 <tr th:each="asi : ${airStagnationIndexData}">
                     <td th:text="${asi.date}"></td>
                     <td th:each="hour : ${asiHoursSequence}">
-                        <span th:switch="${asi.values['h' + hour]}">
-                            <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
-                            <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
-                            <span th:case="*" th:text="${asi.values['h' + hour]}"></span>
-                        </span>
+                            <span th:switch="${asi.values['h' + hour]}">
+                                <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
+                                <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
+                                <span th:case="*" th:text="${asi.values['h' + hour]}"></span>
+                            </span>
                     </td>
                 </tr>
+                </tbody>
             </table>
         </div>
-        <div th:if="${airStagnationIndexData == null or #lists.isEmpty(airStagnationIndexData)}">
+        <div th:unless="${airStagnationIndexData != null and not #lists.isEmpty(airStagnationIndexData)}">
             <p style="color: red;">대기정체지수 데이터를 불러올 수 없습니다.</p>
         </div>
-    </div>
-    <div class="precipitation-forecast-section">
+    </section>
+
+    <!-- 강수량 예보 -->
+    <section class="precipitation-forecast-section" aria-label="강수량 예보">
         <h3>강수량 예보</h3>
         <div th:if="${precipitationData != null and not #lists.isEmpty(precipitationData)}">
             <table class="forecast-table">
+                <thead>
                 <tr>
                     <th>날짜</th>
                     <th th:each="hour : ${precipHoursSequence}" th:text="'+' + ${hour} + '시간'"></th>
                 </tr>
+                </thead>
+                <tbody>
                 <tr th:each="precip : ${precipitationData}">
                     <td th:text="${precip.date}"></td>
                     <td th:each="hour : ${precipHoursSequence}">
-                        <span th:switch="${precip.values['h' + hour]}">
-                            <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
-                            <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
-                            <span th:case="*" th:text="${precip.values['h' + hour]}"></span>
-                        </span>
+                            <span th:switch="${precip.values['h' + hour]}">
+                                <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
+                                <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
+                                <span th:case="*" th:text="${precip.values['h' + hour]}"></span>
+                            </span>
                     </td>
                 </tr>
+                </tbody>
             </table>
         </div>
-        <div th:if="${precipitationData == null or #lists.isEmpty(precipitationData)}">
+        <div th:unless="${precipitationData != null and not #lists.isEmpty(precipitationData)}">
             <p style="color: red;">강수량 데이터를 불러올 수 없습니다.</p>
         </div>
-    </div>
+    </section>
 </div>
 
-<div id="imagePopup" class="popup">
+<!-- 이미지 팝업 -->
+<div id="imagePopup" class="popup" role="dialog" aria-label="이미지 확대 팝업">
     <div class="popup-content">
-        <button class="close-btn" onclick="closePopup()">X</button>
+        <button class="close-btn" onclick="closePopup()" aria-label="팝업 닫기">X</button>
         <img id="popupImage" src="" alt="확대된 이미지">
     </div>
 </div>
 
-<div id="locationPopup" class="popup">
+<!-- 위치 선택 팝업 -->
+<div id="locationPopup" class="popup" role="dialog" aria-label="위치 선택 팝업">
     <div id="locationPopupContent">
-        <button class="close-btn" onclick="closeLocationPopup()">X</button>
+        <button class="close-btn" onclick="closeLocationPopup()" aria-label="팝업 닫기">X</button>
         <div class="select-group">
             <label for="sido">시/도:</label>
-            <select id="sido" onchange="updateSggs()">
+            <select id="sido" onchange="updateSggs()" aria-label="시/도 선택">
                 <option value="">선택하세요</option>
-                <th:each var="sido" items="${sidos}">
+                <th:block th:each="sido : ${sidos}">
                     <option th:value="${sido}" th:text="${sido}" th:selected="${sido == selectedSido}"></option>
-                </th:each>
+                </th:block>
             </select>
         </div>
         <div class="select-group">
             <label for="sgg">시/군/구:</label>
-            <select id="sgg" onchange="updateUmds()">
+            <select id="sgg" onchange="updateUmds()" aria-label="시/군/구 선택">
                 <option value="">먼저 시/도를 선택하세요</option>
-                <th:each var="sgg" items="${sggs}">
+                <th:block th:each="sgg : ${sggs}">
                     <option th:value="${sgg}" th:text="${sgg}" th:selected="${sgg == selectedSgg}"></option>
-                </th:each>
+                </th:block>
             </select>
         </div>
         <div class="select-group">
             <label for="umd">읍/면/동:</label>
-            <select id="umd">
+            <select id="umd" aria-label="읍/면/동 선택">
                 <option value="">먼저 시/군/구를 선택하세요</option>
-                <th:each var="umd" items="${umds}">
+                <th:block th:each="umd : ${umds}">
                     <option th:value="${umd}" th:text="${umd}" th:selected="${umd == selectedUmd}"></option>
-                </th:each>
+                </th:block>
             </select>
         </div>
-        <button id="confirmBtn" onclick="confirmSelection()">확인</button>
+        <button id="confirmBtn" onclick="confirmSelection()" aria-label="위치 확인">확인</button>
     </div>
 </div>
 
 <script>
     let currentSlide = 0;
-    let totalSlides = document.querySelectorAll('.dust-forecast-item').length;
 
     function updateSlidePosition() {
         const slider = document.getElementById('dustSlider');
+        if (!slider) return;
+        const items = slider.querySelectorAll('.dust-forecast-item');
         slider.style.transform = `translateX(-${currentSlide * 100}%)`;
-
-        const prevBtn = document.querySelector('.slider-btn.prev');
-        const nextBtn = document.querySelector('.slider-btn.next');
-        if (prevBtn) prevBtn.disabled = currentSlide === 0;
-        if (nextBtn) nextBtn.disabled = currentSlide === totalSlides - 1;
+        document.querySelector('.slider-btn.prev').disabled = currentSlide === 0;
+        document.querySelector('.slider-btn.next').disabled = currentSlide === items.length - 1;
     }
 
     function moveSlide(direction) {
-        currentSlide += direction;
-        if (currentSlide < 0) currentSlide = 0;
-        if (currentSlide >= totalSlides) currentSlide = totalSlides - 1;
+        const items = document.querySelectorAll('.dust-forecast-item');
+        currentSlide = Math.max(0, Math.min(currentSlide + direction, items.length - 1));
         updateSlidePosition();
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('.overall-text').forEach(element => {
-            element.textContent = removeParentheses(element.textContent);
-        });
-        document.querySelectorAll('.cause-text').forEach(element => {
-            element.textContent = removeParentheses(element.textContent);
-        });
+        const overallTexts = document.querySelectorAll('.overall-text');
+        overallTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
+        const causeTexts = document.querySelectorAll('.cause-text');
+        causeTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
 
-        if (totalSlides <= 1) {
-            const prevBtn = document.querySelector('.slider-btn.prev');
-            const nextBtn = document.querySelector('.slider-btn.next');
-            if (prevBtn) prevBtn.style.display = 'none';
-            if (nextBtn) nextBtn.style.display = 'none';
+        const items = document.querySelectorAll('.dust-forecast-item');
+        if (items.length <= 1) {
+            document.querySelectorAll('.slider-btn').forEach(btn => btn.style.display = 'none');
         } else {
             updateSlidePosition();
         }
 
-        // 초기 위치 확인
         const locationTitle = document.getElementById('locationTitle');
-        if (!locationTitle.textContent || locationTitle.textContent.trim() === '') {
-            locationTitle.textContent = '청진동 (종로구)';
-        }
+        if (!locationTitle.textContent.trim()) locationTitle.textContent = '청진동 (종로구)';
 
-        // 페이지 로드 시 시/군/구와 읍/면/동 자동 로드
         const sidoSelect = document.getElementById('sido');
-        const selectedSido = '[[${selectedSido}]]'; // Thymeleaf 변수로 초기값 설정
+        const selectedSido = '[[${selectedSido}]]';
         if (selectedSido && selectedSido !== '') {
             sidoSelect.value = selectedSido;
             updateSggs().then(() => {
@@ -358,9 +375,7 @@
                     updateUmds().then(() => {
                         const umdSelect = document.getElementById('umd');
                         const selectedUmd = '[[${selectedUmd}]]';
-                        if (selectedUmd && selectedUmd !== '') {
-                            umdSelect.value = selectedUmd;
-                        }
+                        if (selectedUmd && selectedUmd !== '') umdSelect.value = selectedUmd;
                     });
                 }
             });
@@ -373,24 +388,20 @@
 
     function openPopup(imageUrl) {
         const popup = document.getElementById('imagePopup');
-        const popupImage = document.getElementById('popupImage');
-        popupImage.src = imageUrl;
+        document.getElementById('popupImage').src = imageUrl;
         popup.style.display = 'flex';
     }
 
     function closePopup() {
-        const popup = document.getElementById('imagePopup');
-        popup.style.display = 'none';
+        document.getElementById('imagePopup').style.display = 'none';
     }
 
     function openLocationPopup() {
-        const popup = document.getElementById('locationPopup');
-        popup.style.display = 'flex';
+        document.getElementById('locationPopup').style.display = 'flex';
     }
 
     function closeLocationPopup() {
-        const popup = document.getElementById('locationPopup');
-        popup.style.display = 'none';
+        document.getElementById('locationPopup').style.display = 'none';
     }
 
     async function updateSggs() {
@@ -401,28 +412,25 @@
         sggSelect.innerHTML = '<option value="">선택하세요</option>';
         umdSelect.innerHTML = '<option value="">먼저 시/군/구를 선택하세요</option>';
 
-        if (sido) {
-            try {
-                const response = await fetch(`/api/regions/sggs?sido=${encodeURIComponent(sido)}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const sggs = await response.json();
-                console.log('시군구 데이터:', sggs);
-                if (sggs.length === 0) {
-                    sggSelect.innerHTML = '<option value="">시/군/구 데이터 없음</option>';
-                } else {
-                    sggs.forEach(sgg => {
-                        const option = document.createElement('option');
-                        option.value = sgg;
-                        option.textContent = sgg;
-                        sggSelect.appendChild(option);
-                    });
-                }
-            } catch (error) {
-                console.error('시군구 데이터 가져오기 실패:', error);
-                sggSelect.innerHTML = '<option value="">시/군/구 데이터를 불러올 수 없습니다</option>';
+        if (!sido) return;
+
+        try {
+            const response = await fetch(`/api/regions/sggs?sido=${encodeURIComponent(sido)}`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const sggs = await response.json();
+            if (sggs.length === 0) {
+                sggSelect.innerHTML = '<option value="">시/군/구 데이터 없음</option>';
+            } else {
+                sggs.forEach(sgg => {
+                    const option = document.createElement('option');
+                    option.value = sgg;
+                    option.textContent = sgg;
+                    sggSelect.appendChild(option);
+                });
             }
+        } catch (error) {
+            console.error('시군구 데이터 가져오기 실패:', error);
+            sggSelect.innerHTML = '<option value="">시/군/구 데이터를 불러올 수 없습니다</option>';
         }
     }
 
@@ -433,28 +441,25 @@
 
         umdSelect.innerHTML = '<option value="">선택하세요</option>';
 
-        if (sido && sgg) {
-            try {
-                const response = await fetch(`/api/regions/umds?sido=${encodeURIComponent(sido)}&sgg=${encodeURIComponent(sgg)}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const umds = await response.json();
-                console.log('읍면동 데이터:', umds);
-                if (umds.length === 0) {
-                    umdSelect.innerHTML = '<option value="">읍/면/동 데이터 없음</option>';
-                } else {
-                    umds.forEach(umd => {
-                        const option = document.createElement('option');
-                        option.value = umd;
-                        option.textContent = umd;
-                        umdSelect.appendChild(option);
-                    });
-                }
-            } catch (error) {
-                console.error('읍면동 데이터 가져오기 실패:', error);
-                umdSelect.innerHTML = '<option value="">읍/면/동 데이터를 불러올 수 없습니다</option>';
+        if (!sido || !sgg) return;
+
+        try {
+            const response = await fetch(`/api/regions/umds?sido=${encodeURIComponent(sido)}&sgg=${encodeURIComponent(sgg)}`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const umds = await response.json();
+            if (umds.length === 0) {
+                umdSelect.innerHTML = '<option value="">읍/면/동 데이터 없음</option>';
+            } else {
+                umds.forEach(umd => {
+                    const option = document.createElement('option');
+                    option.value = umd;
+                    option.textContent = umd;
+                    umdSelect.appendChild(option);
+                });
             }
+        } catch (error) {
+            console.error('읍면동 데이터 가져오기 실패:', error);
+            umdSelect.innerHTML = '<option value="">읍/면/동 데이터를 불러올 수 없습니다</option>';
         }
     }
 
@@ -463,26 +468,26 @@
         const sgg = document.getElementById('sgg').value;
         const umd = document.getElementById('umd').value;
 
-        if (sido && sgg && umd) {
-            document.getElementById('locationTitle').textContent = `${umd} (${sgg})`;
-            closeLocationPopup();
+        if (!sido || !sgg || !umd) {
+            alert('모든 항목을 선택해 주세요.');
+            return;
+        }
 
-            // 선택된 위치로 날씨 데이터를 업데이트
-            fetch(`/weather?location=${encodeURIComponent(`${sido} ${sgg} ${umd}`)}`, {
-                method: 'GET'
-            }).then(response => {
+        document.getElementById('locationTitle').textContent = `${umd} (${sgg})`;
+        closeLocationPopup();
+
+        fetch(`/weather?location=${encodeURIComponent(`${sido} ${sgg} ${umd}`)}`)
+            .then(response => {
                 if (response.ok) {
-                    window.location.reload(); // 페이지 새로고침으로 날씨 데이터 업데이트
+                    window.location.reload();
                 } else {
                     alert('날씨 데이터를 업데이트하는 데 실패했습니다.');
                 }
-            }).catch(error => {
+            })
+            .catch(error => {
                 console.error('날씨 데이터 업데이트 실패:', error);
                 alert('날씨 데이터를 업데이트하는 데 실패했습니다.');
             });
-        } else {
-            alert('모든 항목을 선택해 주세요.');
-        }
     }
 </script>
 </body>
