@@ -78,20 +78,29 @@
                     <div class="grade-section">
                         <table class="grade-table">
                             <tr>
-                                <th th:if="${not #lists.isEmpty(categorizedForecast[iter.index].first) and not (categorizedForecast[iter.index].first.size() == 1 and categorizedForecast[iter.index].first[0] == 'N/A')}"
+                                <th th:if="${#lists.size(categorizedForecast[iter.index].first) > 0}"
                                     class="grade-title good">좋음</th>
-                                <th th:if="${not #lists.isEmpty(categorizedForecast[iter.index].second) and not (categorizedForecast[iter.index].second.size() == 1 and categorizedForecast[iter.index].second[0] == 'N/A')}"
+                                <th th:if="${#lists.size(categorizedForecast[iter.index].second) > 0}"
                                     class="grade-title moderate">보통</th>
-                                <th th:if="${not #lists.isEmpty(categorizedForecast[iter.index].third) and not (categorizedForecast[iter.index].third.size() == 1 and categorizedForecast[iter.index].third[0] == 'N/A')}"
+                                <th th:if="${#lists.size(categorizedForecast[iter.index].third) > 0}"
                                     class="grade-title bad">나쁨</th>
                             </tr>
-                            <tr th:each="i : ${#numbers.sequence(0, categorizedForecast[iter.index].first.size() - 1)}">
-                                <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].first)}"
-                                    th:text="${categorizedForecast[iter.index].first[i]}" class="grade-cell good"></td>
-                                <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].second)}"
-                                    th:text="${categorizedForecast[iter.index].second[i]}" class="grade-cell moderate"></td>
-                                <td th:if="${not #lists.isEmpty(categorizedForecast[iter.index].third)}"
-                                    th:text="${categorizedForecast[iter.index].third[i]}" class="grade-cell bad"></td>
+                            <!-- 최대 리스트 크기를 기준으로 반복 -->
+                            <tr th:each="i : ${#numbers.sequence(0,
+                                #lists.size(categorizedForecast[iter.index].first) > #lists.size(categorizedForecast[iter.index].second) ?
+                                (#lists.size(categorizedForecast[iter.index].first) > #lists.size(categorizedForecast[iter.index].third) ?
+                                #lists.size(categorizedForecast[iter.index].first) - 1 : #lists.size(categorizedForecast[iter.index].third) - 1) :
+                                (#lists.size(categorizedForecast[iter.index].second) > #lists.size(categorizedForecast[iter.index].third) ?
+                                #lists.size(categorizedForecast[iter.index].second) - 1 : #lists.size(categorizedForecast[iter.index].third) - 1))}">
+                                <td th:if="${#lists.size(categorizedForecast[iter.index].first) > i}"
+                                    th:text="${categorizedForecast[iter.index].first[i] != 'N/A'} ? ${categorizedForecast[iter.index].first[i]} : '-'"
+                                    class="grade-cell good"></td>
+                                <td th:if="${#lists.size(categorizedForecast[iter.index].second) > i}"
+                                    th:text="${categorizedForecast[iter.index].second[i] != 'N/A'} ? ${categorizedForecast[iter.index].second[i]} : '-'"
+                                    class="grade-cell moderate"></td>
+                                <td th:if="${#lists.size(categorizedForecast[iter.index].third) > i}"
+                                    th:text="${categorizedForecast[iter.index].third[i] != 'N/A'} ? ${categorizedForecast[iter.index].third[i]} : '-'"
+                                    class="grade-cell bad"></td>
                             </tr>
                         </table>
                     </div>
