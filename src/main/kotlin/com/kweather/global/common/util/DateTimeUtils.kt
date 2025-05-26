@@ -104,13 +104,10 @@ object DateTimeUtils {
         val hour = now.hour
         val minute = now.minute
 
-        return if (hour >= 12 && minute >= 5) {
-            "0000"
-        } else {
-            when {
-                minute < 30 -> String.format("%02d00", hour)
-                else -> String.format("%02d30", hour)
-            }
+        return when {
+            minute < 10 -> String.format("%02d00", if (hour == 0) 23 else hour - 1)
+            minute >= 10 && minute < 40 -> String.format("%02d00", hour)
+            else -> String.format("%02d30", hour)
         }
     }
 }
