@@ -165,7 +165,7 @@ class WeatherController(
             "realTimeDust" to realTimeDust.ifEmpty { null },
             "uvIndexData" to uvIndexData.ifEmpty { null },
             "senTaIndexData" to senTaIndexData.ifEmpty { null },
-            "airStagnationIndexData" to airStagnationIndexData.ifEmpty { null },
+            "airStagnationIndexData" to airStagnationIndexData,
             "precipitationData" to precipitationData.ifEmpty { null },
             "categorizedForecast" to categorizedForecast.ifEmpty { null },
             "errorMessage" to errorMessage,
