@@ -41,7 +41,7 @@ class GeneralWeatherService(
 
     data class RealTimeDustRequestParams(
         val returnType: String = "json",
-        val numOfRows: Int = 50,
+        val numOfRows: Int = 1000,
         val pageNo: Int = 1,
         val sidoName: String,
         val ver: String = "1.0"
@@ -50,13 +50,13 @@ class GeneralWeatherService(
     private inner class WeatherApiClient : ApiClientUtility.ApiClient<WeatherRequestParams, WeatherResponse> {
         override fun buildUrl(params: WeatherRequestParams): String {
             val formatter = DateTimeFormatter.ofPattern("yyyyMMdd")
-            val date = LocalDate.parse(params.baseDate, formatter)
-            val targetDate = date.minusDays(1).format(formatter) // 과거 데이터 요청
+            val currentDate = LocalDate.now(ZoneId.of("Asia/Seoul")).format(formatter)
+            val currentTime = DateTimeUtils.getBaseTime()
             val urls = "${weatherBaseUrl}?serviceKey=$serviceKey" +
                     "&numOfRows=1000" +
                     "&pageNo=1" +
-                    "&base_date=$targetDate" +
-                    "&base_time=${params.baseTime}" +
+                    "&base_date=$currentDate" +
+                    "&base_time=$currentTime" +
                     "&nx=${params.nx}" +
                     "&ny=${params.ny}" +
                     "&dataType=JSON"
@@ -75,7 +75,7 @@ class GeneralWeatherService(
 
     private inner class DustForecastApiClient : ApiClientUtility.ApiClient<DustForecastRequestParams, ForecastResponse> {
         override fun buildUrl(params: DustForecastRequestParams): String {
-             val urls = "${dustForecastBaseUrl}?serviceKey=$serviceKey" +
+            val urls = "${dustForecastBaseUrl}?serviceKey=$serviceKey" +
                     "&returnType=json" +
                     "&numOfRows=1000" +
                     "&pageNo=1" +
@@ -97,15 +97,14 @@ class GeneralWeatherService(
     private inner class RealTimeDustApiClient : ApiClientUtility.ApiClient<RealTimeDustRequestParams, RealTimeDustResponse> {
         override fun buildUrl(params: RealTimeDustRequestParams): String {
             val encodedSidoName = URLEncoder.encode(params.sidoName, StandardCharsets.UTF_8.toString())
-
             val urls = "${realTimeDustBaseUrl}?serviceKey=$serviceKey" +
                     "&returnType=${params.returnType}" +
                     "&numOfRows=${params.numOfRows}" +
                     "&pageNo=${params.pageNo}" +
                     "&sidoName=$encodedSidoName" +
                     "&ver=${params.ver}"
+            logger.info("실시간 미세먼지 요청 URL: $urls")
             return urls
-            logger.info("실시간 미세먼지: $urls")
         }
 
         override fun parseResponse(response: String): Either<String, RealTimeDustResponse> =
@@ -185,14 +184,20 @@ class GeneralWeatherService(
     }
 
     fun getRealTimeDust(sidoName: String): List<RealTimeDustInfo> {
-        val params = RealTimeDustRequestParams(sidoName = sidoName)
+        val apiSidoName = convertSidoForApi(sidoName) // API에 맞는 형식으로 변환
+        val params = RealTimeDustRequestParams(sidoName = apiSidoName)
         val realTimeDustClient = RealTimeDustApiClient()
 
         return when (val result = ApiClientUtility.makeApiRequest(realTimeDustClient, params) { response ->
-            val dustInfos = response.response?.body?.items?.mapNotNull { item ->
-                item?.let { parseRealTimeDustItem(it) }
-            } ?: emptyList()
-            Either.Right(dustInfos)
+            if (response.response?.header?.resultCode == "03" && response.response.header.resultMsg == "NO_DATA") {
+                logger.warn("실시간 미세먼지 데이터 없음: $apiSidoName")
+                Either.Right(emptyList())
+            } else {
+                val dustInfos = response.response?.body?.items?.mapNotNull { item ->
+                    item?.let { parseRealTimeDustItem(it) }
+                } ?: emptyList()
+                Either.Right(dustInfos)
+            }
         }) {
             is ApiResult.Success -> result.data
             is ApiResult.Error -> {
@@ -200,6 +205,27 @@ class GeneralWeatherService(
                 emptyList()
             }
         }
+    }
+
+    private fun convertSidoForApi(sidoName: String): String = when (sidoName) {
+        "서울특별시" -> "서울"
+        "경기도" -> "경기"
+        "인천광역시" -> "인천"
+        "강원특별자치도" -> "강원"
+        "충청북도" -> "충북"
+        "충청남도" -> "충남"
+        "대전광역시" -> "대전"
+        "세종특별자치시" -> "세종"
+        "전북특별자치도" -> "전북"
+        "전라남도" -> "전남"
+        "광주광역시" -> "광주"
+        "경상북도" -> "경북"
+        "경상남도" -> "경남"
+        "대구광역시" -> "대구"
+        "부산광역시" -> "부산"
+        "울산광역시" -> "울산"
+        "제주특별자치도" -> "제주"
+        else -> sidoName
     }
 
     fun parseWeatherData(response: WeatherResponse): List<WeatherInfo> =
@@ -295,24 +321,26 @@ class GeneralWeatherService(
         }
     }
 
-    private fun calculateRetryTime(hour: Int, minute: Int): String =
-        when {
-            hour >= 12 && minute >= 5 -> "0000"
-            minute < 30 -> String.format("%02d00", if (hour == 0) 23 else hour - 1)
-            else -> String.format("%02d30", if (minute < 45) hour else if (hour == 0) 23 else hour - 1)
-        }
+    private fun calculateRetryTime(hour: Int, minute: Int): String {
+        val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
+        val baseHour = when {
+            minute < 30 -> hour - (hour % 3)
+            else -> hour - (hour % 3) + 3
+        }.let { if (it < 0) 24 + it else it % 24 }
+        return String.format("%02d00", baseHour)
+    }
 
-    fun buildWeatherEntity(nx: Int, ny: Int): Weather {
+    fun buildWeatherEntity(nx: Int, ny: Int, sidoName: String): Weather {
         val response = getUltraShortWeather(nx, ny)
         val weatherInfoList = parseWeatherData(response)
-        val sidoName = "서울"
-        val areaNo = "1100000000"
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
-        val apiTime = now.minusHours(1).format(DateTimeFormatter.ofPattern("yyyyMMddHH")) // 1시간 전 시간 사용
+        val apiTime = now.format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
         val realTimeDust = getRealTimeDust(sidoName)
-        val uvIndexData = uvIndexService.getUVIndex(areaNo, apiTime)
-        val senTaIndexData = senTaIndexService.getSenTaIndex(areaNo, apiTime)
-        val airStagnationIndexData = airStagnationIndexService.getAirStagnationIndex(areaNo, apiTime)
+        val uvIndexData = uvIndexService.getUVIndex("1100000000", apiTime)
+        val senTaIndexData = senTaIndexService.getSenTaIndex("1100000000", apiTime)
+        val airStagnationIndexData = airStagnationIndexService.getAirStagnationIndex("1100000000", apiTime)
+
+        logger.info("buildWeatherEntity - realTimeDust: $realTimeDust") // 디버깅 로그 추가
 
         val (date, time) = DateTimeUtils.getCurrentDateTimeFormatted()
         val currentHour = DateTimeUtils.getCurrentHour()

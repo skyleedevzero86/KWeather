@@ -44,7 +44,7 @@ class WeatherController(
 
     private inner class LiveWeatherDataProvider : WeatherDataProvider {
         override fun getWeatherData(date: String, time: String): Weather = try {
-            generalWeatherService.buildWeatherEntity(60, 127)
+            generalWeatherService.buildWeatherEntity(60, 127, defaultSido)
         } catch (e: Exception) {
             logger.error("실시간 날씨 데이터 가져오기 실패: ${e.message}", e)
             createDefaultWeatherData(date, time)
@@ -107,19 +107,8 @@ class WeatherController(
             listOf(normalizeSido(it[0]), it[1], it[2])
         } ?: listOf(normalizeSido(defaultSido), defaultRegionDistrict, defaultRegionName)
 
-        val baseWeatherData = weatherDataProvider.getWeatherData(dateTime[0], dateTime[1])
-        val weatherData = Weather(
-            date = baseWeatherData.date,
-            time = baseWeatherData.time,
-            location = "$finalUmd ($finalSgg)",
-            currentTemperature = baseWeatherData.currentTemperature,
-            highLowTemperature = baseWeatherData.highLowTemperature,
-            weatherCondition = baseWeatherData.weatherCondition,
-            windSpeed = baseWeatherData.windSpeed,
-            airQuality = baseWeatherData.airQuality,
-            uvIndex = baseWeatherData.uvIndex,
-            hourlyForecast = baseWeatherData.hourlyForecast
-        )
+        // WeatherDataProvider 대신 GeneralWeatherService 사용
+        val weatherData = generalWeatherService.buildWeatherEntity(60, 127, finalSido)
 
         val currentDate = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         val apiTime = now.format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
@@ -133,6 +122,8 @@ class WeatherController(
         val dustForecast = weatherDataProvider.getDustForecastData(currentDate, informCode)
         val realTimeDust = weatherDataProvider.getRealTimeDustData(finalSido)
         val errorMessage = if (realTimeDust.isEmpty()) "실시간 미세먼지 데이터 오류" else null
+
+        logger.info("realTimeDust 데이터: $realTimeDust") // 디버깅 로그 추가
 
         val uvIndexData = weatherDataProvider.getUVIndexData(defaultAreaNo, apiTime)
         val senTaIndexData = weatherDataProvider.getSenTaIndexData(defaultAreaNo, apiTime)
