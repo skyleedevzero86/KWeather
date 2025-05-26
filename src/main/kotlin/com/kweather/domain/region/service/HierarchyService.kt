@@ -37,10 +37,21 @@ class HierarchyService(
 
         // 기존 데이터 로드
         try {
-            sidoRepository.findAllBySidoCdIn(sidoCodes).forEach { sidoCache[it.sidoCd] = it }
-            sggRepository.findAllBySggCdIn(sggCodes).forEach { sggCache[it.sggCd] = it }
-            umdRepository.findAllByUmdCdIn(umdCodes).forEach { umdCache[it.umdCd] = it }
-            riRepository.findAllByRiCdIn(riCodes).forEach { riCache[it.riCd] = it }
+            val sidos = sidoRepository.findAllBySidoCdIn(sidoCodes)
+            sidos.forEach { sidoCache[it.sidoCd] = it }
+            logger.info("로드된 시도 데이터: ${sidos.map { it.sidoCd }}")
+
+            val sggs = sggRepository.findAllBySggCdIn(sggCodes)
+            sggs.forEach { sggCache[it.sggCd] = it }
+            logger.info("로드된 시군구 데이터: ${sggs.map { it.sggCd }}")
+
+            val umds = umdRepository.findAllByUmdCdIn(umdCodes)
+            umds.forEach { umdCache[it.umdCd] = it }
+            logger.info("로드된 읍면동 데이터: ${umds.map { it.umdCd }}")
+
+            val ris = riRepository.findAllByRiCdIn(riCodes)
+            ris.forEach { riCache[it.riCd] = it }
+            logger.info("로드된 리 데이터: ${ris.map { it.riCd }}")
         } catch (e: Exception) {
             logger.error("데이터베이스에서 기존 데이터 로드 중 오류: ${e.message}", e)
             throw e

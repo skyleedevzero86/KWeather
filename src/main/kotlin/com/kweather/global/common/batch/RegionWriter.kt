@@ -25,7 +25,7 @@ class RegionWriter(
             if (items.isNotEmpty()) {
                 // 중복 체크 후 저장
                 val existingRegionCodes = regionRepository.findAllByRegionCdIn(
-                    items.map { it.regionCd }.toSet()
+                    items.map { it.regionCd } // List<String> 유지
                 ).map { it.regionCd }.toSet()
 
                 val newRegions = items.filter { it.regionCd !in existingRegionCodes }
