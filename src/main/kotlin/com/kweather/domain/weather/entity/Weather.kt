@@ -15,7 +15,7 @@ import com.kweather.domain.uvi.dto.UVIndex
  * @property weatherCondition 날씨 상태 (예: 맑음)
  * @property windSpeed 풍속 정보
  * @property airQuality 미세먼지 정보
- * @property uvIndex 초미세먼지 정보
+ * @property uvIndex 자외선 지수 정보
  * @property hourlyForecast 시간별 날씨 예보 목록
  */
 data class Weather(

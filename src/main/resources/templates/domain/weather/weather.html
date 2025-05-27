@@ -30,7 +30,8 @@
             <div class="weather-info">
                 <div class="weather-condition" th:text="${weather.weatherCondition}"></div>
                 <div class="humidity" th:text="'습도 ' + ${weather.hourlyForecast[0].humidity}"></div>
-                <div class="pm-value" th:text="'미세먼지 ' + ${weather.airQuality.value}"></div>
+                <div class="pm-value" th:text="'미세먼지 ' + ${weather.airQuality.value} + ' ' + ${weather.airQuality.measurement}"></div>
+                <div class="pm25-value" th:text="'초미세먼지 ' + ${weather.airQuality.value2} + ' ' + ${weather.airQuality.measurement2}"></div>
             </div>
         </div>
     </section>
@@ -43,11 +44,11 @@
             <p class="status" th:text="${weather.airQuality.status}"></p>
             <p th:text="${weather.airQuality.value} + ' ' + ${weather.airQuality.measurement}"></p>
         </div>
-        <div class="uv-index">
-            <h3 th:text="${weather.uvIndex.title}"></h3>
-            <span class="icon" th:classappend="${weather.uvIndex.icon}" aria-hidden="true"></span>
-            <p class="status" th:text="${weather.uvIndex.status}"></p>
-            <p th:text="${weather.uvIndex.value} + ' ' + ${weather.uvIndex.measurement}"></p>
+        <div class="air-quality">
+            <h3 th:text="${weather.airQuality.title2}"></h3>
+            <span class="icon" th:classappend="${weather.airQuality.icon}" aria-hidden="true"></span>
+            <p class="status" th:text="${weather.airQuality.status2}"></p>
+            <p th:text="${weather.airQuality.value2} + ' ' + ${weather.airQuality.measurement2}"></p>
         </div>
     </section>
 
@@ -78,28 +79,27 @@
                     <div class="grade-section">
                         <table class="grade-table">
                             <tr>
-                                <th th:if="${#lists.size(categorizedForecast[iter.index].first) > 0}"
+                                <th th:if="${#lists.size(categorizedForecast[iter.index].first) > 0 and categorizedForecast[iter.index].first[0] != '없음'}"
                                     class="grade-title good">좋음</th>
-                                <th th:if="${#lists.size(categorizedForecast[iter.index].second) > 0}"
+                                <th th:if="${#lists.size(categorizedForecast[iter.index].second) > 0 and categorizedForecast[iter.index].second[0] != '없음'}"
                                     class="grade-title moderate">보통</th>
-                                <th th:if="${#lists.size(categorizedForecast[iter.index].third) > 0}"
+                                <th th:if="${#lists.size(categorizedForecast[iter.index].third) > 0 and categorizedForecast[iter.index].third[0] != '없음'}"
                                     class="grade-title bad">나쁨</th>
                             </tr>
-                            <!-- 최대 리스트 크기를 기준으로 반복 -->
                             <tr th:each="i : ${#numbers.sequence(0,
                                 #lists.size(categorizedForecast[iter.index].first) > #lists.size(categorizedForecast[iter.index].second) ?
                                 (#lists.size(categorizedForecast[iter.index].first) > #lists.size(categorizedForecast[iter.index].third) ?
                                 #lists.size(categorizedForecast[iter.index].first) - 1 : #lists.size(categorizedForecast[iter.index].third) - 1) :
                                 (#lists.size(categorizedForecast[iter.index].second) > #lists.size(categorizedForecast[iter.index].third) ?
                                 #lists.size(categorizedForecast[iter.index].second) - 1 : #lists.size(categorizedForecast[iter.index].third) - 1))}">
-                                <td th:if="${#lists.size(categorizedForecast[iter.index].first) > i}"
-                                    th:text="${categorizedForecast[iter.index].first[i] != 'N/A'} ? ${categorizedForecast[iter.index].first[i]} : '-'"
+                                <td th:if="${#lists.size(categorizedForecast[iter.index].first) > i and categorizedForecast[iter.index].first[i] != '없음'}"
+                                    th:text="${categorizedForecast[iter.index].first[i]}"
                                     class="grade-cell good"></td>
-                                <td th:if="${#lists.size(categorizedForecast[iter.index].second) > i}"
-                                    th:text="${categorizedForecast[iter.index].second[i] != 'N/A'} ? ${categorizedForecast[iter.index].second[i]} : '-'"
+                                <td th:if="${#lists.size(categorizedForecast[iter.index].second) > i and categorizedForecast[iter.index].second[i] != '없음'}"
+                                    th:text="${categorizedForecast[iter.index].second[i]}"
                                     class="grade-cell moderate"></td>
-                                <td th:if="${#lists.size(categorizedForecast[iter.index].third) > i}"
-                                    th:text="${categorizedForecast[iter.index].third[i] != 'N/A'} ? ${categorizedForecast[iter.index].third[i]} : '-'"
+                                <td th:if="${#lists.size(categorizedForecast[iter.index].third) > i and categorizedForecast[iter.index].third[i] != '없음'}"
+                                    th:text="${categorizedForecast[iter.index].third[i]}"
                                     class="grade-cell bad"></td>
                             </tr>
                         </table>
@@ -171,36 +171,6 @@
         </div>
         <div th:unless="${realTimeDust != null and not #lists.isEmpty(realTimeDust)}">
             <p th:text="${errorMessage ?: '실시간 미세먼지 데이터를 불러올 수 없습니다.'}" style="color: red;"></p>
-        </div>
-    </section>
-
-    <!-- 자외선 지수 예보 -->
-    <section class="uv-index-forecast-section" aria-label="자외선 지수 예보">
-        <h3>자외선 지수 예보</h3>
-        <div th:if="${uvIndexData != null and not #lists.isEmpty(uvIndexData)}">
-            <table class="forecast-table">
-                <thead>
-                <tr>
-                    <th>날짜</th>
-                    <th th:each="hour : ${uvHoursSequence}" th:text="'+' + ${hour} + '시간'"></th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="uv : ${uvIndexData}">
-                    <td th:text="${uv.date}"></td>
-                    <td th:each="hour : ${uvHoursSequence}">
-                            <span th:switch="${uv.values['h' + hour]}">
-                                <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
-                                <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
-                                <span th:case="*" th:text="${uv.values['h' + hour]}"></span>
-                            </span>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <div th:unless="${uvIndexData != null and not #lists.isEmpty(uvIndexData)}">
-            <p style="color: red;">자외선 지수 데이터를 불러올 수 없습니다.</p>
         </div>
     </section>
 
@@ -490,7 +460,7 @@
                 if (response.ok) {
                     window.location.reload();
                 } else {
-                    alert('날씨 데이터를 업데이트하는 데 실패했습니다.');
+                    alert('날씨 데이터 업데이트하는 데 실패했습니다.');
                 }
             })
             .catch(error => {

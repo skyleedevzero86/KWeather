@@ -9,7 +9,6 @@ import com.kweather.domain.senta.dto.SenTaIndexInfo
 import com.kweather.domain.senta.service.SenTaIndexService
 import com.kweather.domain.uvi.dto.UVIndex
 import com.kweather.domain.uvi.dto.UVIndexInfo
-import com.kweather.domain.uvi.service.UVIndexService
 import com.kweather.domain.weather.entity.Weather
 import com.kweather.domain.weather.model.AirQuality
 import com.kweather.domain.weather.model.HourlyForecast
@@ -30,21 +29,22 @@ import java.time.format.DateTimeFormatter
 @Controller
 class WeatherController(
     private val generalWeatherService: GeneralWeatherService,
-    private val uvIndexService: UVIndexService,
     private val senTaIndexService: SenTaIndexService,
     private val airStagnationIndexService: AirStagnationIndexService,
     private val regionService: RegionService,
     @Value("\${weather.default.region.name:한남동}") private val defaultRegionName: String,
     @Value("\${weather.default.region.district:용산구}") private val defaultRegionDistrict: String,
     @Value("\${weather.default.sido:서울특별시}") private val defaultSido: String,
-    @Value("\${weather.default.area-no:1100000000}") private val defaultAreaNo: String
+    @Value("\${weather.default.area-no:1100000000}") private val defaultAreaNo: String,
+    @Value("\${weather.default.nx:60}") private val defaultNx: Int,
+    @Value("\${weather.default.ny:127}") private val defaultNy: Int
 ) {
     private val logger = LoggerFactory.getLogger(WeatherController::class.java)
     private val restTemplate = RestTemplate()
 
     private inner class LiveWeatherDataProvider : WeatherDataProvider {
         override fun getWeatherData(date: String, time: String): Weather = try {
-            generalWeatherService.buildWeatherEntity(60, 127, defaultSido)
+            generalWeatherService.buildWeatherEntity(defaultNx, defaultNy, defaultSido)
         } catch (e: Exception) {
             logger.error("실시간 날씨 데이터 가져오기 실패: ${e.message}", e)
             createDefaultWeatherData(date, time)
@@ -61,13 +61,6 @@ class WeatherController(
             generalWeatherService.getRealTimeDust(sidoName)
         } catch (e: Exception) {
             logger.error("실시간 미세먼지 데이터 가져오기 실패: ${e.message}", e)
-            emptyList()
-        }
-
-        override fun getUVIndexData(areaNo: String, time: String): List<UVIndexInfo> = try {
-            uvIndexService.getUVIndex(areaNo, time)
-        } catch (e: Exception) {
-            logger.error("자외선 지수 데이터 가져오기 실패: ${e.message}", e)
             emptyList()
         }
 
@@ -91,6 +84,25 @@ class WeatherController(
             val values = (0..23).associate { "h$it" to "${it % 5}.0 mm" }
             return listOf(PrecipitationInfo(today, values))
         }
+
+        override fun getUVIndexData(areaNo: String, time: String): List<UVIndexInfo> = try {
+            // TODO: 실제 UV 인덱스 데이터를 가져오는 서비스 호출 구현
+            val today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+
+            listOf(
+                UVIndexInfo(
+                    date = today,
+                    values = mapOf(
+                        "h12" to "3", // 정오 시간대 UV 인덱스
+                        "h13" to "4",
+                        "h14" to "3"
+                    )
+                )
+            )
+        } catch (e: Exception) {
+            logger.error("자외선 지수 데이터 가져오기 실패: ${e.message}", e)
+            emptyList()
+        }
     }
 
     @GetMapping("/")
@@ -107,7 +119,7 @@ class WeatherController(
             listOf(normalizeSido(it[0]), it[1], it[2])
         } ?: listOf(normalizeSido(defaultSido), defaultRegionDistrict, defaultRegionName)
 
-        // WeatherDataProvider 대신 GeneralWeatherService 사용
+        // TODO: nx, ny 값을 동적으로 설정해야 함 (regionService를 통해 좌표 조회)
         val weatherData = generalWeatherService.buildWeatherEntity(60, 127, finalSido)
 
         val currentDate = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
@@ -123,25 +135,28 @@ class WeatherController(
         val realTimeDust = weatherDataProvider.getRealTimeDustData(finalSido)
         val errorMessage = if (realTimeDust.isEmpty()) "실시간 미세먼지 데이터 오류" else null
 
-        logger.info("realTimeDust 데이터: $realTimeDust") // 디버깅 로그 추가
+        logger.info("realTimeDust 데이터: $realTimeDust")
 
-        val uvIndexData = weatherDataProvider.getUVIndexData(defaultAreaNo, apiTime)
         val senTaIndexData = weatherDataProvider.getSenTaIndexData(defaultAreaNo, apiTime)
         val airStagnationIndexData = weatherDataProvider.getAirStagnationIndexData(defaultAreaNo, apiTime)
         val precipitationData = weatherDataProvider.getPrecipitationData(defaultAreaNo, apiTime)
+        val uvIndexData = weatherDataProvider.getUVIndexData(defaultAreaNo, apiTime)
 
-        val uvHoursSequence = (0..75 step 3).toList()
         val sentaHoursSequence = (1..31).toList()
         val asiHoursSequence = (3..78 step 3).toList()
         val precipHoursSequence = (0..23).toList()
 
         val categorizedForecast = dustForecast.map { forecast ->
-            val regions = forecast.grade.split(",").map { it.trim().split(":") }
-                .filter { it.size == 2 }.associate { it[0] to it[1] }
+            val regions = forecast.grade.split(",").map { it.trim() }
+                .filter { it.contains(":") }
+                .map { it.split(":") }
+                .filter { it.size == 2 }
+                .associate { it[0].trim() to it[1].trim() }
+
             Triple(
-                regions.filterValues { it == "좋음" }.keys.toList().ifEmpty { listOf("N/A") },
-                regions.filterValues { it == "보통" }.keys.toList().ifEmpty { listOf("N/A") },
-                regions.filterValues { it == "나쁨" }.keys.toList().ifEmpty { listOf("N/A") }
+                regions.filterValues { it == "좋음" }.keys.toList().ifEmpty { listOf("없음") },
+                regions.filterValues { it == "보통" }.keys.toList().ifEmpty { listOf("없음") },
+                regions.filterValues { it == "나쁨" }.keys.toList().ifEmpty { listOf("없음") }
             )
         }
 
@@ -163,13 +178,12 @@ class WeatherController(
             "timeOfDay" to timeOfDay, "weather" to weatherData,
             "dustForecast" to dustForecast.ifEmpty { null },
             "realTimeDust" to realTimeDust.ifEmpty { null },
-            "uvIndexData" to uvIndexData.ifEmpty { null },
             "senTaIndexData" to senTaIndexData.ifEmpty { null },
             "airStagnationIndexData" to airStagnationIndexData,
             "precipitationData" to precipitationData.ifEmpty { null },
+            "uvIndexData" to uvIndexData.ifEmpty { null },
             "categorizedForecast" to categorizedForecast.ifEmpty { null },
             "errorMessage" to errorMessage,
-            "uvHoursSequence" to uvHoursSequence,
             "sentaHoursSequence" to sentaHoursSequence,
             "asiHoursSequence" to asiHoursSequence,
             "precipHoursSequence" to precipHoursSequence
@@ -199,24 +213,45 @@ class WeatherController(
         else -> sido
     }
 
+    /**
+     * 기본 날씨 데이터를 생성합니다.
+     * API 호출 실패 시 사용되는 기본값입니다.
+     */
     private fun createDefaultWeatherData(date: String, time: String) = Weather(
         date = date,
         time = time,
         location = "$defaultRegionName ($defaultRegionDistrict)",
-        currentTemperature = "-1.8°C",
-        highLowTemperature = "-5°C / -1°C",
+        currentTemperature = "0°C",
+        highLowTemperature = "-3°C / 3°C",
         weatherCondition = "맑음",
-        windSpeed = "1km/초(남서) m/s 0",
-        airQuality = AirQuality("미세먼지", "yellow-smiley", "좋음", "20 ㎍/㎥", "㎍/㎥"),
-        uvIndex = UVIndex("초미세먼지", "yellow-smiley", "좋음", "8 ㎍/㎥", "㎍/㎥"),
+        windSpeed = "0 m/s",
+        airQuality = AirQuality(
+            title = "미세먼지",
+            icon = "yellow-smiley",
+            status = "좋음",
+            value = "20",
+            measurement = "㎍/㎥",
+            title2 = "초미세먼지",
+            status2 = "좋음",
+            value2 = "10",
+            measurement2 = "㎍/㎥"
+        ),
         hourlyForecast = (0..7).map {
             val hour = (LocalDateTime.now().hour + it * 3) % 24
             HourlyForecast(
                 time = if (it == 0) "지금" else "${hour}시",
                 icon = if (hour in 6..18) "sun" else "moon",
-                temperature = "-${it + 1}°C",
-                humidity = "${50 + it * 5}%"
+                temperature = "0°C",
+                humidity = "50%"
             )
-        }
+        },
+        // 수정된 UVIndex 생성 - 모든 필수 매개변수 포함
+        uvIndex = UVIndex(
+            title = "자외선 지수",     // 필수 매개변수 추가
+            icon = "uv-moderate",     // 필수 매개변수 추가
+            status = "보통",          // 필수 매개변수 추가
+            value = "3",
+            measurement = "UV Index"
+        )
     )
 }
