@@ -81,20 +81,25 @@ class WeatherController(
 
         override fun getPrecipitationData(areaNo: String, time: String): List<PrecipitationInfo> {
             val today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            val values = (0..23).associate { "h$it" to "${it % 5}.0 mm" }
+            val values = (0..23).associate { "h$it" to (it % 5).toFloat() } // String 대신 Float으로 변환
             return listOf(PrecipitationInfo(today, values))
         }
 
         override fun getUVIndexData(areaNo: String, time: String): List<UVIndexInfo> = try {
             val today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            val rawValues = mapOf(
+                "h12" to "3",
+                "h13" to "4",
+                "h14" to "3"
+            )
+            // 문자열 값을 Float로 변환
+            val convertedValues = rawValues.mapValues { (_, value) ->
+                value.toFloatOrNull() ?: 0.0f // 변환 실패 시 기본값 0.0f
+            }
             listOf(
                 UVIndexInfo(
                     date = today,
-                    values = mapOf(
-                        "h12" to "3",
-                        "h13" to "4",
-                        "h14" to "3"
-                    )
+                    values = convertedValues
                 )
             )
         } catch (e: Exception) {

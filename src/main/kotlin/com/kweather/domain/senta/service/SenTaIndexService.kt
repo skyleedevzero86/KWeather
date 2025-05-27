@@ -91,7 +91,7 @@ class SenTaIndexService(
     private fun parseSenTaIndexItem(item: SenTaIndexItem): SenTaIndexInfo? =
         runCatching {
             logger.debug("파싱 전 SenTaIndexItem: $item")
-            val values = mutableMapOf<String, String>()
+            val values = mutableMapOf<String, Float>()
             with(item) {
                 listOf(
                     "h1" to h1, "h2" to h2, "h3" to h3, "h4" to h4,
@@ -102,7 +102,9 @@ class SenTaIndexService(
                     "h21" to h21, "h22" to h22, "h23" to h23, "h24" to h24,
                     "h25" to h25, "h26" to h26, "h27" to h27, "h28" to h28,
                     "h29" to h29, "h30" to h30, "h31" to h31, "h32" to h32
-                ).forEach { (key, value) -> value?.takeIf { it.isNotBlank() }?.let { values[key] = it } }
+                ).forEach { (key, value) ->
+                    value?.takeIf { it.isNotBlank() }?.toFloatOrNull()?.let { values[key] = it }
+                }
             }
             if (values.isEmpty()) {
                 logger.warn("파싱된 values가 비어 있습니다: $item")
