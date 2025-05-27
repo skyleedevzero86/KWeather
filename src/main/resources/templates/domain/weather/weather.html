@@ -30,7 +30,8 @@
             <div class="weather-info">
                 <div class="weather-condition" th:text="${weather.weatherCondition}"></div>
                 <div class="humidity" th:text="'습도 ' + ${weather.hourlyForecast[0].humidity}"></div>
-                <div class="pm-value" th:text="'미세먼지 ' + ${weather.airQuality.value}"></div>
+                <div class="pm-value" th:text="'미세먼지 ' + ${weather.airQuality.value} + ' ' + ${weather.airQuality.measurement}"></div>
+                <div class="pm25-value" th:text="'초미세먼지 ' + ${weather.airQuality.value2} + ' ' + ${weather.airQuality.measurement2}"></div>
             </div>
         </div>
     </section>
@@ -43,11 +44,11 @@
             <p class="status" th:text="${weather.airQuality.status}"></p>
             <p th:text="${weather.airQuality.value} + ' ' + ${weather.airQuality.measurement}"></p>
         </div>
-        <div class="uv-index">
-            <h3 th:text="${weather.uvIndex.title}"></h3>
-            <span class="icon" th:classappend="${weather.uvIndex.icon}" aria-hidden="true"></span>
-            <p class="status" th:text="${weather.uvIndex.status}"></p>
-            <p th:text="${weather.uvIndex.value} + ' ' + ${weather.uvIndex.measurement}"></p>
+        <div class="air-quality">
+            <h3 th:text="${weather.airQuality.title2}"></h3>
+            <span class="icon" th:classappend="${weather.airQuality.icon}" aria-hidden="true"></span>
+            <p class="status" th:text="${weather.airQuality.status2}"></p>
+            <p th:text="${weather.airQuality.value2} + ' ' + ${weather.airQuality.measurement2}"></p>
         </div>
     </section>
 
@@ -141,7 +142,7 @@
                 <tr th:each="dust : ${realTimeDust}">
                     <td th:text="${dust.sidoName}"></td>
                     <td th:text="${dust.stationName}"></td>
-                    <td th:text="${dust.dataTime}"></td> <!-- 문제 발생 지점 수정 -->
+                    <td th:text="${dust.dataTime}"></td>
                     <td>
                         <span th:if="${dust.pm10Value != 'N/A'}" th:text="${dust.pm10Value} + ' μg/m³'"></span>
                         <span th:unless="${dust.pm10Value != 'N/A'}" class="na-message" th:text="'측정 중'"></span>
@@ -170,36 +171,6 @@
         </div>
         <div th:unless="${realTimeDust != null and not #lists.isEmpty(realTimeDust)}">
             <p th:text="${errorMessage ?: '실시간 미세먼지 데이터를 불러올 수 없습니다.'}" style="color: red;"></p>
-        </div>
-    </section>
-
-    <!-- 자외선 지수 예보 -->
-    <section class="uv-index-forecast-section" aria-label="자외선 지수 예보">
-        <h3>자외선 지수 예보</h3>
-        <div th:if="${uvIndexData != null and not #lists.isEmpty(uvIndexData)}">
-            <table class="forecast-table">
-                <thead>
-                <tr>
-                    <th>날짜</th>
-                    <th th:each="hour : ${uvHoursSequence}" th:text="'+' + ${hour} + '시간'"></th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="uv : ${uvIndexData}">
-                    <td th:text="${uv.date}"></td>
-                    <td th:each="hour : ${uvHoursSequence}">
-                    <span th:switch="${uv.values['h' + hour]}">
-                        <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
-                        <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
-                        <span th:case="*" th:text="${uv.values['h' + hour]}"></span>
-                    </span>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <div th:unless="${uvIndexData != null and not #lists.isEmpty(uvIndexData)}">
-            <p style="color: red;">자외선 지수 데이터: [[${uvIndexData}]]</p>
         </div>
     </section>
 

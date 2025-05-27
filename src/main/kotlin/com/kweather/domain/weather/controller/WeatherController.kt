@@ -7,9 +7,6 @@ import com.kweather.domain.realtime.dto.RealTimeDustInfo
 import com.kweather.domain.region.service.RegionService
 import com.kweather.domain.senta.dto.SenTaIndexInfo
 import com.kweather.domain.senta.service.SenTaIndexService
-import com.kweather.domain.uvi.dto.UVIndex
-import com.kweather.domain.uvi.dto.UVIndexInfo
-import com.kweather.domain.uvi.service.UVIndexService
 import com.kweather.domain.weather.entity.Weather
 import com.kweather.domain.weather.model.AirQuality
 import com.kweather.domain.weather.model.HourlyForecast
@@ -30,7 +27,6 @@ import java.time.format.DateTimeFormatter
 @Controller
 class WeatherController(
     private val generalWeatherService: GeneralWeatherService,
-    private val uvIndexService: UVIndexService,
     private val senTaIndexService: SenTaIndexService,
     private val airStagnationIndexService: AirStagnationIndexService,
     private val regionService: RegionService,
@@ -63,13 +59,6 @@ class WeatherController(
             generalWeatherService.getRealTimeDust(sidoName)
         } catch (e: Exception) {
             logger.error("실시간 미세먼지 데이터 가져오기 실패: ${e.message}", e)
-            emptyList()
-        }
-
-        override fun getUVIndexData(areaNo: String, time: String): List<UVIndexInfo> = try {
-            uvIndexService.getUVIndex(areaNo, time)
-        } catch (e: Exception) {
-            logger.error("자외선 지수 데이터 가져오기 실패: ${e.message}", e)
             emptyList()
         }
 
@@ -127,12 +116,10 @@ class WeatherController(
 
         logger.info("realTimeDust 데이터: $realTimeDust")
 
-        val uvIndexData = weatherDataProvider.getUVIndexData(defaultAreaNo, apiTime)
         val senTaIndexData = weatherDataProvider.getSenTaIndexData(defaultAreaNo, apiTime)
         val airStagnationIndexData = weatherDataProvider.getAirStagnationIndexData(defaultAreaNo, apiTime)
         val precipitationData = weatherDataProvider.getPrecipitationData(defaultAreaNo, apiTime)
 
-        val uvHoursSequence = (0..75 step 3).toList()
         val sentaHoursSequence = (1..31).toList()
         val asiHoursSequence = (3..78 step 3).toList()
         val precipHoursSequence = (0..23).toList()
@@ -169,13 +156,11 @@ class WeatherController(
             "timeOfDay" to timeOfDay, "weather" to weatherData,
             "dustForecast" to dustForecast.ifEmpty { null },
             "realTimeDust" to realTimeDust.ifEmpty { null },
-            "uvIndexData" to uvIndexData.ifEmpty { null },
             "senTaIndexData" to senTaIndexData.ifEmpty { null },
             "airStagnationIndexData" to airStagnationIndexData,
             "precipitationData" to precipitationData.ifEmpty { null },
             "categorizedForecast" to categorizedForecast.ifEmpty { null },
             "errorMessage" to errorMessage,
-            "uvHoursSequence" to uvHoursSequence,
             "sentaHoursSequence" to sentaHoursSequence,
             "asiHoursSequence" to asiHoursSequence,
             "precipHoursSequence" to precipHoursSequence
@@ -213,8 +198,7 @@ class WeatherController(
         highLowTemperature = "-3°C / 3°C",
         weatherCondition = "맑음",
         windSpeed = "0 m/s",
-        airQuality = AirQuality("미세먼지", "yellow-smiley", "좋음", "20 ㎍/㎥", "㎍/㎥"),
-        uvIndex = UVIndex("자외선 지수", "yellow-smiley", "좋음", "8", ""),
+        airQuality = AirQuality("미세먼지", "yellow-smiley", "좋음", "20", "㎍/㎥", "초미세먼지", "좋음", "10", "㎍/㎥"),
         hourlyForecast = (0..7).map {
             val hour = (LocalDateTime.now().hour + it * 3) % 24
             HourlyForecast(

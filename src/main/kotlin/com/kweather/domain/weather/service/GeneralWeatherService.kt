@@ -10,8 +10,6 @@ import com.kweather.domain.realtime.dto.RealTimeDustInfo
 import com.kweather.domain.realtime.dto.RealTimeDustItem
 import com.kweather.domain.realtime.dto.RealTimeDustResponse
 import com.kweather.domain.senta.service.SenTaIndexService
-import com.kweather.domain.uvi.dto.UVIndex
-import com.kweather.domain.uvi.service.UVIndexService
 import com.kweather.domain.weather.dto.*
 import com.kweather.domain.weather.entity.Weather
 import com.kweather.domain.weather.model.*
@@ -20,8 +18,6 @@ import com.kweather.global.common.util.DateTimeUtils
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -34,7 +30,6 @@ class GeneralWeatherService(
     @Value("\${api.arpltninforinqiresvc.base-url:}") private val dustForecastBaseUrl: String,
     @Value("\${api.arpltninforinqiresvc.real-time-base-url:}") private val realTimeDustBaseUrl: String,
     @Value("\${api.service-key:}") private val serviceKey: String,
-    private val uvIndexService: UVIndexService,
     private val senTaIndexService: SenTaIndexService,
     private val airStagnationIndexService: AirStagnationIndexService
 ) {
@@ -61,7 +56,7 @@ class GeneralWeatherService(
                     "&nx=${params.nx}" +
                     "&ny=${params.ny}" +
                     "&dataType=JSON"
-            logger.info("weatherBaseUrl: $urls")
+            logger.info("날씨 API 요청 URL: $urls")
             return urls
         }
 
@@ -96,7 +91,7 @@ class GeneralWeatherService(
                     "&pageNo=1" +
                     "&searchDate=${params.searchDate}" +
                     "&dataTerm=DAILY"
-            logger.info("미세먼지 예보: $urls")
+            logger.info("미세먼지 예보 API 요청 URL: $urls")
             return urls
         }
 
@@ -125,14 +120,13 @@ class GeneralWeatherService(
 
     private inner class RealTimeDustApiClient : ApiClientUtility.ApiClient<RealTimeDustRequestParams, RealTimeDustResponse> {
         override fun buildUrl(params: RealTimeDustRequestParams): String {
-            val encodedSidoName = URLEncoder.encode(params.sidoName, StandardCharsets.UTF_8.toString())
             val urls = "${realTimeDustBaseUrl}?serviceKey=$serviceKey" +
                     "&returnType=${params.returnType}" +
                     "&numOfRows=${params.numOfRows}" +
                     "&pageNo=${params.pageNo}" +
-                    "&sidoName=$encodedSidoName" +
+                    "&sidoName=${params.sidoName}" +
                     "&ver=${params.ver}"
-            logger.info("실시간 미세먼지 요청 URL: $urls")
+            logger.info("실시간 미세먼지 API 요청 URL: $urls")
             return urls
         }
 
@@ -381,7 +375,6 @@ class GeneralWeatherService(
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
         val apiTime = now.format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
         val realTimeDust = getRealTimeDust(sidoName)
-        val uvIndexData = uvIndexService.getUVIndex("1100000000", apiTime)
         val senTaIndexData = senTaIndexService.getSenTaIndex("1100000000", apiTime)
         val airStagnationIndexData = airStagnationIndexService.getAirStagnationIndex("1100000000", apiTime)
 
@@ -426,35 +419,13 @@ class GeneralWeatherService(
                 icon = "yellow-smiley",
                 status = it.pm10Grade,
                 value = it.pm10Value,
-                measurement = "㎍/㎥"
+                measurement = "㎍/㎥",
+                title2 = "초미세먼지",
+                status2 = it.pm25Grade,
+                value2 = it.pm25Value,
+                measurement2 = "㎍/㎥"
             )
-        } ?: AirQuality(
-            title = "미세먼지",
-            icon = "yellow-smiley",
-            status = "측정 중",
-            value = "측정 중",
-            measurement = "㎍/㎥"
-        )
-
-        val uvIndex = uvIndexData.firstOrNull()?.let { uvInfo ->
-            val currentHourKey = "h${currentHour}"
-            val uvValue = uvInfo.values[currentHourKey] ?: uvInfo.values["h24"] ?: "N/A"
-            val uvStatus = when (uvValue.toIntOrNull() ?: 0) {
-                in 0..2 -> "낮음"
-                in 3..5 -> "보통"
-                in 6..7 -> "높음"
-                in 8..10 -> "매우 높음"
-                11 -> "위험"
-                else -> "N/A"
-            }
-            UVIndex(
-                title = "자외선 지수",
-                icon = "yellow-smiley",
-                status = uvStatus,
-                value = uvValue,
-                measurement = ""
-            )
-        } ?: createDefaultUVIndex()
+        } ?: createDefaultAirQuality()
 
         val hourlyForecast = mutableListOf<HourlyForecast>()
         val currentHourIndex = currentHour / 3 * 3
@@ -491,7 +462,6 @@ class GeneralWeatherService(
             weatherCondition = weatherCondition,
             windSpeed = windSpeed,
             airQuality = airQuality,
-            uvIndex = uvIndex,
             hourlyForecast = hourlyForecast
         )
     }
@@ -502,16 +472,11 @@ class GeneralWeatherService(
             icon = "yellow-smiley",
             status = "측정 중",
             value = "측정 중",
-            measurement = "㎍/㎥"
-        )
-
-    private fun createDefaultUVIndex(): UVIndex =
-        UVIndex(
-            title = "자외선 지수",
-            icon = "yellow-smiley",
-            status = "좋음",
-            value = "8",
-            measurement = ""
+            measurement = "㎍/㎥",
+            title2 = "초미세먼지",
+            status2 = "측정 중",
+            value2 = "측정 중",
+            measurement2 = "㎍/㎥"
         )
 
     private fun getUnitForCategory(category: String?): String =
