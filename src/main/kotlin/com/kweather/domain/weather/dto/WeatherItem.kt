@@ -6,5 +6,6 @@ data class WeatherItem(
     val category: String? = null,
     val nx: Int? = null,
     val ny: Int? = null,
+    val fcstValue: String? = null,
     val obsrValue: String? = null
 )
