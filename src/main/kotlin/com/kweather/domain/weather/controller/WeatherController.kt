@@ -37,14 +37,16 @@ class WeatherController(
     @Value("\${weather.default.region.name:한남동}") private val defaultRegionName: String,
     @Value("\${weather.default.region.district:용산구}") private val defaultRegionDistrict: String,
     @Value("\${weather.default.sido:서울특별시}") private val defaultSido: String,
-    @Value("\${weather.default.area-no:1100000000}") private val defaultAreaNo: String
+    @Value("\${weather.default.area-no:1100000000}") private val defaultAreaNo: String,
+    @Value("\${weather.default.nx:60}") private val defaultNx: Int,
+    @Value("\${weather.default.ny:127}") private val defaultNy: Int
 ) {
     private val logger = LoggerFactory.getLogger(WeatherController::class.java)
     private val restTemplate = RestTemplate()
 
     private inner class LiveWeatherDataProvider : WeatherDataProvider {
         override fun getWeatherData(date: String, time: String): Weather = try {
-            generalWeatherService.buildWeatherEntity(60, 127, defaultSido)
+            generalWeatherService.buildWeatherEntity(defaultNx, defaultNy, defaultSido)
         } catch (e: Exception) {
             logger.error("실시간 날씨 데이터 가져오기 실패: ${e.message}", e)
             createDefaultWeatherData(date, time)
@@ -107,6 +109,7 @@ class WeatherController(
             listOf(normalizeSido(it[0]), it[1], it[2])
         } ?: listOf(normalizeSido(defaultSido), defaultRegionDistrict, defaultRegionName)
 
+        // TODO: nx, ny 값을 동적으로 설정해야 함 (regionService를 통해 좌표 조회)
         val weatherData = generalWeatherService.buildWeatherEntity(60, 127, finalSido)
 
         val currentDate = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
@@ -134,7 +137,6 @@ class WeatherController(
         val asiHoursSequence = (3..78 step 3).toList()
         val precipHoursSequence = (0..23).toList()
 
-        // 개선된 categorizedForecast 로직
         val categorizedForecast = dustForecast.map { forecast ->
             val regions = forecast.grade.split(",").map { it.trim() }
                 .filter { it.contains(":") }
@@ -207,19 +209,19 @@ class WeatherController(
         date = date,
         time = time,
         location = "$defaultRegionName ($defaultRegionDistrict)",
-        currentTemperature = "-1.8°C",
-        highLowTemperature = "-5°C / -1°C",
+        currentTemperature = "0°C",
+        highLowTemperature = "-3°C / 3°C",
         weatherCondition = "맑음",
-        windSpeed = "1km/초(남서) m/s 0",
+        windSpeed = "0 m/s",
         airQuality = AirQuality("미세먼지", "yellow-smiley", "좋음", "20 ㎍/㎥", "㎍/㎥"),
-        uvIndex = UVIndex("초미세먼지", "yellow-smiley", "좋음", "8 ㎍/㎥", "㎍/㎥"),
+        uvIndex = UVIndex("자외선 지수", "yellow-smiley", "좋음", "8", ""),
         hourlyForecast = (0..7).map {
             val hour = (LocalDateTime.now().hour + it * 3) % 24
             HourlyForecast(
                 time = if (it == 0) "지금" else "${hour}시",
                 icon = if (hour in 6..18) "sun" else "moon",
-                temperature = "-${it + 1}°C",
-                humidity = "${50 + it * 5}%"
+                temperature = "0°C",
+                humidity = "50%"
             )
         }
     )

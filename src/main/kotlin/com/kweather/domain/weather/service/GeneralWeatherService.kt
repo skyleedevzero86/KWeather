@@ -26,6 +26,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import javax.xml.parsers.DocumentBuilderFactory
 
 @Service
 class GeneralWeatherService(
@@ -52,8 +53,7 @@ class GeneralWeatherService(
             val formatter = DateTimeFormatter.ofPattern("yyyyMMdd")
             val currentDate = LocalDate.now(ZoneId.of("Asia/Seoul")).format(formatter)
             val currentTime = DateTimeUtils.getBaseTime()
-            val encodedServiceKey = URLEncoder.encode(serviceKey, StandardCharsets.UTF_8.toString()) // 서비스 키 인코딩 추가
-            val urls = "${weatherBaseUrl}?serviceKey=$encodedServiceKey" +
+            val urls = "${weatherBaseUrl}?serviceKey=$serviceKey" +
                     "&numOfRows=1000" +
                     "&pageNo=1" +
                     "&base_date=$currentDate" +
@@ -67,8 +67,17 @@ class GeneralWeatherService(
 
         override fun parseResponse(response: String): Either<String, WeatherResponse> =
             runCatching {
+                if (response.trim().startsWith("<OpenAPI_ServiceResponse>")) {
+                    val dbFactory = DocumentBuilderFactory.newInstance()
+                    val dBuilder = dbFactory.newDocumentBuilder()
+                    val doc = dBuilder.parse(response.byteInputStream())
+                    doc.documentElement.normalize()
+                    val errMsg = doc.getElementsByTagName("errMsg").item(0)?.textContent ?: "Unknown error"
+                    val returnAuthMsg = doc.getElementsByTagName("returnAuthMsg").item(0)?.textContent ?: "Unknown auth error"
+                    throw IllegalStateException("API 오류: $errMsg - $returnAuthMsg")
+                }
+
                 val weatherResponse = ApiClientUtility.getObjectMapper().readValue(response, WeatherResponse::class.java)
-                // API 응답에서 키 오류 확인
                 if (weatherResponse.response?.header?.resultCode == "99" || weatherResponse.response?.header?.resultMsg?.contains("SERVICE KEY") == true) {
                     throw IllegalStateException("API 키 오류: 서비스 키가 유효하지 않습니다.")
                 }
@@ -81,8 +90,7 @@ class GeneralWeatherService(
 
     private inner class DustForecastApiClient : ApiClientUtility.ApiClient<DustForecastRequestParams, ForecastResponse> {
         override fun buildUrl(params: DustForecastRequestParams): String {
-            val encodedServiceKey = URLEncoder.encode(serviceKey, StandardCharsets.UTF_8.toString()) // 서비스 키 인코딩 추가
-            val urls = "${dustForecastBaseUrl}?serviceKey=$encodedServiceKey" +
+            val urls = "${dustForecastBaseUrl}?serviceKey=$serviceKey" +
                     "&returnType=json" +
                     "&numOfRows=1000" +
                     "&pageNo=1" +
@@ -94,8 +102,17 @@ class GeneralWeatherService(
 
         override fun parseResponse(response: String): Either<String, ForecastResponse> =
             runCatching {
+                if (response.trim().startsWith("<OpenAPI_ServiceResponse>")) {
+                    val dbFactory = DocumentBuilderFactory.newInstance()
+                    val dBuilder = dbFactory.newDocumentBuilder()
+                    val doc = dBuilder.parse(response.byteInputStream())
+                    doc.documentElement.normalize()
+                    val errMsg = doc.getElementsByTagName("errMsg").item(0)?.textContent ?: "Unknown error"
+                    val returnAuthMsg = doc.getElementsByTagName("returnAuthMsg").item(0)?.textContent ?: "Unknown auth error"
+                    throw IllegalStateException("API 오류: $errMsg - $returnAuthMsg")
+                }
+
                 val forecastResponse = ApiClientUtility.getObjectMapper().readValue(response, ForecastResponse::class.java)
-                // API 응답에서 키 오류 확인
                 if (forecastResponse.response?.header?.resultCode == "99" || forecastResponse.response?.header?.resultMsg?.contains("SERVICE KEY") == true) {
                     throw IllegalStateException("API 키 오류: 서비스 키가 유효하지 않습니다.")
                 }
@@ -109,8 +126,7 @@ class GeneralWeatherService(
     private inner class RealTimeDustApiClient : ApiClientUtility.ApiClient<RealTimeDustRequestParams, RealTimeDustResponse> {
         override fun buildUrl(params: RealTimeDustRequestParams): String {
             val encodedSidoName = URLEncoder.encode(params.sidoName, StandardCharsets.UTF_8.toString())
-            val encodedServiceKey = URLEncoder.encode(serviceKey, StandardCharsets.UTF_8.toString()) // 서비스 키 인코딩 추가
-            val urls = "${realTimeDustBaseUrl}?serviceKey=$encodedServiceKey" +
+            val urls = "${realTimeDustBaseUrl}?serviceKey=$serviceKey" +
                     "&returnType=${params.returnType}" +
                     "&numOfRows=${params.numOfRows}" +
                     "&pageNo=${params.pageNo}" +
@@ -122,8 +138,17 @@ class GeneralWeatherService(
 
         override fun parseResponse(response: String): Either<String, RealTimeDustResponse> =
             runCatching {
+                if (response.trim().startsWith("<OpenAPI_ServiceResponse>")) {
+                    val dbFactory = DocumentBuilderFactory.newInstance()
+                    val dBuilder = dbFactory.newDocumentBuilder()
+                    val doc = dBuilder.parse(response.byteInputStream())
+                    doc.documentElement.normalize()
+                    val errMsg = doc.getElementsByTagName("errMsg").item(0)?.textContent ?: "Unknown error"
+                    val returnAuthMsg = doc.getElementsByTagName("returnAuthMsg").item(0)?.textContent ?: "Unknown auth error"
+                    throw IllegalStateException("API 오류: $errMsg - $returnAuthMsg")
+                }
+
                 val dustResponse = ApiClientUtility.getObjectMapper().readValue(response, RealTimeDustResponse::class.java)
-                // API 응답에서 키 오류 확인
                 if (dustResponse.response?.header?.resultCode == "99" || dustResponse.response?.header?.resultMsg?.contains("SERVICE KEY") == true) {
                     throw IllegalStateException("API 키 오류: 서비스 키가 유효하지 않습니다.")
                 }
@@ -250,6 +275,7 @@ class GeneralWeatherService(
     fun parseWeatherData(response: WeatherResponse): List<WeatherInfo> =
         when {
             response.response?.header?.resultCode != "00" -> {
+                logger.error("API 응답 오류: ${response.response?.header?.resultCode} - ${response.response?.header?.resultMsg}")
                 listOf(
                     WeatherInfo(
                         baseDate = "",
@@ -365,11 +391,21 @@ class GeneralWeatherService(
         val (date, time) = DateTimeUtils.getCurrentDateTimeFormatted()
         val currentHour = DateTimeUtils.getCurrentHour()
 
+        // 현재 온도
         val temperature = weatherInfoList.find { it.category == "TMP" }?.value?.let { "$it°C" } ?: "0°C"
+        // 습도
         val humidity = weatherInfoList.find { it.category == "REH" }?.value?.let { "$it%" } ?: "50%"
+        // 풍속
         val windSpeed = weatherInfoList.find { it.category == "WSD" }?.value?.let { "${it}m/s" } ?: "0 m/s"
+        // 하늘 상태
         val skyCondition = weatherInfoList.find { it.category == "SKY" }?.value?.toIntOrNull() ?: 1
+        // 강수 형태
         val precipitationType = weatherInfoList.find { it.category == "PTY" }?.value?.toIntOrNull() ?: 0
+
+        // 최고/최저 온도 (TMN, TMX 사용)
+        val minTemp = weatherInfoList.find { it.category == "TMN" }?.value?.let { "$it°C" } ?: (temperature.dropLast(2).toIntOrNull()?.minus(3)?.let { "$it°C" } ?: "-3°C")
+        val maxTemp = weatherInfoList.find { it.category == "TMX" }?.value?.let { "$it°C" } ?: (temperature.dropLast(2).toIntOrNull()?.plus(3)?.let { "$it°C" } ?: "3°C")
+        val highLowTemperature = "$minTemp / $maxTemp"
 
         val weatherCondition = when (precipitationType) {
             0 -> when (skyCondition) {
@@ -429,6 +465,8 @@ class GeneralWeatherService(
             val forecastTime = if (hourOffset == 0) "지금" else "${forecastHour}시"
             val forecastSky = weatherInfoList.find { it.category == "SKY" && it.baseTime == String.format("%02d00", forecastHour) }?.value?.toIntOrNull() ?: skyCondition
             val forecastPrecip = weatherInfoList.find { it.category == "PTY" && it.baseTime == String.format("%02d00", forecastHour) }?.value?.toIntOrNull() ?: precipitationType
+            val forecastTemp = weatherInfoList.find { it.category == "TMP" && it.baseTime == String.format("%02d00", forecastHour) }?.value?.let { "$it°C" } ?: temperature
+            val forecastHumidity = weatherInfoList.find { it.category == "REH" && it.baseTime == String.format("%02d00", forecastHour) }?.value?.let { "$it%" } ?: humidity
             val forecastIcon = when (forecastPrecip) {
                 0 -> when (forecastSky) {
                     1 -> "sun"
@@ -441,18 +479,15 @@ class GeneralWeatherService(
                 3 -> "snow"
                 else -> "sun"
             }
-            val senTaKeyHour = forecastHour + 1
-            val senTaKey = "h$senTaKeyHour"
-            val forecastTemp = senTaIndexData.firstOrNull()?.values?.get(senTaKey)?.let { "$it°C" } ?: temperature
-            hourlyForecast.add(HourlyForecast(forecastTime, forecastIcon, forecastTemp, humidity))
+            hourlyForecast.add(HourlyForecast(forecastTime, forecastIcon, forecastTemp, forecastHumidity))
         }
 
         return Weather(
             date = date,
             time = time,
-            location = "한남동 (용산구)",
+            location = "한남동 (용산구)", // TODO: 동적으로 설정
             currentTemperature = temperature,
-            highLowTemperature = "${temperature.dropLast(2).toInt() - 3}°C / ${temperature.dropLast(2).toInt() + 3}°C",
+            highLowTemperature = highLowTemperature,
             weatherCondition = weatherCondition,
             windSpeed = windSpeed,
             airQuality = airQuality,
@@ -481,7 +516,7 @@ class GeneralWeatherService(
 
     private fun getUnitForCategory(category: String?): String =
         when (category) {
-            "TMP" -> "°C"
+            "TMP", "TMN", "TMX" -> "°C"
             "RN1" -> "mm"
             "UUU", "VVV", "WSD" -> "m/s"
             "REH" -> "%"
@@ -496,7 +531,9 @@ class GeneralWeatherService(
     private fun validateConfiguration() {
         if (serviceKey.isBlank() || weatherBaseUrl.isBlank() || dustForecastBaseUrl.isBlank() || realTimeDustBaseUrl.isBlank()) {
             logger.error("날씨 및 미세먼지 서비스: 필수 설정값이 누락되었습니다")
+            logger.error("serviceKey: $serviceKey")
             throw IllegalStateException("필수 설정값이 누락되었습니다: serviceKey, weatherBaseUrl, dustForecastBaseUrl, realTimeDustBaseUrl 중 하나가 비어 있습니다.")
         }
+        logger.info("설정값 확인 - serviceKey: $serviceKey")
     }
 }
