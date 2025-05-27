@@ -41,18 +41,20 @@
             <button class="dust-forecast-btn" onclick="openDustForecastPopup()" aria-label="미세먼지 예보 보기">미세먼지 예보 보기</button>
             <button class="real-time-dust-btn" onclick="openRealTimeDustPopup()" aria-label="실시간 미세먼지 보기">실시간 미세먼지 보기</button>
         </div>
-        <div class="air-quality">
+        <div class="air-quality-container">
+            <div class="air-quality">
 
-            <h3 th:text="${weather.airQuality.title}"></h3>
-            <span class="icon" th:classappend="${weather.airQuality.icon}" aria-hidden="true"></span>
-            <p class="status" th:text="${weather.airQuality.status}"></p>
-            <p th:text="${weather.airQuality.value} + ' ' + ${weather.airQuality.measurement}"></p>
-        </div>
-        <div class="air-quality">
-            <h3 th:text="${weather.airQuality.title2}"></h3>
-            <span class="icon" th:classappend="${weather.airQuality.icon}" aria-hidden="true"></span>
-            <p class="status" th:text="${weather.airQuality.status2}"></p>
-            <p th:text="${weather.airQuality.value2} + ' ' + ${weather.airQuality.measurement2}"></p>
+                <h3 th:text="${weather.airQuality.title}"></h3>
+                <span class="icon" th:classappend="${weather.airQuality.icon}" aria-hidden="true"></span>
+                <p class="status" th:text="${weather.airQuality.status}"></p>
+                <p th:text="${weather.airQuality.value} + ' ' + ${weather.airQuality.measurement}"></p>
+            </div>
+            <div class="air-quality">
+                <h3 th:text="${weather.airQuality.title2}"></h3>
+                <span class="icon" th:classappend="${weather.airQuality.icon}" aria-hidden="true"></span>
+                <p class="status" th:text="${weather.airQuality.status2}"></p>
+                <p th:text="${weather.airQuality.value2} + ' ' + ${weather.airQuality.measurement2}"></p>
+            </div>
         </div>
     </section>
 
