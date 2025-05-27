@@ -9,9 +9,9 @@ package com.kweather.domain.uvi.dto
  * @property humidity 습도
  */
 data class UVIndex(
-    val title: String,
-    val icon: String,
-    val status: String,
+    val title: String,      // 필수 매개변수
+    val icon: String,       // 필수 매개변수
+    val status: String,     // 필수 매개변수
     val value: String,
     val measurement: String
 )

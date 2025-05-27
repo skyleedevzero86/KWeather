@@ -10,6 +10,7 @@ import com.kweather.domain.realtime.dto.RealTimeDustInfo
 import com.kweather.domain.realtime.dto.RealTimeDustItem
 import com.kweather.domain.realtime.dto.RealTimeDustResponse
 import com.kweather.domain.senta.service.SenTaIndexService
+import com.kweather.domain.uvi.dto.UVIndex
 import com.kweather.domain.weather.dto.*
 import com.kweather.domain.weather.entity.Weather
 import com.kweather.domain.weather.model.*
@@ -369,6 +370,35 @@ class GeneralWeatherService(
         return String.format("%02d00", baseHour)
     }
 
+    /**
+     * 기본 UV 지수 정보를 생성합니다.
+     * 실제 UV 지수 API가 없을 때 사용되는 기본값입니다.
+     */
+    private fun createDefaultUVIndex(): UVIndex {
+        val currentHour = LocalDateTime.now(ZoneId.of("Asia/Seoul")).hour
+
+        // 시간대별로 UV 지수를 추정
+        val (uvValue, uvStatus) = when (currentHour) {
+            in 6..8 -> "3" to "보통"
+            in 9..15 -> "7" to "높음"
+            in 16..18 -> "4" to "보통"
+            else -> "0" to "낮음"
+        }
+
+        return UVIndex(
+            title = "자외선 지수",
+            icon = when (uvStatus) {
+                "낮음" -> "uv-low"
+                "보통" -> "uv-moderate"
+                "높음" -> "uv-high"
+                else -> "uv-low"
+            },
+            status = uvStatus,
+            value = uvValue,
+            measurement = "UV Index"
+        )
+    }
+
     fun buildWeatherEntity(nx: Int, ny: Int, sidoName: String): Weather {
         val response = getUltraShortWeather(nx, ny)
         val weatherInfoList = parseWeatherData(response)
@@ -427,6 +457,9 @@ class GeneralWeatherService(
             )
         } ?: createDefaultAirQuality()
 
+        // UV 지수 정보 생성 (기본값 사용)
+        val uvIndex = createDefaultUVIndex()
+
         val hourlyForecast = mutableListOf<HourlyForecast>()
         val currentHourIndex = currentHour / 3 * 3
         val hours = listOf(0, 3, 6, 9, 12, 15, 18, 21)
@@ -462,6 +495,7 @@ class GeneralWeatherService(
             weatherCondition = weatherCondition,
             windSpeed = windSpeed,
             airQuality = airQuality,
+            uvIndex = uvIndex, // UV 지수 정보 추가
             hourlyForecast = hourlyForecast
         )
     }

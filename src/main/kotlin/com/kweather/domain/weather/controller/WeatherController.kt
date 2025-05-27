@@ -7,6 +7,8 @@ import com.kweather.domain.realtime.dto.RealTimeDustInfo
 import com.kweather.domain.region.service.RegionService
 import com.kweather.domain.senta.dto.SenTaIndexInfo
 import com.kweather.domain.senta.service.SenTaIndexService
+import com.kweather.domain.uvi.dto.UVIndex
+import com.kweather.domain.uvi.dto.UVIndexInfo
 import com.kweather.domain.weather.entity.Weather
 import com.kweather.domain.weather.model.AirQuality
 import com.kweather.domain.weather.model.HourlyForecast
@@ -82,6 +84,25 @@ class WeatherController(
             val values = (0..23).associate { "h$it" to "${it % 5}.0 mm" }
             return listOf(PrecipitationInfo(today, values))
         }
+
+        override fun getUVIndexData(areaNo: String, time: String): List<UVIndexInfo> = try {
+            // TODO: 실제 UV 인덱스 데이터를 가져오는 서비스 호출 구현
+            val today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+
+            listOf(
+                UVIndexInfo(
+                    date = today,
+                    values = mapOf(
+                        "h12" to "3", // 정오 시간대 UV 인덱스
+                        "h13" to "4",
+                        "h14" to "3"
+                    )
+                )
+            )
+        } catch (e: Exception) {
+            logger.error("자외선 지수 데이터 가져오기 실패: ${e.message}", e)
+            emptyList()
+        }
     }
 
     @GetMapping("/")
@@ -119,6 +140,7 @@ class WeatherController(
         val senTaIndexData = weatherDataProvider.getSenTaIndexData(defaultAreaNo, apiTime)
         val airStagnationIndexData = weatherDataProvider.getAirStagnationIndexData(defaultAreaNo, apiTime)
         val precipitationData = weatherDataProvider.getPrecipitationData(defaultAreaNo, apiTime)
+        val uvIndexData = weatherDataProvider.getUVIndexData(defaultAreaNo, apiTime)
 
         val sentaHoursSequence = (1..31).toList()
         val asiHoursSequence = (3..78 step 3).toList()
@@ -159,6 +181,7 @@ class WeatherController(
             "senTaIndexData" to senTaIndexData.ifEmpty { null },
             "airStagnationIndexData" to airStagnationIndexData,
             "precipitationData" to precipitationData.ifEmpty { null },
+            "uvIndexData" to uvIndexData.ifEmpty { null },
             "categorizedForecast" to categorizedForecast.ifEmpty { null },
             "errorMessage" to errorMessage,
             "sentaHoursSequence" to sentaHoursSequence,
@@ -190,6 +213,10 @@ class WeatherController(
         else -> sido
     }
 
+    /**
+     * 기본 날씨 데이터를 생성합니다.
+     * API 호출 실패 시 사용되는 기본값입니다.
+     */
     private fun createDefaultWeatherData(date: String, time: String) = Weather(
         date = date,
         time = time,
@@ -198,7 +225,17 @@ class WeatherController(
         highLowTemperature = "-3°C / 3°C",
         weatherCondition = "맑음",
         windSpeed = "0 m/s",
-        airQuality = AirQuality("미세먼지", "yellow-smiley", "좋음", "20", "㎍/㎥", "초미세먼지", "좋음", "10", "㎍/㎥"),
+        airQuality = AirQuality(
+            title = "미세먼지",
+            icon = "yellow-smiley",
+            status = "좋음",
+            value = "20",
+            measurement = "㎍/㎥",
+            title2 = "초미세먼지",
+            status2 = "좋음",
+            value2 = "10",
+            measurement2 = "㎍/㎥"
+        ),
         hourlyForecast = (0..7).map {
             val hour = (LocalDateTime.now().hour + it * 3) % 24
             HourlyForecast(
@@ -207,6 +244,14 @@ class WeatherController(
                 temperature = "0°C",
                 humidity = "50%"
             )
-        }
+        },
+        // 수정된 UVIndex 생성 - 모든 필수 매개변수 포함
+        uvIndex = UVIndex(
+            title = "자외선 지수",     // 필수 매개변수 추가
+            icon = "uv-moderate",     // 필수 매개변수 추가
+            status = "보통",          // 필수 매개변수 추가
+            value = "3",
+            measurement = "UV Index"
+        )
     )
 }
