@@ -31,7 +31,7 @@
                 <div class="weather-condition" th:text="${weather.weatherCondition}"></div>
                 <div class="humidity" th:text="'습도 ' + ${weather.hourlyForecast[0].humidity}"></div>
                 <div class="pm-value" th:text="'미세먼지 ' + ${weather.airQuality.value} + ' ' + ${weather.airQuality.measurement}"></div>
-                <div class="pm25-value" th:text="'초미세먼지 ' + ${weather.airQuality.value2} + ' ' + ${weather.airQuality.measurement2}"></div>
+                <!--<div class="pm25-value" th:text="'초미세먼지 ' + ${weather.airQuality.value2} + ' ' + ${weather.airQuality.measurement2}"></div>-->
             </div>
         </div>
     </section>
