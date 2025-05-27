@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>날씨 예보</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" th:href="@{/static/global/global.css}" />
     <link rel="stylesheet" th:href="@{/static/global/style.css}" />
 </head>
 <body>
@@ -38,17 +37,24 @@
 
     <!-- 날씨 상세 정보 -->
     <section class="weather-details" aria-label="날씨 상세 정보">
-        <div class="air-quality">
-            <h3 th:text="${weather.airQuality.title}"></h3>
-            <span class="icon" th:classappend="${weather.airQuality.icon}" aria-hidden="true"></span>
-            <p class="status" th:text="${weather.airQuality.status}"></p>
-            <p th:text="${weather.airQuality.value} + ' ' + ${weather.airQuality.measurement}"></p>
+        <div class="dust-buttons-container">
+            <button class="dust-forecast-btn" onclick="openDustForecastPopup()" aria-label="미세먼지 예보 보기">미세먼지 예보 보기</button>
+            <button class="real-time-dust-btn" onclick="openRealTimeDustPopup()" aria-label="실시간 미세먼지 보기">실시간 미세먼지 보기</button>
         </div>
-        <div class="air-quality">
-            <h3 th:text="${weather.airQuality.title2}"></h3>
-            <span class="icon" th:classappend="${weather.airQuality.icon}" aria-hidden="true"></span>
-            <p class="status" th:text="${weather.airQuality.status2}"></p>
-            <p th:text="${weather.airQuality.value2} + ' ' + ${weather.airQuality.measurement2}"></p>
+        <div class="air-quality-container">
+            <div class="air-quality">
+
+                <h3 th:text="${weather.airQuality.title}"></h3>
+                <span class="icon" th:classappend="${weather.airQuality.icon}" aria-hidden="true"></span>
+                <p class="status" th:text="${weather.airQuality.status}"></p>
+                <p th:text="${weather.airQuality.value} + ' ' + ${weather.airQuality.measurement}"></p>
+            </div>
+            <div class="air-quality">
+                <h3 th:text="${weather.airQuality.title2}"></h3>
+                <span class="icon" th:classappend="${weather.airQuality.icon}" aria-hidden="true"></span>
+                <p class="status" th:text="${weather.airQuality.status2}"></p>
+                <p th:text="${weather.airQuality.value2} + ' ' + ${weather.airQuality.measurement2}"></p>
+            </div>
         </div>
     </section>
 
@@ -62,115 +68,6 @@
                 <span class="temp" th:text="${forecast.temperature}"></span>
                 <span class="humid" th:text="${forecast.humidity}"></span>
             </div>
-        </div>
-    </section>
-
-    <!-- 미세먼지 예보 -->
-    <section class="dust-forecast-section" aria-label="미세먼지 예보">
-        <h3>미세먼지 예보</h3>
-        <div th:if="${dustForecast != null}">
-            <button th:if="${#lists.size(dustForecast) > 1}" class="slider-btn prev" onclick="moveSlide(-1)" aria-label="이전 슬라이드">❮</button>
-            <div class="dust-slider" id="dustSlider">
-                <div th:each="forecast, iter : ${dustForecast}" class="dust-forecast-item">
-                    <h4 th:text="${forecast.date} + ' (' + ${forecast.type} + ')'"></h4>
-                    <p th:text="'시간: ' + ${forecast.dataTime}"></p>
-                    <p class="overall-text" th:text="${forecast.overall}" th:unless="${forecast.overall == 'N/A'}"></p>
-                    <p class="cause-text" th:text="${forecast.cause}" th:unless="${forecast.cause == 'N/A'}"></p>
-                    <div class="grade-section">
-                        <table class="grade-table">
-                            <tr>
-                                <th th:if="${#lists.size(categorizedForecast[iter.index].first) > 0 and categorizedForecast[iter.index].first[0] != '없음'}"
-                                    class="grade-title good">좋음</th>
-                                <th th:if="${#lists.size(categorizedForecast[iter.index].second) > 0 and categorizedForecast[iter.index].second[0] != '없음'}"
-                                    class="grade-title moderate">보통</th>
-                                <th th:if="${#lists.size(categorizedForecast[iter.index].third) > 0 and categorizedForecast[iter.index].third[0] != '없음'}"
-                                    class="grade-title bad">나쁨</th>
-                            </tr>
-                            <tr th:each="i : ${#numbers.sequence(0,
-                                #lists.size(categorizedForecast[iter.index].first) > #lists.size(categorizedForecast[iter.index].second) ?
-                                (#lists.size(categorizedForecast[iter.index].first) > #lists.size(categorizedForecast[iter.index].third) ?
-                                #lists.size(categorizedForecast[iter.index].first) - 1 : #lists.size(categorizedForecast[iter.index].third) - 1) :
-                                (#lists.size(categorizedForecast[iter.index].second) > #lists.size(categorizedForecast[iter.index].third) ?
-                                #lists.size(categorizedForecast[iter.index].second) - 1 : #lists.size(categorizedForecast[iter.index].third) - 1))}">
-                                <td th:if="${#lists.size(categorizedForecast[iter.index].first) > i and categorizedForecast[iter.index].first[i] != '없음'}"
-                                    th:text="${categorizedForecast[iter.index].first[i]}"
-                                    class="grade-cell good"></td>
-                                <td th:if="${#lists.size(categorizedForecast[iter.index].second) > i and categorizedForecast[iter.index].second[i] != '없음'}"
-                                    th:text="${categorizedForecast[iter.index].second[i]}"
-                                    class="grade-cell moderate"></td>
-                                <td th:if="${#lists.size(categorizedForecast[iter.index].third) > i and categorizedForecast[iter.index].third[i] != '없음'}"
-                                    th:text="${categorizedForecast[iter.index].third[i]}"
-                                    class="grade-cell bad"></td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div th:if="${forecast.imageUrls != null and not #lists.isEmpty(forecast.imageUrls)}">
-                        <h5 class="image-title">예보 이미지</h5>
-                        <div class="forecast-images">
-                            <img th:each="url : ${forecast.imageUrls}" th:src="${url}" alt="예보 이미지" onclick="openPopup(this.src)" />
-                        </div>
-                    </div>
-                    <div th:unless="${forecast.imageUrls != null and not #lists.isEmpty(forecast.imageUrls)}">
-                        <h5 class="image-title">이미지 없음</h5>
-                    </div>
-                </div>
-            </div>
-            <button th:if="${#lists.size(dustForecast) > 1}" class="slider-btn next" onclick="moveSlide(1)" aria-label="다음 슬라이드">❯</button>
-        </div>
-        <div th:unless="${dustForecast != null}">
-            <p>미세먼지 예보 데이터를 불러올 수 없습니다. (날짜 형식이 잘못되었거나 API 요청이 실패했습니다.)</p>
-        </div>
-    </section>
-
-    <!-- 실시간 미세먼지 -->
-    <section class="real-time-dust-section" aria-label="실시간 미세먼지">
-        <h3>실시간 미세먼지</h3>
-        <div th:if="${realTimeDust != null and not #lists.isEmpty(realTimeDust)}">
-            <table class="real-time-dust-table">
-                <thead>
-                <tr>
-                    <th>시도</th>
-                    <th>측정소</th>
-                    <th>측정 시간</th>
-                    <th>미세먼지(PM10)</th>
-                    <th>미세먼지 등급</th>
-                    <th>초미세먼지(PM2.5)</th>
-                    <th>초미세먼지 등급</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="dust : ${realTimeDust}">
-                    <td th:text="${dust.sidoName}"></td>
-                    <td th:text="${dust.stationName}"></td>
-                    <td th:text="${dust.dataTime}"></td>
-                    <td>
-                        <span th:if="${dust.pm10Value != 'N/A'}" th:text="${dust.pm10Value} + ' μg/m³'"></span>
-                        <span th:unless="${dust.pm10Value != 'N/A'}" class="na-message" th:text="'측정 중'"></span>
-                    </td>
-                    <td class="grade-cell" th:switch="${dust.pm10Grade}">
-                        <span th:case="'N/A'" class="na-message" th:text="'측정 중'"></span>
-                        <span th:case="'좋음'" class="grade-good" th:text="'좋음'"></span>
-                        <span th:case="'보통'" class="grade-moderate" th:text="'보통'"></span>
-                        <span th:case="'나쁨'" class="grade-bad" th:text="'나쁨'"></span>
-                        <span th:case="'매우나쁨'" class="grade-very-bad" th:text="'매우나쁨'"></span>
-                    </td>
-                    <td>
-                        <span th:if="${dust.pm25Value != 'N/A'}" th:text="${dust.pm25Value} + ' μg/m³'"></span>
-                        <span th:unless="${dust.pm25Value != 'N/A'}" class="na-message" th:text="'측정 중'"></span>
-                    </td>
-                    <td class="grade-cell" th:switch="${dust.pm25Grade}">
-                        <span th:case="'N/A'" class="na-message" th:text="'측정 중'"></span>
-                        <span th:case="'좋음'" class="grade-good" th:text="'좋음'"></span>
-                        <span th:case="'보통'" class="grade-moderate" th:text="'보통'"></span>
-                        <span th:case="'나쁨'" class="grade-bad" th:text="'나쁨'"></span>
-                        <span th:case="'매우나쁨'" class="grade-very-bad" th:text="'매우나쁨'"></span>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <div th:unless="${realTimeDust != null and not #lists.isEmpty(realTimeDust)}">
-            <p th:text="${errorMessage ?: '실시간 미세먼지 데이터를 불러올 수 없습니다.'}" style="color: red;"></p>
         </div>
     </section>
 
@@ -189,11 +86,11 @@
                 <tr th:each="senta : ${senTaIndexData}">
                     <td th:text="${senta.date}"></td>
                     <td th:each="hour : ${sentaHoursSequence}">
-                            <span th:switch="${senta.values['h' + hour]}">
-                                <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
-                                <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
-                                <span th:case="*" th:text="${senta.values['h' + hour]}"></span>
-                            </span>
+                        <span th:switch="${senta.values['h' + hour]}">
+                            <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="*" th:text="${senta.values['h' + hour]}"></span>
+                        </span>
                     </td>
                 </tr>
                 </tbody>
@@ -219,11 +116,11 @@
                 <tr th:each="asi : ${airStagnationIndexData}">
                     <td th:text="${asi.date}"></td>
                     <td th:each="hour : ${asiHoursSequence}">
-                            <span th:switch="${asi.values['h' + hour]}">
-                                <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
-                                <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
-                                <span th:case="*" th:text="${asi.values['h' + hour]}"></span>
-                            </span>
+                        <span th:switch="${asi.values['h' + hour]}">
+                            <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="*" th:text="${asi.values['h' + hour]}"></span>
+                        </span>
                     </td>
                 </tr>
                 </tbody>
@@ -249,11 +146,11 @@
                 <tr th:each="precip : ${precipitationData}">
                     <td th:text="${precip.date}"></td>
                     <td th:each="hour : ${precipHoursSequence}">
-                            <span th:switch="${precip.values['h' + hour]}">
-                                <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
-                                <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
-                                <span th:case="*" th:text="${precip.values['h' + hour]}"></span>
-                            </span>
+                        <span th:switch="${precip.values['h' + hour]}">
+                            <span th:case="null" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="''" class="na-message" th:text="'데이터 없음'"></span>
+                            <span th:case="*" th:text="${precip.values['h' + hour]}"></span>
+                        </span>
                     </td>
                 </tr>
                 </tbody>
@@ -308,6 +205,125 @@
     </div>
 </div>
 
+<!-- 미세먼지 예보 팝업 -->
+<div id="dustForecastPopup" class="popup" role="dialog" aria-label="미세먼지 예보 팝업">
+    <div class="popup-content">
+        <button class="close-btn" onclick="closeDustForecastPopup()" aria-label="팝업 닫기">X</button>
+        <section class="dust-forecast-section" aria-label="미세먼지 예보">
+            <h3>미세먼지 예보</h3>
+            <div th:if="${dustForecast != null}">
+                <button th:if="${#lists.size(dustForecast) > 1}" class="slider-btn prev" onclick="moveSlide(-1)" aria-label="이전 슬라이드">❮</button>
+                <div class="dust-slider" id="dustSlider">
+                    <div th:each="forecast, iter : ${dustForecast}" class="dust-forecast-item">
+                        <h4 th:text="${forecast.date} + ' (' + ${forecast.type} + ')'"></h4>
+                        <p th:text="'시간: ' + ${forecast.dataTime}"></p>
+                        <p class="overall-text" th:text="${forecast.overall}" th:unless="${forecast.overall == 'N/A'}"></p>
+                        <p class="cause-text" th:text="${forecast.cause}" th:unless="${forecast.cause == 'N/A'}"></p>
+                        <div class="grade-section">
+                            <table class="grade-table">
+                                <tr>
+                                    <th th:if="${#lists.size(categorizedForecast[iter.index].first) > 0 and categorizedForecast[iter.index].first[0] != '없음'}"
+                                        class="grade-title good">좋음</th>
+                                    <th th:if="${#lists.size(categorizedForecast[iter.index].second) > 0 and categorizedForecast[iter.index].second[0] != '없음'}"
+                                        class="grade-title moderate">보통</th>
+                                    <th th:if="${#lists.size(categorizedForecast[iter.index].third) > 0 and categorizedForecast[iter.index].third[0] != '없음'}"
+                                        class="grade-title bad">나쁨</th>
+                                </tr>
+                                <tr th:each="i : ${#numbers.sequence(0,
+                                    #lists.size(categorizedForecast[iter.index].first) > #lists.size(categorizedForecast[iter.index].second) ?
+                                    (#lists.size(categorizedForecast[iter.index].first) > #lists.size(categorizedForecast[iter.index].third) ?
+                                    #lists.size(categorizedForecast[iter.index].first) - 1 : #lists.size(categorizedForecast[iter.index].third) - 1) :
+                                    (#lists.size(categorizedForecast[iter.index].second) > #lists.size(categorizedForecast[iter.index].third) ?
+                                    #lists.size(categorizedForecast[iter.index].second) - 1 : #lists.size(categorizedForecast[iter.index].third) - 1))}">
+                                    <td th:if="${#lists.size(categorizedForecast[iter.index].first) > i and categorizedForecast[iter.index].first[i] != '없음'}"
+                                        th:text="${categorizedForecast[iter.index].first[i]}"
+                                        class="grade-cell good"></td>
+                                    <td th:if="${#lists.size(categorizedForecast[iter.index].second) > i and categorizedForecast[iter.index].second[i] != '없음'}"
+                                        th:text="${categorizedForecast[iter.index].second[i]}"
+                                        class="grade-cell moderate"></td>
+                                    <td th:if="${#lists.size(categorizedForecast[iter.index].third) > i and categorizedForecast[iter.index].third[i] != '없음'}"
+                                        th:text="${categorizedForecast[iter.index].third[i]}"
+                                        class="grade-cell bad"></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div th:if="${forecast.imageUrls != null and not #lists.isEmpty(forecast.imageUrls)}">
+                            <h5 class="image-title">예보 이미지</h5>
+                            <div class="forecast-images">
+                                <img th:each="url : ${forecast.imageUrls}" th:src="${url}" alt="예보 이미지" onclick="openPopup(this.src)" />
+                            </div>
+                        </div>
+                        <div th:unless="${forecast.imageUrls != null and not #lists.isEmpty(forecast.imageUrls)}">
+                            <h5 class="image-title">이미지 없음</h5>
+                        </div>
+                    </div>
+                </div>
+                <button th:if="${#lists.size(dustForecast) > 1}" class="slider-btn next" onclick="moveSlide(1)" aria-label="다음 슬라이드">❯</button>
+            </div>
+            <div th:unless="${dustForecast != null}">
+                <p>미세먼지 예보 데이터를 불러올 수 없습니다. (날짜 형식이 잘못되었거나 API 요청이 실패했습니다.)</p>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- 실시간 미세먼지 팝업 -->
+<div id="realTimeDustPopup" class="popup" role="dialog" aria-label="실시간 미세먼지 팝업">
+    <div class="popup-content">
+        <button class="close-btn" onclick="closeRealTimeDustPopup()" aria-label="팝업 닫기">X</button>
+        <section class="real-time-dust-section" aria-label="실시간 미세먼지">
+            <h3>실시간 미세먼지</h3>
+            <div th:if="${realTimeDust != null and not #lists.isEmpty(realTimeDust)}">
+                <table class="real-time-dust-table">
+                    <thead>
+                    <tr>
+                        <th>시도</th>
+                        <th>측정소</th>
+                        <th>측정 시간</th>
+                        <th>미세먼지(PM10)</th>
+                        <th>미세먼지 등급</th>
+                        <th>초미세먼지(PM2.5)</th>
+                        <th>초미세먼지 등급</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="dust : ${realTimeDust}">
+                        <td th:text="${dust.sidoName}"></td>
+                        <td th:text="${dust.stationName}"></td>
+                        <td th:text="${dust.dataTime}"></td>
+                        <td>
+                            <span th:if="${dust.pm10Value != 'N/A'}" th:text="${dust.pm10Value} + ' μg/m³'"></span>
+                            <span th:unless="${dust.pm10Value != 'N/A'}" class="na-message" th:text="'측정 중'"></span>
+                        </td>
+                        <td class="grade-cell" th:switch="${dust.pm10Grade}">
+                            <span th:case="'N/A'" class="na-message" th:text="'측정 중'"></span>
+                            <span th:case="'좋음'" class="grade-good" th:text="'좋음'"></span>
+                            <span th:case="'보통'" class="grade-moderate" th:text="'보통'"></span>
+                            <span th:case="'나쁨'" class="grade-bad" th:text="'나쁨'"></span>
+                            <span th:case="'매우나쁨'" class="grade-very-bad" th:text="'매우나쁨'"></span>
+                        </td>
+                        <td>
+                            <span th:if="${dust.pm25Value != 'N/A'}" th:text="${dust.pm25Value} + ' μg/m³'"></span>
+                            <span th:unless="${dust.pm25Value != 'N/A'}" class="na-message" th:text="'측정 중'"></span>
+                        </td>
+                        <td class="grade-cell" th:switch="${dust.pm25Grade}">
+                            <span th:case="'N/A'" class="na-message" th:text="'측정 중'"></span>
+                            <span th:case="'좋음'" class="grade-good" th:text="'좋음'"></span>
+                            <span th:case="'보통'" class="grade-moderate" th:text="'보통'"></span>
+                            <span th:case="'나쁨'" class="grade-bad" th:text="'나쁨'"></span>
+                            <span th:case="'매우나쁨'" class="grade-very-bad" th:text="'매우나쁨'"></span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div th:unless="${realTimeDust != null and not #lists.isEmpty(realTimeDust)}">
+                <p th:text="${errorMessage ?: '실시간 미세먼지 데이터를 불러올 수 없습니다.'}" style="color: red;"></p>
+            </div>
+        </section>
+    </div>
+</div>
+
 <script>
     let currentSlide = 0;
 
@@ -316,8 +332,10 @@
         if (!slider) return;
         const items = slider.querySelectorAll('.dust-forecast-item');
         slider.style.transform = `translateX(-${currentSlide * 100}%)`;
-        document.querySelector('.slider-btn.prev').disabled = currentSlide === 0;
-        document.querySelector('.slider-btn.next').disabled = currentSlide === items.length - 1;
+        const prevBtn = document.querySelector('.slider-btn.prev');
+        const nextBtn = document.querySelector('.slider-btn.next');
+        if (prevBtn) prevBtn.disabled = currentSlide === 0;
+        if (nextBtn) nextBtn.disabled = currentSlide === items.length - 1;
     }
 
     function moveSlide(direction) {
@@ -326,18 +344,30 @@
         updateSlidePosition();
     }
 
+    function openDustForecastPopup() {
+        const popup = document.getElementById('dustForecastPopup');
+        popup.style.display = 'flex';
+        currentSlide = 0;
+        updateSlidePosition();
+    }
+
+    function closeDustForecastPopup() {
+        document.getElementById('dustForecastPopup').style.display = 'none';
+    }
+
+    function openRealTimeDustPopup() {
+        document.getElementById('realTimeDustPopup').style.display = 'flex';
+    }
+
+    function closeRealTimeDustPopup() {
+        document.getElementById('realTimeDustPopup').style.display = 'none';
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         const overallTexts = document.querySelectorAll('.overall-text');
         overallTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
         const causeTexts = document.querySelectorAll('.cause-text');
         causeTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
-
-        const items = document.querySelectorAll('.dust-forecast-item');
-        if (items.length <= 1) {
-            document.querySelectorAll('.slider-btn').forEach(btn => btn.style.display = 'none');
-        } else {
-            updateSlidePosition();
-        }
 
         const locationTitle = document.getElementById('locationTitle');
         if (!locationTitle.textContent.trim()) locationTitle.textContent = '청진동 (종로구)';
@@ -366,6 +396,10 @@
     }
 
     function openPopup(imageUrl) {
+        // 기존 팝업 닫기
+        closeDustForecastPopup();
+        closeRealTimeDustPopup();
+        closeLocationPopup();
         const popup = document.getElementById('imagePopup');
         document.getElementById('popupImage').src = imageUrl;
         popup.style.display = 'flex';
@@ -469,5 +503,6 @@
             });
     }
 </script>
+<script type="text/javascript" th:src="@{/static/global/global.js}"></script>
 </body>
 </html>

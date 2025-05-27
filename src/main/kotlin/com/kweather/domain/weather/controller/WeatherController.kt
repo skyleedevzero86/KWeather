@@ -81,22 +81,25 @@ class WeatherController(
 
         override fun getPrecipitationData(areaNo: String, time: String): List<PrecipitationInfo> {
             val today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            val values = (0..23).associate { "h$it" to "${it % 5}.0 mm" }
+            val values = (0..23).associate { "h$it" to (it % 5).toFloat() } // String 대신 Float으로 변환
             return listOf(PrecipitationInfo(today, values))
         }
 
         override fun getUVIndexData(areaNo: String, time: String): List<UVIndexInfo> = try {
-            // TODO: 실제 UV 인덱스 데이터를 가져오는 서비스 호출 구현
             val today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-
+            val rawValues = mapOf(
+                "h12" to "3",
+                "h13" to "4",
+                "h14" to "3"
+            )
+            // 문자열 값을 Float로 변환
+            val convertedValues = rawValues.mapValues { (_, value) ->
+                value.toFloatOrNull() ?: 0.0f // 변환 실패 시 기본값 0.0f
+            }
             listOf(
                 UVIndexInfo(
                     date = today,
-                    values = mapOf(
-                        "h12" to "3", // 정오 시간대 UV 인덱스
-                        "h13" to "4",
-                        "h14" to "3"
-                    )
+                    values = convertedValues
                 )
             )
         } catch (e: Exception) {
@@ -119,7 +122,6 @@ class WeatherController(
             listOf(normalizeSido(it[0]), it[1], it[2])
         } ?: listOf(normalizeSido(defaultSido), defaultRegionDistrict, defaultRegionName)
 
-        // TODO: nx, ny 값을 동적으로 설정해야 함 (regionService를 통해 좌표 조회)
         val weatherData = generalWeatherService.buildWeatherEntity(60, 127, finalSido)
 
         val currentDate = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
@@ -213,10 +215,6 @@ class WeatherController(
         else -> sido
     }
 
-    /**
-     * 기본 날씨 데이터를 생성합니다.
-     * API 호출 실패 시 사용되는 기본값입니다.
-     */
     private fun createDefaultWeatherData(date: String, time: String) = Weather(
         date = date,
         time = time,
@@ -245,11 +243,10 @@ class WeatherController(
                 humidity = "50%"
             )
         },
-        // 수정된 UVIndex 생성 - 모든 필수 매개변수 포함
         uvIndex = UVIndex(
-            title = "자외선 지수",     // 필수 매개변수 추가
-            icon = "uv-moderate",     // 필수 매개변수 추가
-            status = "보통",          // 필수 매개변수 추가
+            title = "자외선 지수",
+            icon = "uv-moderate",
+            status = "보통",
             value = "3",
             measurement = "UV Index"
         )
