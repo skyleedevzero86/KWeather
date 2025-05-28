@@ -26,7 +26,6 @@ body {
 
 .weather-header {
     text-align: center;
-    margin-bottom: 20px;
 }
 
 .weather-header .date {
@@ -242,7 +241,6 @@ body {
 /* 미세먼지 예보 슬라이드 스타일 */
 .dust-forecast-section {
     text-align: center;
-    padding: 20px;
     background: white;
     border-radius: 20px;
     color: black;
@@ -524,9 +522,9 @@ body {
 
 .close-btn2 {
     position: absolute;
-    top: 15px;
+    top: 5px;
     right: 15px;
-    font-size: 2.5em;
+    font-size: 1.2em;
     cursor: pointer;
     color: #000;
     background: none;
@@ -852,4 +850,22 @@ body {
 
 .precipitation-forecast-section th {
     background-color: #f2f2f2;
+}
+
+.chart-btn {
+    background: #4a90e2;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    margin-top: 10px;
+    transition: background-color 0.3s;
+}
+.chart-btn.clicked {
+    background-color: #ff0000;
+}
+.chart-btn:hover {
+    background: #357abd;
 }
