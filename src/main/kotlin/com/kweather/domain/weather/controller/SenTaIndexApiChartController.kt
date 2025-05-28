@@ -1,6 +1,5 @@
 package com.kweather.domain.weather.controller
 
-import com.kweather.domain.senta.dto.SenTaIndexInfo
 import com.kweather.domain.senta.service.SenTaIndexService
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -13,11 +12,11 @@ import java.time.format.DateTimeFormatter
 
 @RestController
 @RequestMapping("/api/chart")
-class ChartDataController(
+class SenTaIndexChartDataController(
     private val senTaIndexService: SenTaIndexService,
     @Value("\${weather.default.area-no:1100000000}") private val defaultAreaNo: String
 ) {
-    private val logger = LoggerFactory.getLogger(ChartDataController::class.java)
+    private val logger = LoggerFactory.getLogger(SenTaIndexChartDataController::class.java)
 
     data class ChartDataResponse(
         val startDate: String,
