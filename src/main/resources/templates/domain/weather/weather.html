@@ -30,7 +30,7 @@
                 <div class="weather-condition" th:text="${weather.weatherCondition}"></div>
                 <div class="humidity" th:text="'습도 ' + ${weather.hourlyForecast[0].humidity}"></div>
                 <div class="pm-value" th:text="'미세먼지 ' + ${weather.airQuality.value} + ' ' + ${weather.airQuality.measurement}"></div>
-                <div class="pm25-value" th:text="'초미세먼지 ' + ${weather.airQuality.value2} + ' ' + ${weather.airQuality.measurement2}"></div>
+                <div class="pm25-value" th:text="날씨정보상세보기"></div>
             </div>
         </div>
     </section>
@@ -38,6 +38,7 @@
     <!-- 날씨 상세 정보 -->
     <section class="weather-details" aria-label="날씨 상세 정보">
         <div class="dust-buttons-container">
+            <button class="dust-forecast-btn" onclick="alert('안녕 디지몬')" aria-label="추가기능">추가기능</button>
             <button class="dust-forecast-btn" onclick="openDustForecastPopup()" aria-label="미세먼지 예보 보기">미세먼지 예보 보기</button>
             <button class="real-time-dust-btn" onclick="openRealTimeDustPopup()" aria-label="실시간 미세먼지 보기">실시간 미세먼지 보기</button>
         </div>
@@ -63,9 +64,9 @@
         <h3>시간대별 날씨</h3>
         <div class="forecast-row">
             <div th:each="forecast : ${weather.hourlyForecast}" class="forecast-item">
-                <span class="time" th:text="${forecast.time}"></span>
-                <span class="icon" th:classappend="${forecast.icon}" aria-hidden="true"></span>
-                <span class="temp" th:text="${forecast.temperature}"></span>
+                <span class="time" th:text="${forecast.time}"></span><br/><br/>
+                <span class="temp" th:text="${forecast.temperature}"></span><br/><br/>
+                <span class="icon" th:classappend="${forecast.icon}" aria-hidden="true"></span><br/><br/>
                 <span class="humid" th:text="${forecast.humidity}"></span>
             </div>
         </div>
@@ -95,6 +96,7 @@
                 </tr>
                 </tbody>
             </table>
+            <button class="chart-btn" onclick="toggleChart(this)" aria-label="차트 보기"><span>대시보드</span></button>
         </div>
         <div th:unless="${senTaIndexData != null and not #lists.isEmpty(senTaIndexData)}">
             <p style="color: red;">체감온도 데이터를 불러올 수 없습니다. (5월~9월에만 제공됩니다.)</p>
@@ -173,7 +175,7 @@
 <!-- 위치 선택 팝업 -->
 <div id="locationPopup" class="popup" role="dialog" aria-label="위치 선택 팝업">
     <div id="locationPopupContent">
-        <button class="close-btn" onclick="closeLocationPopup()" aria-label="팝업 닫기">X</button>
+        <button class="close-btn2" onclick="closeLocationPopup()" aria-label="팝업 닫기">X</button>
         <div class="select-group">
             <label for="sido">시/도:</label>
             <select id="sido" onchange="updateSggs()" aria-label="시/도 선택">
@@ -502,6 +504,35 @@
                 alert('날씨 데이터를 업데이트하는 데 실패했습니다.');
             });
     }
+
+    function updateSlidePosition() {
+        const slider = document.getElementById('dustSlider');
+        if (!slider) return;
+        const items = slider.querySelectorAll('.dust-forecast-item');
+        slider.style.transform = `translateX(-${currentSlide * 100}%)`;
+        const prevBtn = document.querySelector('.slider-btn.prev');
+        const nextBtn = document.querySelector('.slider-btn.next');
+        if (prevBtn) prevBtn.disabled = currentSlide === 0;
+        if (nextBtn) nextBtn.disabled = currentSlide === items.length - 1;
+    }
+
+    function moveSlide(direction) {
+        const items = document.querySelectorAll('.dust-forecast-item');
+        currentSlide = Math.max(0, Math.min(currentSlide + direction, items.length - 1));
+        updateSlidePosition();
+    }
+
+    function toggleChart(button) {
+        button.classList.toggle('clicked');
+        if (button.classList.contains('clicked')) {
+            // 차트 팝업 열기 로직 (여기서는 예시로 alert 사용)
+            alert('차트가 팝업으로 열립니다. (구현 필요)');
+        } else {
+            // 차트 팝업 닫기 로직 (구현 필요)
+            alert('차트가 닫힙니다. (구현 필요)');
+        }
+    }
+
 </script>
 <script type="text/javascript" th:src="@{/static/global/global.js}"></script>
 </body>

@@ -26,7 +26,6 @@ body {
 
 .weather-header {
     text-align: center;
-    margin-bottom: 20px;
 }
 
 .weather-header .date {
@@ -115,7 +114,7 @@ body {
 .uv-index {
     flex: 1;
     text-align: center;
-    padding: 20px;
+    padding: 10px;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 15px;
     position: relative;
@@ -242,7 +241,6 @@ body {
 /* 미세먼지 예보 슬라이드 스타일 */
 .dust-forecast-section {
     text-align: center;
-    padding: 20px;
     background: white;
     border-radius: 20px;
     color: black;
@@ -522,6 +520,21 @@ body {
     z-index: 1001;
 }
 
+.close-btn2 {
+    position: absolute;
+    top: 5px;
+    right: 15px;
+    font-size: 1.2em;
+    cursor: pointer;
+    color: #000;
+    background: none;
+    border: none;
+    padding: 15px 20px;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+    z-index: 1001;
+}
+
 .close-btn:hover {
     color: #ff0000;
     background-color: rgba(255, 0, 0, 0.1);
@@ -617,7 +630,7 @@ body {
 
     .air-quality,
     .uv-index {
-        width: 100%;
+
         margin-bottom: 10px;
         margin: 10px 0;
     }
@@ -837,4 +850,22 @@ body {
 
 .precipitation-forecast-section th {
     background-color: #f2f2f2;
+}
+
+.chart-btn {
+    background: #4a90e2;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    margin-top: 10px;
+    transition: background-color 0.3s;
+}
+.chart-btn.clicked {
+    background-color: #ff0000;
+}
+.chart-btn:hover {
+    background: #357abd;
 }
