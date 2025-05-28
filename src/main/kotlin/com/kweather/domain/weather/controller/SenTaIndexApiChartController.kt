@@ -12,11 +12,11 @@ import java.time.format.DateTimeFormatter
 
 @RestController
 @RequestMapping("/api/chart")
-class SenTaIndexChartDataController(
+class SenTaIndexApiChartController(
     private val senTaIndexService: SenTaIndexService,
     @Value("\${weather.default.area-no:1100000000}") private val defaultAreaNo: String
 ) {
-    private val logger = LoggerFactory.getLogger(SenTaIndexChartDataController::class.java)
+    private val logger = LoggerFactory.getLogger(SenTaIndexApiChartController::class.java)
 
     data class ChartDataResponse(
         val startDate: String,
