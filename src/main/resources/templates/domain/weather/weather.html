@@ -309,7 +309,7 @@
                             <span th:case="'매우나쁨'" class="grade-very-bad" th:text="'매우나쁨'"></span>
                         </td>
                         <td>
-                            <span th:if="${dust?.pm25Value != 'N/A'}" th:text="${dust.pm29Value + ' μg/m³'}"></span>
+                            <span th:if="${dust?.pm25Value != 'N/A'}" th:text="${dust.pm25Value + ' μg/m³'}"></span>
                             <span th:unless="${dust?.pm25Value != 'N/A'}" class="na-message" th:text="'측정 중'"></span>
                         </td>
                         <td class="grade-cell" th:switch="${dust?.pm25Grade}">

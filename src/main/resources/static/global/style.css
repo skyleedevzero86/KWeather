@@ -493,10 +493,13 @@ body {
     background-color: #fff;
     padding: 20px;
     border-radius: 10px;
-    max-width: 90%;
-    max-height: 90vh;
+    max-width: 95%;
+    max-height: 95vh;
     overflow: auto;
     color: black;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .popup-content img {
@@ -517,18 +520,20 @@ body {
 }
 
 .chart-container {
-    width: 90%;
+    width: 100%;
     max-width: 1200px;
     padding: 20px;
     background: white;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     margin: 20px auto;
+    height: 500px; /* 고정 높이 설정 */
 }
 
 canvas {
     width: 100% !important;
-    height: auto !important;
+    height: 100% !important; /* 캔버스 높이를 컨테이너에 맞춤 */
+    max-height: 450px; /* 최대 높이 제한 */
 }
 
 /* Updated close button styling */
@@ -620,6 +625,10 @@ canvas {
     .grade-table td {
         max-width: 120px;
     }
+
+    .chart-container {
+        height: 400px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -649,7 +658,6 @@ canvas {
         gap: 20px;
     }
 
-    /* 768px 이하에서는 공기질 정보를 세로로 배치 */
     .air-quality-container {
         flex-direction: column;
         width: 100%;
@@ -713,6 +721,10 @@ canvas {
     .dust-buttons-container {
         flex-direction: column;
         width: 100%;
+    }
+
+    .chart-container {
+        height: 350px;
     }
 }
 
@@ -780,7 +792,6 @@ canvas {
         padding: 8px 15px;
     }
 
-    /* 480px 이하에서도 공기질 정보를 세로로 배치 */
     .air-quality-container {
         flex-direction: column;
         width: 100%;
@@ -789,6 +800,10 @@ canvas {
     .air-quality {
         width: 100%;
         margin-bottom: 10px;
+    }
+
+    .chart-container {
+        height: 300px;
     }
 }
 
