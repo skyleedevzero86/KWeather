@@ -1,5 +1,6 @@
 package com.kweather.domain.weather.controller
 
+import kotlin.text.toFloatOrNull
 import com.kweather.domain.airstagnation.dto.AirStagnationIndexInfo
 import com.kweather.domain.airstagnation.service.AirStagnationIndexService
 import com.kweather.domain.forecast.dto.ForecastInfo
@@ -66,7 +67,13 @@ class WeatherController(
 
         override fun getSenTaIndexData(areaNo: String, time: String): List<SenTaIndexInfo> = try {
             val currentMonth = LocalDateTime.now(ZoneId.of("Asia/Seoul")).monthValue
-            if (currentMonth in 5..9) senTaIndexService.getSenTaIndex(areaNo, time) else emptyList()
+            if (currentMonth in 5..9) {
+                val result = senTaIndexService.getSenTaIndex(areaNo, time)
+                logger.info("SenTaIndexData: $result")
+                result
+            } else {
+                emptyList()
+            }
         } catch (e: Exception) {
             logger.error("체감온도 데이터 가져오기 실패: ${e.message}", e)
             emptyList()
@@ -81,27 +88,15 @@ class WeatherController(
 
         override fun getPrecipitationData(areaNo: String, time: String): List<PrecipitationInfo> {
             val today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            val values = (0..23).associate { "h$it" to (it % 5).toFloat() } // String 대신 Float으로 변환
+            val values = (0..23).associate { "h$it" to (it % 5).toFloat() }
             return listOf(PrecipitationInfo(today, values))
         }
 
         override fun getUVIndexData(areaNo: String, time: String): List<UVIndexInfo> = try {
             val today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            val rawValues = mapOf(
-                "h12" to "3",
-                "h13" to "4",
-                "h14" to "3"
-            )
-            // 문자열 값을 Float로 변환
-            val convertedValues = rawValues.mapValues { (_, value) ->
-                value.toFloatOrNull() ?: 0.0f // 변환 실패 시 기본값 0.0f
-            }
-            listOf(
-                UVIndexInfo(
-                    date = today,
-                    values = convertedValues
-                )
-            )
+            val rawValues = mapOf("h12" to "3", "h13" to "4", "h14" to "3")
+            val convertedValues = rawValues.mapValues { (_, value) -> value.toFloatOrNull() ?: 0.0f }
+            listOf(UVIndexInfo(date = today, values = convertedValues))
         } catch (e: Exception) {
             logger.error("자외선 지수 데이터 가져오기 실패: ${e.message}", e)
             emptyList()
@@ -113,85 +108,125 @@ class WeatherController(
 
     @GetMapping("/weather")
     fun getWeather(@RequestParam(value = "location", required = false) location: String?, model: Model): String {
-        val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
-        val dateTime = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")).split(" ")
-        val hour = now.hour
+        return try {
+            val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
+            val dateTime = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")).split(" ")
+            val hour = now.hour
 
-        val weatherDataProvider = LiveWeatherDataProvider()
-        val (finalSido, finalSgg, finalUmd) = location?.split(" ")?.let {
-            listOf(normalizeSido(it[0]), it[1], it[2])
-        } ?: listOf(normalizeSido(defaultSido), defaultRegionDistrict, defaultRegionName)
+            val weatherDataProvider = LiveWeatherDataProvider()
+            val (finalSido, finalSgg, finalUmd) = location?.split(" ")?.let { parts ->
+                if (parts.size >= 3) {
+                    listOf(normalizeSido(parts[0]), parts[1], parts[2])
+                } else {
+                    listOf(normalizeSido(defaultSido), defaultRegionDistrict, defaultRegionName)
+                }
+            } ?: listOf(normalizeSido(defaultSido), defaultRegionDistrict, defaultRegionName)
 
-        val weatherData = generalWeatherService.buildWeatherEntity(60, 127, finalSido)
+            val weatherData = try {
+                generalWeatherService.buildWeatherEntity(defaultNx, defaultNy, finalSido)
+            } catch (e: Exception) {
+                logger.error("날씨 데이터 생성 실패: ${e.message}", e)
+                createDefaultWeatherData(dateTime[0], dateTime[1])
+            }
 
-        val currentDate = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-        val apiTime = now.format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
-        val informCode = when (hour) {
-            in 0..5 -> "PM10"
-            in 6..11 -> "PM25"
-            in 12..17 -> "O3"
-            else -> "PM10"
+            val currentDate = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            val apiTime = now.format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
+            val informCode = when (hour) {
+                in 0..5 -> "PM10"
+                in 6..11 -> "PM25"
+                in 12..17 -> "O3"
+                else -> "PM10"
+            }
+
+            val dustForecast = weatherDataProvider.getDustForecastData(currentDate, informCode)
+            val realTimeDust = weatherDataProvider.getRealTimeDustData(finalSido)
+            val errorMessage = if (realTimeDust.isEmpty()) "실시간 미세먼지 데이터 오류" else null
+
+            logger.info("realTimeDust 데이터: $realTimeDust")
+
+            val senTaIndexData = weatherDataProvider.getSenTaIndexData(defaultAreaNo, apiTime)
+            val airStagnationIndexData = weatherDataProvider.getAirStagnationIndexData(defaultAreaNo, apiTime)
+            val precipitationData = weatherDataProvider.getPrecipitationData(defaultAreaNo, apiTime)
+            val uvIndexData = weatherDataProvider.getUVIndexData(defaultAreaNo, apiTime)
+
+            val sentaHoursSequence = (1..31).toList()
+            val asiHoursSequence = (3..78 step 3).toList()
+            val precipHoursSequence = (0..23).toList()
+
+            val categorizedForecast = dustForecast.map { forecast ->
+                val regions = forecast.grade.split(",").map { it.trim() }
+                    .filter { it.contains(":") }
+                    .map { it.split(":") }
+                    .filter { it.size == 2 }
+                    .associate { it[0].trim() to it[1].trim() }
+
+                Triple(
+                    regions.filterValues { it == "좋음" }.keys.toList().ifEmpty { listOf("없음") },
+                    regions.filterValues { it == "보통" }.keys.toList().ifEmpty { listOf("없음") },
+                    regions.filterValues { it == "나쁨" }.keys.toList().ifEmpty { listOf("없음") }
+                )
+            }
+
+            val timeOfDay = when (hour) {
+                in 6..11 -> " ( 아침 )"
+                in 12..17 -> " ( 낮 )"
+                in 18..23 -> " ( 저녁 )"
+                else -> " ( 새벽 )"
+            }
+
+            val sidos = try {
+                restTemplate.getForObject("http://localhost:8090/api/regions/sidos", List::class.java) as? List<String> ?: emptyList()
+            } catch (e: Exception) {
+                logger.error("시도 목록 조회 실패: ${e.message}", e)
+                listOf(finalSido)
+            }
+
+            val sggs = try {
+                if (sidos.contains(finalSido)) {
+                    restTemplate.getForObject("http://localhost:8090/api/regions/sggs?sido=$finalSido", List::class.java) as? List<String> ?: emptyList()
+                } else {
+                    emptyList()
+                }
+            } catch (e: Exception) {
+                logger.error("시군구 목록 조회 실패: ${e.message}", e)
+                listOf(finalSgg)
+            }
+
+            val umds = try {
+                if (sggs.contains(finalSgg)) {
+                    restTemplate.getForObject("http://localhost:8090/api/regions/umds?sido=$finalSido&sgg=$finalSgg", List::class.java) as? List<String> ?: emptyList()
+                } else {
+                    emptyList()
+                }
+            } catch (e: Exception) {
+                logger.error("읍면동 목록 조회 실패: ${e.message}", e)
+                listOf(finalUmd)
+            }
+
+            model.addAllAttributes(mapOf(
+                "sidos" to sidos, "selectedSido" to finalSido,
+                "sggs" to sggs, "selectedSgg" to finalSgg,
+                "umds" to umds, "selectedUmd" to finalUmd,
+                "timeOfDay" to timeOfDay, "weather" to weatherData,
+                "dustForecast" to dustForecast.ifEmpty { null },
+                "realTimeDust" to realTimeDust.ifEmpty { null },
+                "senTaIndexData" to senTaIndexData.ifEmpty { null },
+                "airStagnationIndexData" to airStagnationIndexData,
+                "precipitationData" to precipitationData.ifEmpty { null },
+                "uvIndexData" to uvIndexData.ifEmpty { null },
+                "categorizedForecast" to categorizedForecast.ifEmpty { null },
+                "errorMessage" to errorMessage,
+                "sentaHoursSequence" to sentaHoursSequence,
+                "asiHoursSequence" to asiHoursSequence,
+                "precipHoursSequence" to precipHoursSequence
+            ))
+
+            "domain/weather/weather"
+        } catch (e: Exception) {
+            logger.error("날씨 페이지 처리 중 오류 발생: ${e.message}", e)
+            model.addAttribute("errorMessage", "날씨 정보를 불러오는 중 오류가 발생했습니다.")
+            "error" // 에러 페이지로 리다이렉트
         }
-
-        val dustForecast = weatherDataProvider.getDustForecastData(currentDate, informCode)
-        val realTimeDust = weatherDataProvider.getRealTimeDustData(finalSido)
-        val errorMessage = if (realTimeDust.isEmpty()) "실시간 미세먼지 데이터 오류" else null
-
-        logger.info("realTimeDust 데이터: $realTimeDust")
-
-        val senTaIndexData = weatherDataProvider.getSenTaIndexData(defaultAreaNo, apiTime)
-        val airStagnationIndexData = weatherDataProvider.getAirStagnationIndexData(defaultAreaNo, apiTime)
-        val precipitationData = weatherDataProvider.getPrecipitationData(defaultAreaNo, apiTime)
-        val uvIndexData = weatherDataProvider.getUVIndexData(defaultAreaNo, apiTime)
-
-        val sentaHoursSequence = (1..31).toList()
-        val asiHoursSequence = (3..78 step 3).toList()
-        val precipHoursSequence = (0..23).toList()
-
-        val categorizedForecast = dustForecast.map { forecast ->
-            val regions = forecast.grade.split(",").map { it.trim() }
-                .filter { it.contains(":") }
-                .map { it.split(":") }
-                .filter { it.size == 2 }
-                .associate { it[0].trim() to it[1].trim() }
-
-            Triple(
-                regions.filterValues { it == "좋음" }.keys.toList().ifEmpty { listOf("없음") },
-                regions.filterValues { it == "보통" }.keys.toList().ifEmpty { listOf("없음") },
-                regions.filterValues { it == "나쁨" }.keys.toList().ifEmpty { listOf("없음") }
-            )
-        }
-
-        val timeOfDay = when (hour) {
-            in 6..11 -> " ( 아침 )"
-            in 12..17 -> " ( 낮 )"
-            in 18..23 -> " ( 저녁 )"
-            else -> " ( 새벽 )"
-        }
-
-        val sidos = restTemplate.getForObject("http://localhost:8090/api/regions/sidos", List::class.java) as List<String>
-        val sggs = if (sidos.contains(finalSido)) restTemplate.getForObject("http://localhost:8090/api/regions/sggs?sido=$finalSido", List::class.java) as List<String> else emptyList()
-        val umds = if (sggs.contains(finalSgg)) restTemplate.getForObject("http://localhost:8090/api/regions/umds?sido=$finalSido&sgg=$finalSgg", List::class.java) as List<String> else emptyList()
-
-        model.addAllAttributes(mapOf(
-            "sidos" to sidos, "selectedSido" to finalSido,
-            "sggs" to sggs, "selectedSgg" to finalSgg,
-            "umds" to umds, "selectedUmd" to finalUmd,
-            "timeOfDay" to timeOfDay, "weather" to weatherData,
-            "dustForecast" to dustForecast.ifEmpty { null },
-            "realTimeDust" to realTimeDust.ifEmpty { null },
-            "senTaIndexData" to senTaIndexData.ifEmpty { null },
-            "airStagnationIndexData" to airStagnationIndexData,
-            "precipitationData" to precipitationData.ifEmpty { null },
-            "uvIndexData" to uvIndexData.ifEmpty { null },
-            "categorizedForecast" to categorizedForecast.ifEmpty { null },
-            "errorMessage" to errorMessage,
-            "sentaHoursSequence" to sentaHoursSequence,
-            "asiHoursSequence" to asiHoursSequence,
-            "precipHoursSequence" to precipHoursSequence
-        ))
-
-        return "domain/weather/weather"
     }
 
     private fun normalizeSido(sido: String) = when (sido) {

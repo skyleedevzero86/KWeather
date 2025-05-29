@@ -504,6 +504,33 @@ body {
     max-height: 70vh;
 }
 
+/* 차트 팝업 스타일 */
+.air-stagnation-chart-section {
+    text-align: center;
+    background: white;
+    border-radius: 20px;
+    color: black;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.chart-container {
+    width: 90%;
+    max-width: 1200px;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin: 20px auto;
+}
+
+canvas {
+    width: 100% !important;
+    height: auto !important;
+}
+
 /* Updated close button styling */
 .close-btn {
     position: absolute;
@@ -630,7 +657,6 @@ body {
 
     .air-quality,
     .uv-index {
-
         margin-bottom: 10px;
         margin: 10px 0;
     }
@@ -863,9 +889,11 @@ body {
     margin-top: 10px;
     transition: background-color 0.3s;
 }
+
 .chart-btn.clicked {
     background-color: #ff0000;
 }
+
 .chart-btn:hover {
     background: #357abd;
 }
