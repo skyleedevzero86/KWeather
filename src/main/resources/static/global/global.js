@@ -187,10 +187,21 @@ async function fetchChartData() {
     } catch (error) {
         console.error('차트 데이터 가져오기 실패:', error);
         return {
-            startDate: '2025052900',
+            startDate: getCurrentDateTimeFormatted(),
             temperatures: [18.0, 17.0, 18.0, 18.0, 18.0, 18.0, 18.0, 20.0, 21.0, 22.0]
         };
     }
+}
+
+function getCurrentDateTimeFormatted() {
+    const now = new Date();
+
+    const yyyy = now.getFullYear();
+    const MM = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const HH = String(now.getHours()).padStart(2, '0');
+
+    return `${yyyy}${MM}${dd}${HH}`;
 }
 
 function createChart(startDate, temperatures) {
@@ -281,5 +292,135 @@ async function toggleChart(button) {
         }
     } else {
         chartContainer.style.display = 'none';
+    }
+}
+// 대기정체지수 차트 데이터 가져오기
+async function fetchAirStagnationChartData() {
+    try {
+        const response = await fetch('/api/airchart/air-stagnation');
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('대기정체지수 차트 데이터 가져오기 실패:', error);
+        throw error;
+    }
+}
+
+// 대기정체지수 차트 생성
+function createAirStagnationChart(startDate, indices) {
+    const year = parseInt(startDate.substring(0, 4));
+    const month = parseInt(startDate.substring(4, 6)) - 1;
+    const day = parseInt(startDate.substring(6, 8));
+    const hour = parseInt(startDate.substring(8, 10));
+    const startTime = new Date(year, month, day, hour);
+    const labels = [];
+    for (let i = 0; i < indices.length; i++) {
+        const time = new Date(startTime.getTime() + i * 3 * 60 * 60 * 1000); // 3시간 간격
+        const label = `${time.getMonth() + 1}/${time.getDate()} ${time.getHours()}:00`;
+        labels.push(label);
+    }
+    const ctx = document.getElementById('airStagnationChart').getContext('2d');
+    return new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '대기정체지수',
+                data: indices,
+                borderColor: '#4a90e2',
+                backgroundColor: 'rgba(74, 144, 226, 0.2)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: '시간 (KST)',
+                        font: { size: 14 }
+                    },
+                    ticks: {
+                        maxTicksLimit: 10,
+                        autoSkip: true
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: '대기정체지수',
+                        font: { size: 14 }
+                    },
+                    beginAtZero: false,
+                    suggestedMin: 40,
+                    suggestedMax: 110,
+                    ticks: {
+                        stepSize: 25
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: '대기정체지수 예보 (2025년 5월 27일 - 5월 31일)',
+                    font: { size: 18 }
+                }
+            }
+        }
+    });
+}
+// 대기정체지수 차트 팝업 닫기
+function closeAirStagnationChartPopup() {
+    document.getElementById('airStagnationChartPopup').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const overallTexts = document.querySelectorAll('.overall-text');
+    overallTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
+    const causeTexts = document.querySelectorAll('.cause-text');
+    causeTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
+
+    const locationTitle = document.getElementById('locationTitle');
+    if (!locationTitle.textContent.trim()) locationTitle.textContent = '청진동 (종로구)';
+
+    const sidoSelect = document.getElementById('sido');
+    const selectedSido = /*[[${selectedSido}]]*/ '';
+    if (selectedSido && selectedSido !== '') {
+        sidoSelect.value = selectedSido;
+        updateSggs().then(() => {
+            const sggSelect = document.getElementById('sgg');
+            const selectedSgg = /*[[${selectedSgg}]]*/ '';
+            if (selectedSgg && selectedSgg !== '') {
+                sggSelect.value = selectedSgg;
+                updateUmds().then(() => {
+                    const umdSelect = document.getElementById('umd');
+                    const selectedUmd = /*[[${selectedUmd}]]*/ '';
+                    if (selectedUmd && selectedUmd !== '') umdSelect.value = selectedUmd;
+                });
+            }
+        });
+    }
+});
+// 대기정체지수 차트 팝업 열기
+function openAirStagnationChartPopup() {
+    const popup = document.getElementById('airStagnationChartPopup');
+    popup.style.display = 'flex';
+    if (!airStagnationChart) {
+        fetchAirStagnationChartData().then(data => {
+            airStagnationChart = createAirStagnationChart(data.startDate, data.indices);
+        }).catch(error => {
+            console.error('차트 데이터 가져오기 실패:', error);
+            alert('대기정체지수 차트를 불러올 수 없습니다.');
+            closeAirStagnationChartPopup();
+        });
     }
 }

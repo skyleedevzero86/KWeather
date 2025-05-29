@@ -130,6 +130,7 @@
                 </tr>
                 </tbody>
             </table>
+            <button class="chart-btn" onclick="openAirStagnationChartPopup()" aria-label="차트 보기"><span>차트 보기</span></button>
         </div>
         <div th:unless="${airStagnationIndexData != null and not #lists.isEmpty(airStagnationIndexData)}">
             <p style="color: red;">대기정체지수 데이터를 불러올 수 없습니다.</p>
@@ -225,7 +226,7 @@
                         <p class="overall-text" th:text="${forecast?.overall ?: 'N/A'}" th:unless="${forecast?.overall == 'N/A'}"></p>
                         <p class="cause-text" th:text="${forecast?.cause ?: 'N/A'}" th:unless="${forecast?.cause == 'N/A'}"></p>
                         <div class="grade-section">
-                            <table AJAXclass="grade-table">
+                            <table class="grade-table">
                                 <tr>
                                     <th th:if="${#lists.size(categorizedForecast[iter.index].first) > 0 and categorizedForecast[iter.index].first[0] != '없음'}"
                                         class="grade-title good">좋음</th>
@@ -308,7 +309,7 @@
                             <span th:case="'매우나쁨'" class="grade-very-bad" th:text="'매우나쁨'"></span>
                         </td>
                         <td>
-                            <span th:if="${dust?.pm25Value != 'N/A'}" th:text="${dust.pm25Value + ' μg/m³'}"></span>
+                            <span th:if="${dust?.pm25Value != 'N/A'}" th:text="${dust.pm29Value + ' μg/m³'}"></span>
                             <span th:unless="${dust?.pm25Value != 'N/A'}" class="na-message" th:text="'측정 중'"></span>
                         </td>
                         <td class="grade-cell" th:switch="${dust?.pm25Grade}">
@@ -328,6 +329,19 @@
         </section>
     </div>
 </div>
+
+<!-- 대기정체지수 차트 팝업 -->
+<div id="airStagnationChartPopup" class="popup" role="dialog" aria-label="대기정체지수 차트 팝업">
+    <div class="popup-content">
+        <button class="close-btn" onclick="closeAirStagnationChartPopup()" aria-label="팝업 닫기">X</button>
+        <section class="air-stagnation-chart-section" aria-label="대기정체지수 차트">
+            <div class="chart-container">
+                <canvas id="airStagnationChart"></canvas>
+            </div>
+        </section>
+    </div>
+</div>
+
 <script type="text/javascript" th:src="@{/static/global/global.js}"></script>
 </body>
 </html>
