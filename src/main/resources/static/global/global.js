@@ -1,6 +1,6 @@
 let currentSlide = 0;
-
 let chart = null;
+let airStagnationChart = null;
 
 function updateSlidePosition() {
     const slider = document.getElementById('dustSlider');
@@ -195,12 +195,10 @@ async function fetchChartData() {
 
 function getCurrentDateTimeFormatted() {
     const now = new Date();
-
     const yyyy = now.getFullYear();
     const MM = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
     const HH = String(now.getHours()).padStart(2, '0');
-
     return `${yyyy}${MM}${dd}${HH}`;
 }
 
@@ -234,38 +232,46 @@ function createChart(startDate, temperatures) {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             scales: {
                 x: {
                     title: {
                         display: true,
                         text: '시간 (KST)',
-                        font: { size: 14 }
+                        font: { size: 16 }
                     },
                     ticks: {
                         maxTicksLimit: 12,
-                        autoSkip: true
+                        autoSkip: true,
+                        font: { size: 12 }
                     }
                 },
                 y: {
                     title: {
                         display: true,
                         text: '온도 (°C)',
-                        font: { size: 14 }
+                        font: { size: 16 }
                     },
                     beginAtZero: false,
                     suggestedMin: 14,
-                    suggestedMax: 30
+                    suggestedMax: 30,
+                    ticks: {
+                        font: { size: 12 }
+                    }
                 }
             },
             plugins: {
                 legend: {
                     display: true,
-                    position: 'top'
+                    position: 'top',
+                    labels: {
+                        font: { size: 14 }
+                    }
                 },
                 title: {
                     display: true,
                     text: '여름철 체감온도 예보 (5월~9월)',
-                    font: { size: 18 }
+                    font: { size: 20 }
                 }
             }
         }
@@ -294,6 +300,7 @@ async function toggleChart(button) {
         chartContainer.style.display = 'none';
     }
 }
+
 // 대기정체지수 차트 데이터 가져오기
 async function fetchAirStagnationChartData() {
     try {
@@ -303,7 +310,10 @@ async function fetchAirStagnationChartData() {
         return data;
     } catch (error) {
         console.error('대기정체지수 차트 데이터 가져오기 실패:', error);
-        throw error;
+        return {
+            startDate: getCurrentDateTimeFormatted(),
+            indices: [50, 55, 60, 65, 70, 75, 80, 85, 90, 95]
+        };
     }
 }
 
@@ -316,7 +326,7 @@ function createAirStagnationChart(startDate, indices) {
     const startTime = new Date(year, month, day, hour);
     const labels = [];
     for (let i = 0; i < indices.length; i++) {
-        const time = new Date(startTime.getTime() + i * 3 * 60 * 60 * 1000); // 3시간 간격
+        const time = new Date(startTime.getTime() + i * 3 * 60 * 60 * 1000);
         const label = `${time.getMonth() + 1}/${time.getDate()} ${time.getHours()}:00`;
         labels.push(label);
     }
@@ -338,46 +348,70 @@ function createAirStagnationChart(startDate, indices) {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             scales: {
                 x: {
                     title: {
                         display: true,
                         text: '시간 (KST)',
-                        font: { size: 14 }
+                        font: { size: 16 }
                     },
                     ticks: {
                         maxTicksLimit: 10,
-                        autoSkip: true
+                        autoSkip: true,
+                        font: { size: 12 }
                     }
                 },
                 y: {
                     title: {
                         display: true,
                         text: '대기정체지수',
-                        font: { size: 14 }
+                        font: { size: 16 }
                     },
                     beginAtZero: false,
                     suggestedMin: 40,
                     suggestedMax: 110,
                     ticks: {
-                        stepSize: 25
+                        stepSize: 25,
+                        font: { size: 12 }
                     }
                 }
             },
             plugins: {
                 legend: {
                     display: true,
-                    position: 'top'
+                    position: 'top',
+                    labels: {
+                        font: { size: 14 }
+                    }
                 },
                 title: {
                     display: true,
                     text: '대기정체지수 예보 (2025년 5월 27일 - 5월 31일)',
-                    font: { size: 18 }
+                    font: { size: 20 }
                 }
             }
         }
     });
 }
+
+// 대기정체지수 차트 팝업 열기
+async function openAirStagnationChartPopup() {
+    const popup = document.getElementById('airStagnationChartPopup');
+    popup.style.display = 'flex';
+
+    if (!airStagnationChart) {
+        try {
+            const data = await fetchAirStagnationChartData();
+            airStagnationChart = createAirStagnationChart(data.startDate, data.indices);
+        } catch (error) {
+            console.error('차트 데이터 가져오기 실패:', error);
+            alert('대기정체지수 차트를 불러올 수 없습니다.');
+            closeAirStagnationChartPopup();
+        }
+    }
+}
+
 // 대기정체지수 차트 팝업 닫기
 function closeAirStagnationChartPopup() {
     document.getElementById('airStagnationChartPopup').style.display = 'none';
@@ -410,17 +444,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-// 대기정체지수 차트 팝업 열기
-function openAirStagnationChartPopup() {
-    const popup = document.getElementById('airStagnationChartPopup');
-    popup.style.display = 'flex';
-    if (!airStagnationChart) {
-        fetchAirStagnationChartData().then(data => {
-            airStagnationChart = createAirStagnationChart(data.startDate, data.indices);
-        }).catch(error => {
-            console.error('차트 데이터 가져오기 실패:', error);
-            alert('대기정체지수 차트를 불러올 수 없습니다.');
-            closeAirStagnationChartPopup();
-        });
-    }
-}
