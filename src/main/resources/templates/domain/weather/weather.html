@@ -39,7 +39,7 @@
     <!-- 날씨 상세 정보 -->
     <section class="weather-details" aria-label="날씨 상세 정보">
         <div class="dust-buttons-container">
-            <button class="dust-forecast-btn" onclick="alert('안녕 디지몬')" aria-label="추가기능">추가기능</button>
+            <button class="dust-forecast-btn" aria-label="추가기능">추가기능</button>
             <button class="dust-forecast-btn" onclick="openDustForecastPopup()" aria-label="미세먼지 예보 보기">미세먼지 예보 보기</button>
             <button class="real-time-dust-btn" onclick="openRealTimeDustPopup()" aria-label="실시간 미세먼지 보기">실시간 미세먼지 보기</button>
         </div>
@@ -344,9 +344,9 @@
 </div>
 
 <!-- 강수량 예보 차트 팝업 -->
-<div id="precipitationChartPopup" class="popup">
+<div id="precipitationChartPopup" class="popup" role="dialog" aria-label="강수량 예보 차트 팝업">
     <div class="popup-content">
-        <button class="close-btn" onclick="closePrecipitationChartPopup()">×</button>
+        <button class="close-btn" onclick="closePrecipitationChartPopup()" aria-label="팝업 닫기">×</button>
         <div class="chart-container">
             <canvas id="precipitationChart"></canvas>
         </div>

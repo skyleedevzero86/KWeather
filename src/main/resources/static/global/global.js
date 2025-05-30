@@ -3,6 +3,7 @@ let chart = null;
 let airStagnationChart = null;
 let precipitationChart = null;
 
+// 슬라이더 관련 함수
 function updateSlidePosition() {
     const slider = document.getElementById('dustSlider');
     if (!slider) return;
@@ -37,38 +38,6 @@ function openRealTimeDustPopup() {
 
 function closeRealTimeDustPopup() {
     document.getElementById('realTimeDustPopup').style.display = 'none';
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const overallTexts = document.querySelectorAll('.overall-text');
-    overallTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
-    const causeTexts = document.querySelectorAll('.cause-text');
-    causeTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
-
-    const locationTitle = document.getElementById('locationTitle');
-    if (!locationTitle.textContent.trim()) locationTitle.textContent = '청진동 (종로구)';
-
-    const sidoSelect = document.getElementById('sido');
-    const selectedSido = /*[[${selectedSido}]]*/ '';
-    if (selectedSido && selectedSido !== '') {
-        sidoSelect.value = selectedSido;
-        updateSggs().then(() => {
-            const sggSelect = document.getElementById('sgg');
-            const selectedSgg = /*[[${selectedSgg}]]*/ '';
-            if (selectedSgg && selectedSgg !== '') {
-                sggSelect.value = selectedSgg;
-                updateUmds().then(() => {
-                    const umdSelect = document.getElementById('umd');
-                    const selectedUmd = /*[[${selectedUmd}]]*/ '';
-                    if (selectedUmd && selectedUmd !== '') umdSelect.value = selectedUmd;
-                });
-            }
-        });
-    }
-});
-
-function removeParentheses(text) {
-    return text.replace(/\([^()]*\)/g, '').replace(/\[.*?\]/g, '').replace(/\./g, '').trim();
 }
 
 function openPopup(imageUrl) {
@@ -178,7 +147,11 @@ function confirmSelection() {
         });
 }
 
-// 차트 관련 JavaScript
+function removeParentheses(text) {
+    return text.replace(/\([^()]*\)/g, '').replace(/\[.*?\]/g, '').replace(/\./g, '').trim();
+}
+
+// 체감온도 차트 관련 함수
 async function fetchChartData() {
     try {
         const response = await fetch('/api/chart/temperature');
@@ -186,7 +159,7 @@ async function fetchChartData() {
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error('차트 데이터 가져오기 실패:', error);
+        console.error('체감온도 차트 데이터 가져오기 실패:', error);
         return {
             startDate: getCurrentDateTimeFormatted(),
             temperatures: [18.0, 17.0, 18.0, 18.0, 18.0, 18.0, 18.0, 20.0, 21.0, 22.0]
@@ -215,8 +188,13 @@ function createChart(startDate, temperatures) {
         const label = `${time.getMonth() + 1}/${time.getDate()} ${time.getHours()}:00`;
         labels.push(label);
     }
-    const ctx = document.getElementById('temperatureChart').getContext('2d');
-    return new Chart(ctx, {
+    const ctx = document.getElementById('temperatureChart')?.getContext('2d');
+    if (!ctx) {
+        console.error('temperatureChart 캔버스를 찾을 수 없습니다.');
+        return null;
+    }
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
@@ -277,6 +255,7 @@ function createChart(startDate, temperatures) {
             }
         }
     });
+    return chart;
 }
 
 async function toggleChart(button) {
@@ -290,8 +269,12 @@ async function toggleChart(button) {
             try {
                 const chartData = await fetchChartData();
                 chart = createChart(chartData.startDate, chartData.temperatures);
+                if (!chart) {
+                    chartContainer.style.display = 'none';
+                    button.classList.remove('clicked');
+                }
             } catch (error) {
-                console.error('차트 생성 실패:', error);
+                console.error('체감온도 차트 생성 실패:', error);
                 alert('차트를 생성하는 데 실패했습니다.');
                 chartContainer.style.display = 'none';
                 button.classList.remove('clicked');
@@ -299,10 +282,14 @@ async function toggleChart(button) {
         }
     } else {
         chartContainer.style.display = 'none';
+        if (chart) {
+            chart.destroy();
+            chart = null;
+        }
     }
 }
 
-// 대기정체지수 차트 데이터 가져오기
+// 대기정체지수 차트 관련 함수
 async function fetchAirStagnationChartData() {
     try {
         const response = await fetch('/api/airchart/air-stagnation');
@@ -318,7 +305,6 @@ async function fetchAirStagnationChartData() {
     }
 }
 
-// 대기정체지수 차트 생성
 function createAirStagnationChart(startDate, indices) {
     const year = parseInt(startDate.substring(0, 4));
     const month = parseInt(startDate.substring(4, 6)) - 1;
@@ -331,8 +317,13 @@ function createAirStagnationChart(startDate, indices) {
         const label = `${time.getMonth() + 1}/${time.getDate()} ${time.getHours()}:00`;
         labels.push(label);
     }
-    const ctx = document.getElementById('airStagnationChart').getContext('2d');
-    return new Chart(ctx, {
+    const ctx = document.getElementById('airStagnationChart')?.getContext('2d');
+    if (!ctx) {
+        console.error('airStagnationChart 캔버스를 찾을 수 없습니다.');
+        return null;
+    }
+    if (airStagnationChart) airStagnationChart.destroy();
+    airStagnationChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
@@ -394,9 +385,9 @@ function createAirStagnationChart(startDate, indices) {
             }
         }
     });
+    return airStagnationChart;
 }
 
-// 대기정체지수 차트 팝업 열기
 async function openAirStagnationChartPopup() {
     const popup = document.getElementById('airStagnationChartPopup');
     popup.style.display = 'flex';
@@ -405,28 +396,137 @@ async function openAirStagnationChartPopup() {
         try {
             const data = await fetchAirStagnationChartData();
             airStagnationChart = createAirStagnationChart(data.startDate, data.indices);
+            if (!airStagnationChart) {
+                closeAirStagnationChartPopup();
+            }
         } catch (error) {
-            console.error('차트 데이터 가져오기 실패:', error);
+            console.error('대기정체지수 차트 데이터 가져오기 실패:', error);
             alert('대기정체지수 차트를 불러올 수 없습니다.');
             closeAirStagnationChartPopup();
         }
     }
 }
 
-// 대기정체지수 차트 팝업 닫기
 function closeAirStagnationChartPopup() {
     document.getElementById('airStagnationChartPopup').style.display = 'none';
+    if (airStagnationChart) {
+        airStagnationChart.destroy();
+        airStagnationChart = null;
+    }
 }
 
+// 강수량 차트 관련 함수
+async function fetchPrecipitationData() {
+    try {
+        const response = await fetch('/api/precipitation');
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        console.log('강수량 데이터:', data);
+        return data;
+    } catch (error) {
+        console.error('강수량 데이터 가져오기 실패:', error);
+        return {
+            labels: ['5/30 11:00', '5/30 12:00', '5/30 13:00', '5/30 14:00', '5/30 15:00'],
+            precipitations: [0.0, 0.5, 1.0, 0.5, 0.0]
+        };
+    }
+}
+
+function createPrecipitationChart(labels, precipitations) {
+    const ctx = document.getElementById('precipitationChart')?.getContext('2d');
+    if (!ctx) {
+        console.error('precipitationChart 캔버스를 찾을 수 없습니다.');
+        return null;
+    }
+
+    // 데이터가 모두 0인지 확인
+    const allZero = precipitations.every(value => value === 0);
+    const maxPrecipitation = Math.max(...precipitations, 1); // 최소 1mm로 설정
+
+    if (precipitationChart) precipitationChart.destroy();
+    precipitationChart = new Chart(ctx, {
+        type: 'bar', // 막대그래프로 설정 (꺾은선 그래프를 원하면 'line'으로 변경)
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '강수량 (mm)',
+                data: precipitations,
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: '#36A2EB',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: '시간 (KST)',
+                        font: { size: 14 }
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: '강수량 (mm)',
+                        font: { size: 14 }
+                    },
+                    beginAtZero: true,
+                    max: allZero ? 1 : Math.ceil(maxPrecipitation * 1.2), // 동적 스케일 조정
+                    ticks: {
+                        stepSize: allZero ? 0.2 : Math.ceil(maxPrecipitation * 1.2) / 5
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: allZero ? '강수량 예보 (5월 30일, 2025) - 강수 없음' : '강수량 예보 (5월 30일, 2025)',
+                    font: { size: 18 }
+                }
+            }
+        }
+    });
+    return precipitationChart;
+}
+
+async function openPrecipitationChartPopup() {
+    const popup = document.getElementById('precipitationChartPopup');
+    popup.style.display = 'flex';
+    const data = await fetchPrecipitationData();
+    const newChart = createPrecipitationChart(data.labels, data.precipitations);
+    if (!newChart) {
+        closePrecipitationChartPopup();
+    }
+}
+
+function closePrecipitationChartPopup() {
+    document.getElementById('precipitationChartPopup').style.display = 'none';
+    if (precipitationChart) {
+        precipitationChart.destroy();
+        precipitationChart = null;
+    }
+}
+
+// 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
+    // 텍스트 처리
     const overallTexts = document.querySelectorAll('.overall-text');
     overallTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
     const causeTexts = document.querySelectorAll('.cause-text');
     causeTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
 
+    // 위치 기본값 설정
     const locationTitle = document.getElementById('locationTitle');
     if (!locationTitle.textContent.trim()) locationTitle.textContent = '청진동 (종로구)';
 
+    // 지역 선택 초기화
     const sidoSelect = document.getElementById('sido');
     const selectedSido = /*[[${selectedSido}]]*/ '';
     if (selectedSido && selectedSido !== '') {
@@ -444,88 +544,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // 추가 기능 버튼 이벤트
+    const extraButton = document.querySelector('.dust-buttons-container .dust-forecast-btn:first-child');
+    if (extraButton) {
+        extraButton.addEventListener('click', () => alert('안녕 디지몬'));
+    }
 });
-
-async function fetchPrecipitationData() {
-    try {
-        const response = await fetch('/api/precipitation');
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('강수량 데이터 가져오기 실패:', error);
-        return {
-            labels: ['5/30 11:00', '5/30 12:00', '5/30 13:00', '5/30 14:00', '5/30 15:00'],
-            precipitations: [0.0, 0.5, 1.0, 0.5, 0.0]
-        };
-    }
-}
-
-function createPrecipitationChart(labels, precipitations) {
-    const ctx = document.getElementById('precipitationChart').getContext('2d');
-    if (precipitationChart) precipitationChart.destroy();
-    precipitationChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: '강수량 (mm)',
-                data: precipitations,
-                backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                borderColor: '#36A2EB',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: '시간 (KST)',
-                        font: { size: 14 }
-                    }
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: '강수량 (mm)',
-                        font: { size: 14 }
-                    },
-                    beginAtZero: true,
-                    suggestedMax: 5,
-                    ticks: {
-                        stepSize: 1
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top'
-                },
-                title: {
-                    display: true,
-                    text: '강수량 예보 (5월 30일, 2025)',
-                    font: { size: 18 }
-                }
-            }
-        }
-    });
-}
-
-async function openPrecipitationChartPopup() {
-    const popup = document.getElementById('precipitationChartPopup');
-    popup.style.display = 'flex';
-    const data = await fetchPrecipitationData();
-    createPrecipitationChart(data.labels, data.precipitations);
-}
-
-function closePrecipitationChartPopup() {
-    document.getElementById('precipitationChartPopup').style.display = 'none';
-    if (precipitationChart) {
-        precipitationChart.destroy();
-        precipitationChart = null;
-    }
-}
-
