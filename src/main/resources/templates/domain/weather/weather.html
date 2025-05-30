@@ -161,6 +161,7 @@
                 </tr>
                 </tbody>
             </table>
+            <button class="chart-btn" onclick="openPrecipitationChartPopup()">차트 보기</button>
         </div>
         <div th:unless="${precipitationData != null and not #lists.isEmpty(precipitationData)}">
             <p style="color: red;">강수량 데이터를 불러올 수 없습니다.</p>
@@ -339,6 +340,16 @@
                 <canvas id="airStagnationChart"></canvas>
             </div>
         </section>
+    </div>
+</div>
+
+<!-- 강수량 예보 차트 팝업 -->
+<div id="precipitationChartPopup" class="popup">
+    <div class="popup-content">
+        <button class="close-btn" onclick="closePrecipitationChartPopup()">×</button>
+        <div class="chart-container">
+            <canvas id="precipitationChart"></canvas>
+        </div>
     </div>
 </div>
 

@@ -45,13 +45,15 @@ class GeneralWeatherService(
         val ver: String = "1.0"
     )
 
+    //추후확인
     private inner class WeatherApiClient : ApiClientUtility.ApiClient<WeatherRequestParams, WeatherResponse> {
         override fun buildUrl(params: WeatherRequestParams): String {
+            // "&base_time=${params.baseTime}" +
             val urls = "${weatherBaseUrl}?serviceKey=$serviceKey" +
                     "&numOfRows=1000" +
                     "&pageNo=1" +
                     "&base_date=${params.baseDate}" +
-                    "&base_time=${params.baseTime}" +
+                    "&base_time=0500" +
                     "&nx=${params.nx}" +
                     "&ny=${params.ny}" +
                     "&dataType=JSON"
@@ -556,5 +558,28 @@ class GeneralWeatherService(
             throw IllegalStateException("필수 설정값이 누락되었습니다: serviceKey, weatherBaseUrl, dustForecastBaseUrl, realTimeDustBaseUrl 중 하나가 비어 있습니다.")
         }
         logger.info("설정값 확인 - serviceKey: $serviceKey")
+    }
+
+    // 기존 코드 유지, getPrecipitationData 추가
+    fun getPrecipitationData(areaNo: String, time: String): List<PrecipitationInfo> {
+        // API 호출 예시 (실제 API에 맞게 수정 필요)
+        val baseDate = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMdd"))
+        val params = WeatherRequestParams(baseDate, "0500", 5, 127)
+        val weatherClient = WeatherApiClient()
+
+        return when (val result = ApiClientUtility.makeApiRequest(weatherClient, params) { response ->
+            Either.Right(response)
+        }) {
+            is ApiResult.Success -> {
+                val items = result.data.response?.body?.items?.filter { it.category == "PCP" } ?: emptyList()
+                val values = (0..23).associate { "h$it" to (items.getOrNull(it)?.fcstValue?.toFloatOrNull() ?: 0f) }
+                listOf(PrecipitationInfo(baseDate, values))
+            }
+            is ApiResult.Error -> {
+                logger.error("강수량 데이터 가져오기 실패: ${result.message}")
+                val defaultValues = (0..23).associate { "h$it" to 0f }
+                listOf(PrecipitationInfo(baseDate, defaultValues))
+            }
+        }
     }
 }

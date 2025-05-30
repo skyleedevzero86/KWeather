@@ -1,6 +1,7 @@
 let currentSlide = 0;
 let chart = null;
 let airStagnationChart = null;
+let precipitationChart = null;
 
 function updateSlidePosition() {
     const slider = document.getElementById('dustSlider');
@@ -444,3 +445,87 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+async function fetchPrecipitationData() {
+    try {
+        const response = await fetch('/api/precipitation');
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('강수량 데이터 가져오기 실패:', error);
+        return {
+            labels: ['5/30 11:00', '5/30 12:00', '5/30 13:00', '5/30 14:00', '5/30 15:00'],
+            precipitations: [0.0, 0.5, 1.0, 0.5, 0.0]
+        };
+    }
+}
+
+function createPrecipitationChart(labels, precipitations) {
+    const ctx = document.getElementById('precipitationChart').getContext('2d');
+    if (precipitationChart) precipitationChart.destroy();
+    precipitationChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '강수량 (mm)',
+                data: precipitations,
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: '#36A2EB',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: '시간 (KST)',
+                        font: { size: 14 }
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: '강수량 (mm)',
+                        font: { size: 14 }
+                    },
+                    beginAtZero: true,
+                    suggestedMax: 5,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: '강수량 예보 (5월 30일, 2025)',
+                    font: { size: 18 }
+                }
+            }
+        }
+    });
+}
+
+async function openPrecipitationChartPopup() {
+    const popup = document.getElementById('precipitationChartPopup');
+    popup.style.display = 'flex';
+    const data = await fetchPrecipitationData();
+    createPrecipitationChart(data.labels, data.precipitations);
+}
+
+function closePrecipitationChartPopup() {
+    document.getElementById('precipitationChartPopup').style.display = 'none';
+    if (precipitationChart) {
+        precipitationChart.destroy();
+        precipitationChart = null;
+    }
+}
+
