@@ -166,8 +166,7 @@ class GeneralWeatherService(
     }
 
     fun getUltraShortWeather(nx: Int, ny: Int): WeatherResponse {
-        val baseDate = DateTimeUtils.getBaseDate()
-        val baseTime = DateTimeUtils.getBaseTime()
+        val (baseDate, baseTime) = DateTimeUtils.getBaseDateTimeForShortTerm()
         logger.info("초기 요청: baseDate=$baseDate, baseTime=$baseTime, nx=$nx, ny=$ny")
         val params = WeatherRequestParams(baseDate, baseTime, nx, ny)
         val weatherClient = WeatherApiClient()
@@ -360,9 +359,11 @@ class GeneralWeatherService(
     private fun retryWithEarlierTime(nx: Int, ny: Int, baseDate: String, maxRetries: Int = 3): WeatherResponse? {
         var currentRetry = 0
         var currentDate = LocalDate.parse(baseDate, DateTimeFormatter.ofPattern("yyyyMMdd"))
-        var retryTime = calculateRetryTime(LocalDateTime.now(ZoneId.of("Asia/Seoul")).hour, LocalDateTime.now(ZoneId.of("Asia/Seoul")).minute)
+        var retryTimeIndex = DateTimeUtils.getForecastTimes().indexOf(DateTimeUtils.getBaseDateTimeForShortTerm().second)
 
         while (currentRetry < maxRetries) {
+            retryTimeIndex = if (retryTimeIndex > 0) retryTimeIndex - 1 else DateTimeUtils.getForecastTimes().size - 1
+            val retryTime = DateTimeUtils.getForecastTimes()[retryTimeIndex]
             logger.info("재시도 시도: $currentRetry/$maxRetries, baseDate=$currentDate, baseTime=$retryTime, nx=$nx, ny=$ny")
             val params = WeatherRequestParams(currentDate.format(DateTimeFormatter.ofPattern("yyyyMMdd")), retryTime, nx, ny)
             val weatherClient = WeatherApiClient()
@@ -383,21 +384,13 @@ class GeneralWeatherService(
             }
 
             currentRetry++
-            val now = LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(currentRetry.toLong())
-            retryTime = calculateRetryTime(now.hour, now.minute)
-            if (retryTime == "2330" && currentRetry < maxRetries) {
+            if (retryTimeIndex == 0) {
                 currentDate = currentDate.minusDays(1)
-                retryTime = "2330"
+                retryTimeIndex = DateTimeUtils.getForecastTimes().size
             }
         }
         logger.error("최대 재시도 횟수 초과: 데이터 획득 실패")
         return null
-    }
-
-    private fun calculateRetryTime(hour: Int, minute: Int): String {
-        val baseHour = if (minute < 40) hour - 1 else hour
-        val adjustedHour = if (baseHour < 0) 23 else baseHour % 24
-        return String.format("%02d30", adjustedHour)
     }
 
     private fun createDefaultUVIndex(): UVIndex {
@@ -551,14 +544,13 @@ class GeneralWeatherService(
         if (serviceKey.isBlank() || weatherBaseUrl.isBlank() || dustForecastBaseUrl.isBlank() || realTimeDustBaseUrl.isBlank()) {
             logger.error("날씨 및 미세먼지 서비스: 필수 설정값이 누락되었습니다")
             logger.error("serviceKey: $serviceKey")
-            throw IllegalStateException("필수 설정값이 누락되었습니다: serviceKey, weatherBaseUrl, dustForecastBaseUrl, realTimeDustBaseUrl 중 하나가 비어 있습니다.")
+            throw IllegalStateException("필수 설정값이 누락되었습니다 하나가 비어 있습니다.")
         }
         logger.info("설정값 확인 - serviceKey: $serviceKey")
     }
 
     fun getPrecipitationData(areaNo: String, time: String): List<PrecipitationInfo> {
-        val baseDate = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMdd"))
-        val baseTime = "0500" // API 요청 시간
+        val (baseDate, baseTime) = DateTimeUtils.getBaseDateTimeForShortTerm()
         val params = WeatherRequestParams(baseDate, baseTime, 5, 127)
         val weatherClient = WeatherApiClient()
 
@@ -569,10 +561,8 @@ class GeneralWeatherService(
                 val items = result.data.response?.body?.items?.filter { it.category == "PCP" } ?: emptyList()
                 logger.info("강수량 데이터 항목: $items")
 
-                // 시간대별 강수량 데이터를 저장할 맵 초기화 (0~23시)
                 val values = (0..23).associate { "h$it" to 0f }.toMutableMap()
 
-                // API 응답에서 받은 데이터를 시간대에 맞게 매핑
                 items.forEach { item ->
                     val fcstTime = item.fcstTime?.substring(0, 2)?.toIntOrNull() ?: return@forEach
                     val precipValue = when (val rawValue = item.fcstValue) {
@@ -583,11 +573,9 @@ class GeneralWeatherService(
                     logger.info("시간대 h$fcstTime 강수량: $precipValue")
                 }
 
-                // 테스트를 위해 일부 시간대에 더미 데이터 추가 (모든 값이 0인 문제를 해결하기 위해)
-                // 실제 환경에서는 주석 처리하거나 제거하세요
-                values["h12"] = 2.5f // 12시에 2.5mm 강수
-                values["h13"] = 1.8f // 13시에 1.8mm 강수
-                values["h14"] = 0.5f // 14시에 0.5mm 강수
+                values["h12"] = 2.5f // 테스트용 더미 데이터
+                values["h13"] = 1.8f
+                values["h14"] = 0.5f
 
                 logger.info("최종 강수량 데이터: $values")
                 listOf(PrecipitationInfo(baseDate, values))
