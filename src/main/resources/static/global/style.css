@@ -1012,3 +1012,116 @@ canvas {
     font-style: italic;
     text-align: center;
 }
+
+/* 시간대별 날씨 섹션 스타일 */
+.forecast-section {
+    text-align: center;
+    padding: 20px;
+    background: #003087; /* 파란 배경 */
+    border-radius: 20px;
+    color: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.forecast-section h3 {
+    font-size: 1.5em;
+    margin-bottom: 15px;
+    color: white;
+}
+
+.forecast-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.forecast-btn {
+    background: #4a90e2; /* 버튼 배경색 */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s;
+}
+
+.forecast-btn:hover {
+    background: #357abd; /* 호버 시 색상 변화 */
+}
+
+.forecast-row {
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.forecast-item {
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.2); /* 반투명 흰색 배경 */
+    border-radius: 10px;
+    flex: 1;
+    min-width: 100px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.time {
+    font-size: 1.1em;
+    margin-bottom: 5px;
+    color: #e6f0fa;
+}
+
+.temp {
+    font-size: 1.3em;
+    font-weight: bold;
+    color: #fff;
+}
+
+.humid {
+    font-size: 1em;
+    color: #ffcc00;
+}
+
+.icon.sun::before {
+    content: "\f185";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    color: #4a90e2;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .forecast-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .forecast-btn {
+        width: 100%;
+    }
+
+    .forecast-row {
+        flex-direction: column;
+    }
+
+    .forecast-item {
+        margin: 5px 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .forecast-item {
+        min-width: 80px;
+    }
+
+    .forecast-btn {
+        font-size: 0.9em;
+        padding: 8px 15px;
+    }
+}

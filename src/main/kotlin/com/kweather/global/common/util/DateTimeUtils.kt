@@ -18,6 +18,16 @@ import java.util.*
  */
 object DateTimeUtils {
 
+    // 단기예보 발표 시간 (02:00, 05:00, 08:00, 11:00, 14:00, 17:00, 20:00, 23:00)
+    private val FORECAST_TIMES = listOf("0200", "0500", "0800", "1100", "1400", "1700", "2000", "2300")
+
+    /**
+     * 단기예보 발표 시간 리스트를 반환합니다.
+     *
+     * @return List<String> - 발표 시간 리스트 (HHmm 형식)
+     */
+    fun getForecastTimes(): List<String> = FORECAST_TIMES
+
     /**
      * 현재 시간을 API 호출용 형식으로 반환합니다.
      *
@@ -67,16 +77,46 @@ object DateTimeUtils {
     }
 
     /**
-     * 기상청 API 호출 시 사용할 기준 날짜를 반환합니다.
+     * 기상청 단기예보 API 호출 시 사용할 기준 날짜와 시간을 반환합니다.
      *
-     * 기상청 API의 특성상 정오(12시) 이후에는 전날 데이터를 기준으로 하는
-     * 비즈니스 로직을 적용합니다.
+     * 단기예보는 매일 02, 05, 08, 11, 14, 17, 20, 23시에 발표되며,
+     * 발표 후 10분 뒤부터 데이터가 제공됩니다.
+     * 현재 시간을 기준으로 가장 최근의 발표 시간을 계산합니다.
      *
-     * @return 기준 날짜 문자열 (yyyyMMdd 형식)
-     *         - 현재 시간이 12시 이후: 전날 날짜
-     *         - 현재 시간이 12시 이전: 오늘 날짜
-     *
-     * @see getBaseTime 기준 시간 조회
+     * @return Pair<String, String> - 첫 번째는 base_date (yyyyMMdd), 두 번째는 base_time (HHmm)
+     */
+    fun getBaseDateTimeForShortTerm(): Pair<String, String> {
+        val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
+        val formatter = DateTimeFormatter.ofPattern("yyyyMMdd")
+        val hour = now.hour
+        val minute = now.minute
+
+        // 현재 시간(분 단위)으로 변환
+        val currentTimeInMinutes = hour * 60 + minute
+
+        // 가장 최근 발표 시간을 찾음
+        val latestTime = FORECAST_TIMES
+            .map { it.toInt() }
+            .map { h -> h / 100 * 60 + h % 100 } // HHmm -> 분 단위로 변환
+            .filter { it <= currentTimeInMinutes + 10 } // 발표 후 10분 뒤부터 유효
+            .maxOrNull() ?: 1380 // 기본값: 23:00 (1380분)
+
+        val latestHour = latestTime / 60
+        val latestMinute = latestTime % 60
+        val baseTime = String.format("%02d%02d", latestHour, latestMinute)
+
+        // base_date 조정: 02:00 발표 시간 전에 요청 시 전날 날짜 사용
+        val baseDate = if (currentTimeInMinutes < 130 && latestTime == 1380) { // 02:10 전이고 23:00 데이터일 경우
+            now.minusDays(1).format(formatter)
+        } else {
+            now.format(formatter)
+        }
+
+        return Pair(baseDate, baseTime)
+    }
+
+    /**
+     * 기존 getBaseDate와 getBaseTime은 초단기예보를 위해 유지
      */
     fun getBaseDate(): String {
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
@@ -87,18 +127,6 @@ object DateTimeUtils {
         }
     }
 
-    /**
-     * 기상청 API 호출 시 사용할 기준 시간을 반환합니다.
-     *
-     * 기상청 API의 데이터 업데이트 주기에 맞춰 적절한 기준 시간을 계산합니다.
-     * - 12시 이후 5분 경과 시: "0000" (자정)
-     * - 30분 이전: 현재 시간의 정각 (예: 14:25 → "1400")
-     * - 30분 이후: 현재 시간의 30분 (예: 14:35 → "1430")
-     *
-     * @return 기준 시간 문자열 (HHmm 형식, 예: "1400", "1430", "0000")
-     *
-     * @see getBaseDate 기준 날짜 조회
-     */
     fun getBaseTime(): String {
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
         val hour = now.hour
