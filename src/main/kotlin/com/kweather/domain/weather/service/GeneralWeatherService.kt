@@ -434,11 +434,11 @@ class GeneralWeatherService(
         val (date, time) = DateTimeUtils.getCurrentDateTimeFormatted()
         val currentHour = DateTimeUtils.getCurrentHour()
 
-        val temperature = weatherInfoList.find { it.category == "TMP" }?.value?.let { "$it°C" } ?: "0°C"
-        val humidity = weatherInfoList.find { it.category == "REH" }?.value?.let { "$it%" } ?: "50%"
-        val windSpeed = weatherInfoList.find { it.category == "WSD" }?.value?.let { "${it}m/s" } ?: "0 m/s"
-        val skyCondition = weatherInfoList.find { it.category == "SKY" }?.value?.toIntOrNull() ?: 1
-        val precipitationType = weatherInfoList.find { it.category == "PTY" }?.value?.toIntOrNull() ?: 0
+        val temperature = weatherInfoList.find { it.category == "TMP" && it.baseTime == String.format("%02d00", currentHour) }?.value?.let { "$it°C" } ?: "0°C"
+        val humidity = weatherInfoList.find { it.category == "REH" && it.baseTime == String.format("%02d00", currentHour) }?.value?.let { "$it%" } ?: "50%"
+        val windSpeed = weatherInfoList.find { it.category == "WSD" && it.baseTime == String.format("%02d00", currentHour) }?.value?.let { "${it}m/s" } ?: "0 m/s"
+        val skyCondition = weatherInfoList.find { it.category == "SKY" && it.baseTime == String.format("%02d00", currentHour) }?.value?.toIntOrNull() ?: 1
+        val precipitationType = weatherInfoList.find { it.category == "PTY" && it.baseTime == String.format("%02d00", currentHour) }?.value?.toIntOrNull() ?: 0
 
         val minTemp = weatherInfoList.find { it.category == "TMN" }?.value?.let { "$it°C" } ?: (temperature.dropLast(2).toIntOrNull()?.minus(3)?.let { "$it°C" } ?: "-3°C")
         val maxTemp = weatherInfoList.find { it.category == "TMX" }?.value?.let { "$it°C" } ?: (temperature.dropLast(2).toIntOrNull()?.plus(3)?.let { "$it°C" } ?: "3°C")
@@ -475,15 +475,16 @@ class GeneralWeatherService(
 
         val hourlyForecast = mutableListOf<HourlyForecast>()
         val currentHourIndex = currentHour / 3 * 3
-        val hours = listOf(0, 3, 6, 9, 12, 15, 18, 21)
+        val hours = (0..21 step 3).map { (currentHourIndex + it) % 24 } // 0시부터 21시까지 3시간 간격
 
-        hours.forEachIndexed { index, hourOffset ->
-            val forecastHour = (currentHourIndex + hourOffset) % 24
-            val forecastTime = if (hourOffset == 0) "지금" else "${forecastHour}시"
-            val forecastSky = weatherInfoList.find { it.category == "SKY" && it.baseTime == String.format("%02d00", forecastHour) }?.value?.toIntOrNull() ?: skyCondition
-            val forecastPrecip = weatherInfoList.find { it.category == "PTY" && it.baseTime == String.format("%02d00", forecastHour) }?.value?.toIntOrNull() ?: precipitationType
-            val forecastTemp = weatherInfoList.find { it.category == "TMP" && it.baseTime == String.format("%02d00", forecastHour) }?.value?.let { "$it°C" } ?: temperature
-            val forecastHumidity = weatherInfoList.find { it.category == "REH" && it.baseTime == String.format("%02d00", forecastHour) }?.value?.let { "$it%" } ?: humidity
+        hours.forEach { hour ->
+            val forecastTime = if (hour == currentHour) "지금" else "${hour}시"
+            val baseTime = String.format("%02d00", hour)
+            val forecastSky = weatherInfoList.find { it.category == "SKY" && it.baseTime == baseTime }?.value?.toIntOrNull() ?: skyCondition
+            val forecastPrecip = weatherInfoList.find { it.category == "PTY" && it.baseTime == baseTime }?.value?.toIntOrNull() ?: precipitationType
+            val forecastTemp = weatherInfoList.find { it.category == "TMP" && it.baseTime == baseTime }?.value?.let { "$it°C" } ?: temperature
+            val forecastHumidity = weatherInfoList.find { it.category == "REH" && it.baseTime == baseTime }?.value?.let { "$it%" } ?: humidity
+
             val forecastIcon = when (forecastPrecip) {
                 0 -> when (forecastSky) {
                     1 -> "sun"
@@ -497,6 +498,7 @@ class GeneralWeatherService(
                 else -> "sun"
             }
             hourlyForecast.add(HourlyForecast(forecastTime, forecastIcon, forecastTemp, forecastHumidity))
+            logger.info("시간대 $forecastTime 데이터 - 온도: $forecastTemp, 습도: $forecastHumidity, 하늘: $forecastSky, 강수: $forecastPrecip")
         }
 
         return Weather(

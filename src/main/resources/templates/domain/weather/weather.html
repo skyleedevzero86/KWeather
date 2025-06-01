@@ -39,8 +39,8 @@
     <!-- 날씨 상세 정보 -->
     <section class="weather-details" aria-label="날씨 상세 정보">
         <div class="dust-buttons-container">
-            <button class="dust-time-btn" aria-label="시간별온도">시간별 온도보기</button>
-            <button class="dust-weather-btn" aria-label="날씨기상">날씨별 통계</button>
+            <button class="forecast-btn" onclick="showHourlyForecast()">시간별 온도보기</button>
+            <button class="forecast-btn" onclick="showWeatherStats()">날씨 통계</button>
             <button class="dust-forecast-btn" onclick="openDustForecastPopup()" aria-label="미세먼지 예보 보기">미세먼지 예보 보기</button>
             <button class="real-time-dust-btn" onclick="openRealTimeDustPopup()" aria-label="실시간 미세먼지 보기">실시간 미세먼지 보기</button>
         </div>
