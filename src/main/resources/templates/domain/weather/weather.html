@@ -64,6 +64,10 @@
     <section class="forecast-section" aria-label="시간대별 날씨 예보">
         <h3>시간대별 날씨</h3>
         <div class="forecast-row">
+            <!-- 수정: 데이터가 없을 경우 메시지 표시 -->
+            <div th:if="${#lists.isEmpty(weather?.hourlyForecast)}">
+                <p>시간대별 날씨 데이터가 없습니다.</p>
+            </div>
             <div th:each="forecast : ${weather?.hourlyForecast ?: {}}" class="forecast-item">
                 <span class="time" th:text="${forecast?.time ?: '시간 없음'}"></span><br/><br/>
                 <span class="temp" th:text="${forecast?.temperature ?: '온도 없음'}"></span><br/><br/>

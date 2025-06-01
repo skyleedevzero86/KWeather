@@ -1,11 +1,9 @@
 package com.kweather.domain.weather.controller
 
-import kotlin.text.toFloatOrNull
 import com.kweather.domain.airstagnation.dto.AirStagnationIndexInfo
 import com.kweather.domain.airstagnation.service.AirStagnationIndexService
 import com.kweather.domain.forecast.dto.ForecastInfo
 import com.kweather.domain.realtime.dto.RealTimeDustInfo
-import com.kweather.domain.region.service.RegionService
 import com.kweather.domain.senta.dto.SenTaIndexInfo
 import com.kweather.domain.senta.service.SenTaIndexService
 import com.kweather.domain.uvi.dto.UVIndex
@@ -32,7 +30,6 @@ class WeatherController(
     private val generalWeatherService: GeneralWeatherService,
     private val senTaIndexService: SenTaIndexService,
     private val airStagnationIndexService: AirStagnationIndexService,
-    private val regionService: RegionService,
     @Value("\${weather.default.region.name:한남동}") private val defaultRegionName: String,
     @Value("\${weather.default.region.district:용산구}") private val defaultRegionDistrict: String,
     @Value("\${weather.default.sido:서울특별시}") private val defaultSido: String,
@@ -67,13 +64,7 @@ class WeatherController(
 
         override fun getSenTaIndexData(areaNo: String, time: String): List<SenTaIndexInfo> = try {
             val currentMonth = LocalDateTime.now(ZoneId.of("Asia/Seoul")).monthValue
-            if (currentMonth in 5..9) {
-                val result = senTaIndexService.getSenTaIndex(areaNo, time)
-                logger.info("SenTaIndexData: $result")
-                result
-            } else {
-                emptyList()
-            }
+            if (currentMonth in 5..9) senTaIndexService.getSenTaIndex(areaNo, time) else emptyList()
         } catch (e: Exception) {
             logger.error("체감온도 데이터 가져오기 실패: ${e.message}", e)
             emptyList()
@@ -95,7 +86,7 @@ class WeatherController(
         override fun getUVIndexData(areaNo: String, time: String): List<UVIndexInfo> = try {
             val today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
             val rawValues = mapOf("h12" to "3", "h13" to "4", "h14" to "3")
-            val convertedValues = rawValues.mapValues { (_, value) -> value.toFloatOrNull() ?: 0.0f }
+            val convertedValues = rawValues.mapValues { it.value.toFloatOrNull() ?: 0.0f }
             listOf(UVIndexInfo(date = today, values = convertedValues))
         } catch (e: Exception) {
             logger.error("자외선 지수 데이터 가져오기 실패: ${e.message}", e)
@@ -115,11 +106,8 @@ class WeatherController(
 
             val weatherDataProvider = LiveWeatherDataProvider()
             val (finalSido, finalSgg, finalUmd) = location?.split(" ")?.let { parts ->
-                if (parts.size >= 3) {
-                    listOf(normalizeSido(parts[0]), parts[1], parts[2])
-                } else {
-                    listOf(normalizeSido(defaultSido), defaultRegionDistrict, defaultRegionName)
-                }
+                if (parts.size >= 3) listOf(normalizeSido(parts[0]), parts[1], parts[2])
+                else listOf(normalizeSido(defaultSido), defaultRegionDistrict, defaultRegionName)
             } ?: listOf(normalizeSido(defaultSido), defaultRegionDistrict, defaultRegionName)
 
             val weatherData = try {
@@ -128,6 +116,10 @@ class WeatherController(
                 logger.error("날씨 데이터 생성 실패: ${e.message}", e)
                 createDefaultWeatherData(dateTime[0], dateTime[1])
             }
+
+            // 수정: 모델 데이터 확인용 로그 추가
+            logger.info("weatherData: $weatherData")
+            logger.info("hourlyForecast size: ${weatherData.hourlyForecast.size}")
 
             val currentDate = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
             val apiTime = now.format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
@@ -141,8 +133,6 @@ class WeatherController(
             val dustForecast = weatherDataProvider.getDustForecastData(currentDate, informCode)
             val realTimeDust = weatherDataProvider.getRealTimeDustData(finalSido)
             val errorMessage = if (realTimeDust.isEmpty()) "실시간 미세먼지 데이터 오류" else null
-
-            logger.info("realTimeDust 데이터: $realTimeDust")
 
             val senTaIndexData = weatherDataProvider.getSenTaIndexData(defaultAreaNo, apiTime)
             val airStagnationIndexData = weatherDataProvider.getAirStagnationIndexData(defaultAreaNo, apiTime)
@@ -184,9 +174,7 @@ class WeatherController(
             val sggs = try {
                 if (sidos.contains(finalSido)) {
                     restTemplate.getForObject("http://localhost:8090/api/regions/sggs?sido=$finalSido", List::class.java) as? List<String> ?: emptyList()
-                } else {
-                    emptyList()
-                }
+                } else emptyList()
             } catch (e: Exception) {
                 logger.error("시군구 목록 조회 실패: ${e.message}", e)
                 listOf(finalSgg)
@@ -195,9 +183,7 @@ class WeatherController(
             val umds = try {
                 if (sggs.contains(finalSgg)) {
                     restTemplate.getForObject("http://localhost:8090/api/regions/umds?sido=$finalSido&sgg=$finalSgg", List::class.java) as? List<String> ?: emptyList()
-                } else {
-                    emptyList()
-                }
+                } else emptyList()
             } catch (e: Exception) {
                 logger.error("읍면동 목록 조회 실패: ${e.message}", e)
                 listOf(finalUmd)
@@ -225,7 +211,7 @@ class WeatherController(
         } catch (e: Exception) {
             logger.error("날씨 페이지 처리 중 오류 발생: ${e.message}", e)
             model.addAttribute("errorMessage", "날씨 정보를 불러오는 중 오류가 발생했습니다.")
-            "error" // 에러 페이지로 리다이렉트
+            "error"
         }
     }
 
@@ -278,12 +264,17 @@ class WeatherController(
                 humidity = "50%"
             )
         },
-        uvIndex = UVIndex(
+        uvIndex = createDefaultUVIndex() // 기본 UVIndex 객체 사용
+    )
+
+    // 기본 UVIndex 객체를 생성하는 헬퍼 함수
+    private fun createDefaultUVIndex(): UVIndex {
+        return UVIndex(
             title = "자외선 지수",
             icon = "uv-moderate",
             status = "보통",
             value = "3",
             measurement = "UV Index"
         )
-    )
+    }
 }

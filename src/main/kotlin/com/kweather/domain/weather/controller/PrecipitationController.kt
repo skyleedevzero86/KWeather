@@ -14,6 +14,7 @@ class PrecipitationController(private val generalWeatherService: GeneralWeatherS
 
     private val logger = LoggerFactory.getLogger(PrecipitationController::class.java)
 
+    // 강수량 데이터 API 엔드포인트
     @GetMapping("/api/precipitation")
     fun getPrecipitationData(): Map<String, Any> {
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
@@ -23,7 +24,7 @@ class PrecipitationController(private val generalWeatherService: GeneralWeatherS
         val labels = precipitationData.firstOrNull()?.values?.keys?.map { it.replace("h", "5/30 ") + ":00" } ?: emptyList()
         val precipitations = precipitationData.firstOrNull()?.values?.values?.map { it.toFloat() } ?: emptyList()
 
-        logger.info("강수량 API 응답 - labels: $labels, precipitations: $precipitations")
+        logger.info("강수량 API 응답 - 라벨: $labels, 강수량: $precipitations")
 
         return mapOf(
             "labels" to labels,
