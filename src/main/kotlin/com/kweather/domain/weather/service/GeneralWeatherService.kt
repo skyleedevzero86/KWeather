@@ -401,26 +401,35 @@ class GeneralWeatherService(
         val realTimeDust = getRealTimeDust(sidoName)
 
         logger.info("weatherInfoList 크기: ${weatherInfoList.size}")
-        logger.info("weatherInfoList: $weatherInfoList")
+        logger.info("weatherInfoList 내용: $weatherInfoList")
 
         val (date, time) = DateTimeUtils.getCurrentDateTimeFormatted()
         val currentHour = DateTimeUtils.getCurrentHour()
 
-        val temperature = weatherInfoList.find { it.category == "TMP" && it.fcstTime == String.format("%02d00", currentHour) }?.value?.let { "$it°C" }
-            ?: weatherInfoList.find { it.category == "TMP" && it.fcstTime == "1800" }?.value?.let { "$it°C" } ?: "0°C"
-        val humidity = weatherInfoList.find { it.category == "REH" && it.fcstTime == String.format("%02d00", currentHour) }?.value?.let { "$it%" }
-            ?: weatherInfoList.find { it.category == "REH" && it.fcstTime == "1800" }?.value?.let { "$it%" } ?: "50%"
-        val windSpeed = weatherInfoList.find { it.category == "WSD" && it.fcstTime == String.format("%02d00", currentHour) }?.value?.let { "${it}m/s" }
-            ?: weatherInfoList.find { it.category == "WSD" && it.fcstTime == "1800" }?.value?.let { "${it}m/s" } ?: "0 m/s"
-        val skyCondition = weatherInfoList.find { it.category == "SKY" && it.fcstTime == String.format("%02d00", currentHour) }?.value?.toIntOrNull()
-            ?: weatherInfoList.find { it.category == "SKY" && it.fcstTime == "1800" }?.value?.toIntOrNull() ?: 1
-        val precipitationType = weatherInfoList.find { it.category == "PTY" && it.fcstTime == String.format("%02d00", currentHour) }?.value?.toIntOrNull()
-            ?: weatherInfoList.find { it.category == "PTY" && it.fcstTime == "1800" }?.value?.toIntOrNull() ?: 0
+        // 현재 시간과 가장 가까운 fcstTime 찾기
+        val forecastTimes = weatherInfoList.mapNotNull { it.fcstTime?.substring(0, 2)?.toIntOrNull() }.distinct().sorted()
+        logger.info("forecastTimes: $forecastTimes")
+        val closestHour = forecastTimes.minByOrNull { Math.abs(it - currentHour) } ?: currentHour
+        logger.info("현재 시간: $currentHour, 가장 가까운 예보 시간: $closestHour")
+
+        // 현재 시간 또는 가장 가까운 시간대의 데이터로 온도, 습도, 풍속, 하늘 상태, 강수 타입 설정
+        val closestFcstTime = String.format("%02d00", closestHour)
+        val temperature = weatherInfoList.find { it.category == "TMP" && it.fcstTime == closestFcstTime }?.value?.let { "$it°C" }
+            ?: weatherInfoList.find { it.category == "TMP" }?.value?.let { "$it°C" } ?: "0°C"
+        val humidity = weatherInfoList.find { it.category == "REH" && it.fcstTime == closestFcstTime }?.value?.let { "$it%" }
+            ?: weatherInfoList.find { it.category == "REH" }?.value?.let { "$it%" } ?: "50%"
+        val windSpeed = weatherInfoList.find { it.category == "WSD" && it.fcstTime == closestFcstTime }?.value?.let { "${it}m/s" }
+            ?: weatherInfoList.find { it.category == "WSD" }?.value?.let { "${it}m/s" } ?: "0 m/s"
+        val skyCondition = weatherInfoList.find { it.category == "SKY" && it.fcstTime == closestFcstTime }?.value?.toIntOrNull()
+            ?: weatherInfoList.find { it.category == "SKY" }?.value?.toIntOrNull() ?: 1
+        val precipitationType = weatherInfoList.find { it.category == "PTY" && it.fcstTime == closestFcstTime }?.value?.toIntOrNull()
+            ?: weatherInfoList.find { it.category == "PTY" }?.value?.toIntOrNull() ?: 0
 
         val minTemp = weatherInfoList.find { it.category == "TMN" }?.value?.let { "$it°C" } ?: "-3°C"
         val maxTemp = weatherInfoList.find { it.category == "TMX" }?.value?.let { "$it°C" } ?: "3°C"
         val highLowTemperature = "$minTemp / $maxTemp"
 
+        // 날씨 상태 결정
         val weatherCondition = when (precipitationType) {
             0 -> when (skyCondition) {
                 1 -> "맑음"
@@ -434,6 +443,7 @@ class GeneralWeatherService(
             else -> "맑음"
         }
 
+        // 공기질 데이터 설정
         val airQuality = realTimeDust.firstOrNull()?.let {
             AirQuality(
                 title = "미세먼지",
@@ -448,35 +458,58 @@ class GeneralWeatherService(
             )
         } ?: createDefaultAirQuality()
 
+        // 시간대별 예보 리스트 생성
         val hourlyForecast = mutableListOf<HourlyForecast>()
-        val forecastTimes = weatherInfoList.mapNotNull { it.fcstTime?.substring(0, 2)?.toIntOrNull() }.distinct().sorted()
-
         logger.info("forecastTimes: $forecastTimes")
 
-        forecastTimes.forEach { hour ->
-            val fcstTime = String.format("%02d00", hour)
-            val forecastTime = if (hour == currentHour) "지금" else "${hour}시"
-            val forecastSky = weatherInfoList.find { it.category == "SKY" && it.fcstTime == fcstTime }?.value?.toIntOrNull() ?: skyCondition
-            val forecastPrecip = weatherInfoList.find { it.category == "PTY" && it.fcstTime == fcstTime }?.value?.toIntOrNull() ?: precipitationType
-            val forecastTemp = weatherInfoList.find { it.category == "TMP" && it.fcstTime == fcstTime }?.value?.let { "$it°C" } ?: temperature
-            val forecastHumidity = weatherInfoList.find { it.category == "REH" && it.fcstTime == fcstTime }?.value?.let { "$it%" } ?: humidity
-
-            val forecastIcon = when (forecastPrecip) {
-                0 -> when (forecastSky) {
-                    1 -> "sun"
-                    3 -> "partly-cloudy"
-                    4 -> "cloudy"
+        // forecastTimes가 비어 있을 경우 기본 데이터 추가
+        if (forecastTimes.isEmpty()) {
+            logger.warn("forecastTimes가 비어 있습니다. 기본 시간대 데이터 추가")
+            val defaultTimes = listOf(currentHour, (currentHour + 1) % 24, (currentHour + 2) % 24, (currentHour + 3) % 24)
+            defaultTimes.forEach { hour ->
+                val fcstTime = String.format("%02d00", hour)
+                val forecastTime = if (hour == currentHour) "지금" else "${hour}시"
+                val forecastIcon = when (precipitationType) {
+                    0 -> when (skyCondition) {
+                        1 -> "sun"
+                        3 -> "partly-cloudy"
+                        4 -> "cloudy"
+                        else -> "sun"
+                    }
+                    1 -> "rain"
+                    2 -> "sleet"
+                    3 -> "snow"
                     else -> "sun"
                 }
-                1 -> "rain"
-                2 -> "sleet"
-                3 -> "snow"
-                else -> "sun"
+                hourlyForecast.add(HourlyForecast(forecastTime, forecastIcon, temperature, humidity))
             }
-            hourlyForecast.add(HourlyForecast(forecastTime, forecastIcon, forecastTemp, forecastHumidity))
+        } else {
+            forecastTimes.forEach { hour ->
+                val fcstTime = String.format("%02d00", hour)
+                val forecastTime = if (hour == currentHour) "지금" else "${hour}시"
+                val forecastSky = weatherInfoList.find { it.category == "SKY" && it.fcstTime == fcstTime }?.value?.toIntOrNull() ?: skyCondition
+                val forecastPrecip = weatherInfoList.find { it.category == "PTY" && it.fcstTime == fcstTime }?.value?.toIntOrNull() ?: precipitationType
+                val forecastTemp = weatherInfoList.find { it.category == "TMP" && it.fcstTime == fcstTime }?.value?.let { "$it°C" } ?: temperature
+                val forecastHumidity = weatherInfoList.find { it.category == "REH" && it.fcstTime == fcstTime }?.value?.let { "$it%" } ?: humidity
+
+                val forecastIcon = when (forecastPrecip) {
+                    0 -> when (forecastSky) {
+                        1 -> "sun"
+                        3 -> "partly-cloudy"
+                        4 -> "cloudy"
+                        else -> "sun"
+                    }
+                    1 -> "rain"
+                    2 -> "sleet"
+                    3 -> "snow"
+                    else -> "sun"
+                }
+                hourlyForecast.add(HourlyForecast(forecastTime, forecastIcon, forecastTemp, forecastHumidity))
+            }
         }
 
         logger.info("hourlyForecast 크기: ${hourlyForecast.size}")
+        logger.info("hourlyForecast 내용: $hourlyForecast")
 
         val uvIndex = createDefaultUVIndex()  // 기본 UVIndex 생성
 
