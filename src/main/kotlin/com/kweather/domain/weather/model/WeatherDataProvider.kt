@@ -15,4 +15,5 @@ interface WeatherDataProvider {
     fun getSenTaIndexData(areaNo: String, time: String): List<SenTaIndexInfo>
     fun getAirStagnationIndexData(areaNo: String, time: String): List<AirStagnationIndexInfo>
     fun getPrecipitationData(areaNo: String, time: String): List<PrecipitationInfo>
+    fun getHourlyTemperatureData(areaNo: String, time: String): Map<String, Any>
 }

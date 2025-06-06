@@ -33,7 +33,6 @@ class GeneralWeatherService(
 ) {
     private val logger = LoggerFactory.getLogger(GeneralWeatherService::class.java)
 
-    // 실시간 미세먼지 요청 파라미터 데이터 클래스
     data class RealTimeDustRequestParams(
         val returnType: String = "json",
         val numOfRows: Int = 1000,
@@ -42,7 +41,6 @@ class GeneralWeatherService(
         val ver: String = "1.0"
     )
 
-    // 날씨 API 클라이언트 내부 클래스
     private inner class WeatherApiClient : ApiClientUtility.ApiClient<WeatherRequestParams, WeatherResponse> {
         override fun buildUrl(params: WeatherRequestParams): String {
             val urls = "${weatherBaseUrl}?serviceKey=$serviceKey" +
@@ -66,11 +64,13 @@ class GeneralWeatherService(
                     val doc = dBuilder.parse(response.byteInputStream())
                     doc.documentElement.normalize()
                     val errMsg = doc.getElementsByTagName("errMsg").item(0)?.textContent ?: "알 수 없는 오류"
-                    val returnAuthMsg = doc.getElementsByTagName("returnAuthMsg").item(0)?.textContent ?: "알 수 없는 인증 오류"
+                    val returnAuthMsg = doc.getElementsByTagName("returnAuthMsg").item(0)?.textContent
+                        ?: "알 수 없는 인증 오류"
                     logger.error("XML 오류 응답 수신: $errMsg - $returnAuthMsg")
                     throw IllegalStateException("API 오류: $errMsg - $returnAuthMsg")
                 } else if (response.trim().startsWith("{")) {
-                    val weatherResponse = ApiClientUtility.getObjectMapper().readValue(response, WeatherResponse::class.java)
+                    val weatherResponse =
+                        ApiClientUtility.getObjectMapper().readValue(response, WeatherResponse::class.java)
                     if (weatherResponse.response?.header?.resultCode != "00") {
                         logger.error("JSON 오류 응답: ${weatherResponse.response?.header?.resultCode} - ${weatherResponse.response?.header?.resultMsg}")
                         throw IllegalStateException("API 오류: ${weatherResponse.response?.header?.resultCode} - ${weatherResponse.response?.header?.resultMsg}")
@@ -86,8 +86,8 @@ class GeneralWeatherService(
         }
     }
 
-    // 미세먼지 예보 API 클라이언트 내부 클래스
-    private inner class DustForecastApiClient : ApiClientUtility.ApiClient<DustForecastRequestParams, ForecastResponse> {
+    private inner class DustForecastApiClient :
+        ApiClientUtility.ApiClient<DustForecastRequestParams, ForecastResponse> {
         override fun buildUrl(params: DustForecastRequestParams): String {
             val urls = "${dustForecastBaseUrl}?serviceKey=$serviceKey" +
                     "&returnType=json" +
@@ -107,10 +107,12 @@ class GeneralWeatherService(
                     val doc = dBuilder.parse(response.byteInputStream())
                     doc.documentElement.normalize()
                     val errMsg = doc.getElementsByTagName("errMsg").item(0)?.textContent ?: "알 수 없는 오류"
-                    val returnAuthMsg = doc.getElementsByTagName("returnAuthMsg").item(0)?.textContent ?: "알 수 없는 인증 오류"
+                    val returnAuthMsg = doc.getElementsByTagName("returnAuthMsg").item(0)?.textContent
+                        ?: "알 수 없는 인증 오류"
                     throw IllegalStateException("API 오류: $errMsg - $returnAuthMsg")
                 }
-                val forecastResponse = ApiClientUtility.getObjectMapper().readValue(response, ForecastResponse::class.java)
+                val forecastResponse =
+                    ApiClientUtility.getObjectMapper().readValue(response, ForecastResponse::class.java)
                 if (forecastResponse.response?.header?.resultCode != "00") {
                     throw IllegalStateException("API 오류: ${forecastResponse.response?.header?.resultCode} - ${forecastResponse.response?.header?.resultMsg}")
                 }
@@ -121,8 +123,8 @@ class GeneralWeatherService(
             )
     }
 
-    // 실시간 미세먼지 API 클라이언트 내부 클래스
-    private inner class RealTimeDustApiClient : ApiClientUtility.ApiClient<RealTimeDustRequestParams, RealTimeDustResponse> {
+    private inner class RealTimeDustApiClient :
+        ApiClientUtility.ApiClient<RealTimeDustRequestParams, RealTimeDustResponse> {
         override fun buildUrl(params: RealTimeDustRequestParams): String {
             val encodedSidoName = URLEncoder.encode(params.sidoName, "UTF-8")
             val urls = "${realTimeDustBaseUrl}?serviceKey=$serviceKey" +
@@ -144,11 +146,13 @@ class GeneralWeatherService(
                     val doc = dBuilder.parse(response.byteInputStream())
                     doc.documentElement.normalize()
                     val errMsg = doc.getElementsByTagName("errMsg").item(0)?.textContent ?: "알 수 없는 오류"
-                    val returnAuthMsg = doc.getElementsByTagName("returnAuthMsg").item(0)?.textContent ?: "알 수 없는 인증 오류"
+                    val returnAuthMsg = doc.getElementsByTagName("returnAuthMsg").item(0)?.textContent
+                        ?: "알 수 없는 인증 오류"
                     logger.error("XML 오류 응답 수신: $errMsg - $returnAuthMsg")
                     throw IllegalStateException("API 오류: $errMsg - $returnAuthMsg")
                 } else if (response.trim().startsWith("{")) {
-                    val dustResponse = ApiClientUtility.getObjectMapper().readValue(response, RealTimeDustResponse::class.java)
+                    val dustResponse =
+                        ApiClientUtility.getObjectMapper().readValue(response, RealTimeDustResponse::class.java)
                     if (dustResponse.response?.header?.resultCode != "00") {
                         logger.error("JSON 오류 응답: ${dustResponse.response?.header?.resultCode} - ${dustResponse.response?.header?.resultMsg}")
                         throw IllegalStateException("API 오류: ${dustResponse.response?.header?.resultCode} - ${dustResponse.response?.header?.resultMsg}")
@@ -164,7 +168,6 @@ class GeneralWeatherService(
         }
     }
 
-    // 초단기 날씨 데이터 가져오기
     fun getUltraShortWeather(nx: Int, ny: Int): WeatherResponse {
         val (baseDate, baseTime) = DateTimeUtils.getBaseDateTimeForShortTerm()
         logger.info("초기 요청: baseDate=$baseDate, baseTime=$baseTime, nx=$nx, ny=$ny")
@@ -191,11 +194,11 @@ class GeneralWeatherService(
         }
     }
 
-    // 미세먼지 예보 데이터 가져오기
     fun getDustForecast(searchDate: String, informCode: String): List<ForecastInfo> {
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
         val currentHour = now.hour
-        val targetDate = if (currentHour < 6) now.minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) else searchDate
+        val targetDate =
+            if (currentHour < 6) now.minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) else searchDate
         val params = DustForecastRequestParams(targetDate, informCode)
         val dustClient = DustForecastApiClient()
 
@@ -206,14 +209,18 @@ class GeneralWeatherService(
                     .minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
                 val retryParams = DustForecastRequestParams(previousDate, informCode)
                 when (val retryResult = ApiClientUtility.makeApiRequest(dustClient, retryParams) { retryResponse ->
-                    val forecastInfos = retryResponse.response?.body?.items?.mapNotNull { item -> item?.let { parseForecastItem(it, informCode) } } ?: emptyList()
+                    val forecastInfos =
+                        retryResponse.response?.body?.items?.mapNotNull { item -> item?.let { parseForecastItem(it, informCode) } }
+                            ?: emptyList()
                     Either.Right(forecastInfos)
                 }) {
                     is ApiResult.Success -> Either.Right(retryResult.data)
                     is ApiResult.Error -> Either.Right(emptyList())
                 }
             } else {
-                val forecastInfos = response.response?.body?.items?.mapNotNull { item -> item?.let { parseForecastItem(it, informCode) } } ?: emptyList()
+                val forecastInfos =
+                    response.response?.body?.items?.mapNotNull { item -> item?.let { parseForecastItem(it, informCode) } }
+                        ?: emptyList()
                 Either.Right(forecastInfos)
             }
         }) {
@@ -225,7 +232,6 @@ class GeneralWeatherService(
         }
     }
 
-    // 실시간 미세먼지 데이터 가져오기
     fun getRealTimeDust(sidoName: String): List<RealTimeDustInfo> {
         val apiSidoName = convertSidoForApi(sidoName)
         val params = RealTimeDustRequestParams(sidoName = apiSidoName)
@@ -236,7 +242,9 @@ class GeneralWeatherService(
                 logger.warn("실시간 미세먼지 데이터 없음: $apiSidoName")
                 Either.Right(emptyList())
             } else {
-                val dustInfos = response.response?.body?.items?.mapNotNull { item -> item?.let { parseRealTimeDustItem(it) } } ?: emptyList()
+                val dustInfos =
+                    response.response?.body?.items?.mapNotNull { item -> item?.let { parseRealTimeDustItem(it) } }
+                        ?: emptyList()
                 logger.info("실시간 미세먼지 데이터: $dustInfos")
                 Either.Right(dustInfos)
             }
@@ -249,7 +257,6 @@ class GeneralWeatherService(
         }
     }
 
-    // API용 시도 이름 변환
     private fun convertSidoForApi(sidoName: String): String = when (sidoName) {
         "서울특별시" -> "서울"
         "경기도" -> "경기"
@@ -271,7 +278,6 @@ class GeneralWeatherService(
         else -> sidoName
     }
 
-    // 날씨 데이터 파싱
     fun parseWeatherData(response: WeatherResponse): List<WeatherInfo> =
         when {
             response.response?.header?.resultCode != "00" -> {
@@ -287,16 +293,18 @@ class GeneralWeatherService(
                     )
                 )
             }
+
             response.response?.body?.items.isNullOrEmpty() -> {
                 logger.warn("날씨 응답에 항목이 없습니다")
                 emptyList()
             }
+
             else -> {
-                response.response?.body?.items?.mapNotNull { item -> item?.let { parseWeatherItem(it) } } ?: emptyList()
+                response.response?.body?.items?.mapNotNull { item -> item?.let { parseWeatherItem(it) } }
+                    ?: emptyList()
             }
         }
 
-    // 개별 날씨 항목 파싱
     private fun parseWeatherItem(item: WeatherItem): WeatherInfo? =
         runCatching {
             WeatherInfo(
@@ -311,7 +319,6 @@ class GeneralWeatherService(
             logger.warn("날씨 항목 파싱 실패: ${e.message}")
         }.getOrNull()
 
-    // 실시간 미세먼지 항목 파싱
     private fun parseRealTimeDustItem(item: RealTimeDustItem): RealTimeDustInfo? =
         runCatching {
             RealTimeDustInfo(
@@ -327,7 +334,6 @@ class GeneralWeatherService(
             logger.warn("실시간 미세먼지 항목 파싱 실패: ${e.message}")
         }.getOrNull()
 
-    // 미세먼지 등급 변환
     private fun convertGrade(grade: String?): String = when (grade) {
         "1" -> "좋음"
         "2" -> "보통"
@@ -336,7 +342,6 @@ class GeneralWeatherService(
         else -> "측정 중"
     }
 
-    // 예보 항목 파싱
     private fun parseForecastItem(item: ForecastItem, defaultInformCode: String): ForecastInfo? =
         runCatching {
             ForecastInfo(
@@ -355,7 +360,6 @@ class GeneralWeatherService(
             logger.warn("예보 항목 파싱 실패: ${e.message}")
         }.getOrNull()
 
-    // 이전 시간으로 재시도
     private fun retryWithEarlierTime(nx: Int, ny: Int, baseDate: String, maxRetries: Int = 3): WeatherResponse? {
         var currentRetry = 0
         var currentDate = LocalDate.parse(baseDate, DateTimeFormatter.ofPattern("yyyyMMdd"))
@@ -365,7 +369,12 @@ class GeneralWeatherService(
             retryTimeIndex = if (retryTimeIndex > 0) retryTimeIndex - 1 else DateTimeUtils.getForecastTimes().size - 1
             val retryTime = DateTimeUtils.getForecastTimes()[retryTimeIndex]
             logger.info("재시도 시도: $currentRetry/$maxRetries, baseDate=$currentDate, baseTime=$retryTime, nx=$nx, ny=$ny")
-            val params = WeatherRequestParams(currentDate.format(DateTimeFormatter.ofPattern("yyyyMMdd")), retryTime, nx, ny)
+            val params = WeatherRequestParams(
+                currentDate.format(DateTimeFormatter.ofPattern("yyyyMMdd")),
+                retryTime,
+                nx,
+                ny
+            )
             val weatherClient = WeatherApiClient()
 
             when (val result = ApiClientUtility.makeApiRequest(weatherClient, params) { response ->
@@ -378,6 +387,7 @@ class GeneralWeatherService(
                     }
                     logger.warn("재시도 응답: ${result.data.response?.header?.resultCode} - ${result.data.response?.header?.resultMsg}")
                 }
+
                 is ApiResult.Error -> logger.error("재시도 실패: ${result.message}")
             }
 
@@ -391,7 +401,6 @@ class GeneralWeatherService(
         return null
     }
 
-    // 날씨 엔티티 생성
     fun buildWeatherEntity(nx: Int, ny: Int, sidoName: String): Weather {
         val adjustedNx = if (nx == 60) 60 else nx
         val adjustedNy = if (ny == 127) 126 else ny
@@ -406,13 +415,12 @@ class GeneralWeatherService(
         val (date, time) = DateTimeUtils.getCurrentDateTimeFormatted()
         val currentHour = DateTimeUtils.getCurrentHour()
 
-        // 현재 시간과 가장 가까운 fcstTime 찾기
-        val forecastTimes = weatherInfoList.mapNotNull { it.fcstTime?.substring(0, 2)?.toIntOrNull() }.distinct().sorted()
+        val forecastTimes =
+            weatherInfoList.mapNotNull { it.fcstTime?.substring(0, 2)?.toIntOrNull() }.distinct().sorted()
         logger.info("forecastTimes: $forecastTimes")
         val closestHour = forecastTimes.minByOrNull { Math.abs(it - currentHour) } ?: currentHour
         logger.info("현재 시간: $currentHour, 가장 가까운 예보 시간: $closestHour")
 
-        // 현재 시간 또는 가장 가까운 시간대의 데이터로 온도, 습도, 풍속, 하늘 상태, 강수 타입 설정
         val closestFcstTime = String.format("%02d00", closestHour)
         val temperature = weatherInfoList.find { it.category == "TMP" && it.fcstTime == closestFcstTime }?.value?.let { "$it°C" }
             ?: weatherInfoList.find { it.category == "TMP" }?.value?.let { "$it°C" } ?: "0°C"
@@ -420,16 +428,17 @@ class GeneralWeatherService(
             ?: weatherInfoList.find { it.category == "REH" }?.value?.let { "$it%" } ?: "50%"
         val windSpeed = weatherInfoList.find { it.category == "WSD" && it.fcstTime == closestFcstTime }?.value?.let { "${it}m/s" }
             ?: weatherInfoList.find { it.category == "WSD" }?.value?.let { "${it}m/s" } ?: "0 m/s"
-        val skyCondition = weatherInfoList.find { it.category == "SKY" && it.fcstTime == closestFcstTime }?.value?.toIntOrNull()
-            ?: weatherInfoList.find { it.category == "SKY" }?.value?.toIntOrNull() ?: 1
-        val precipitationType = weatherInfoList.find { it.category == "PTY" && it.fcstTime == closestFcstTime }?.value?.toIntOrNull()
-            ?: weatherInfoList.find { it.category == "PTY" }?.value?.toIntOrNull() ?: 0
+        val skyCondition =
+            weatherInfoList.find { it.category == "SKY" && it.fcstTime == closestFcstTime }?.value?.toIntOrNull()
+                ?: weatherInfoList.find { it.category == "SKY" }?.value?.toIntOrNull() ?: 1
+        val precipitationType =
+            weatherInfoList.find { it.category == "PTY" && it.fcstTime == closestFcstTime }?.value?.toIntOrNull()
+                ?: weatherInfoList.find { it.category == "PTY" }?.value?.toIntOrNull() ?: 0
 
         val minTemp = weatherInfoList.find { it.category == "TMN" }?.value?.let { "$it°C" } ?: "-3°C"
         val maxTemp = weatherInfoList.find { it.category == "TMX" }?.value?.let { "$it°C" } ?: "3°C"
         val highLowTemperature = "$minTemp / $maxTemp"
 
-        // 날씨 상태 결정
         val weatherCondition = when (precipitationType) {
             0 -> when (skyCondition) {
                 1 -> "맑음"
@@ -437,13 +446,13 @@ class GeneralWeatherService(
                 4 -> "흐림"
                 else -> "맑음"
             }
+
             1 -> "비"
             2 -> "비/눈"
             3 -> "눈"
             else -> "맑음"
         }
 
-        // 공기질 데이터 설정
         val airQuality = realTimeDust.firstOrNull()?.let {
             AirQuality(
                 title = "미세먼지",
@@ -458,11 +467,9 @@ class GeneralWeatherService(
             )
         } ?: createDefaultAirQuality()
 
-        // 시간대별 예보 리스트 생성
         val hourlyForecast = mutableListOf<HourlyForecast>()
         logger.info("forecastTimes: $forecastTimes")
 
-        // forecastTimes가 비어 있을 경우 기본 데이터 추가
         if (forecastTimes.isEmpty()) {
             logger.warn("forecastTimes가 비어 있습니다. 기본 시간대 데이터 추가")
             val defaultTimes = listOf(currentHour, (currentHour + 1) % 24, (currentHour + 2) % 24, (currentHour + 3) % 24)
@@ -476,6 +483,7 @@ class GeneralWeatherService(
                         4 -> "cloudy"
                         else -> "sun"
                     }
+
                     1 -> "rain"
                     2 -> "sleet"
                     3 -> "snow"
@@ -487,10 +495,18 @@ class GeneralWeatherService(
             forecastTimes.forEach { hour ->
                 val fcstTime = String.format("%02d00", hour)
                 val forecastTime = if (hour == currentHour) "지금" else "${hour}시"
-                val forecastSky = weatherInfoList.find { it.category == "SKY" && it.fcstTime == fcstTime }?.value?.toIntOrNull() ?: skyCondition
-                val forecastPrecip = weatherInfoList.find { it.category == "PTY" && it.fcstTime == fcstTime }?.value?.toIntOrNull() ?: precipitationType
-                val forecastTemp = weatherInfoList.find { it.category == "TMP" && it.fcstTime == fcstTime }?.value?.let { "$it°C" } ?: temperature
-                val forecastHumidity = weatherInfoList.find { it.category == "REH" && it.fcstTime == fcstTime }?.value?.let { "$it%" } ?: humidity
+                val forecastSky =
+                    weatherInfoList.find { it.category == "SKY" && it.fcstTime == fcstTime }?.value?.toIntOrNull()
+                        ?: skyCondition
+                val forecastPrecip =
+                    weatherInfoList.find { it.category == "PTY" && it.fcstTime == fcstTime }?.value?.toIntOrNull()
+                        ?: precipitationType
+                val forecastTemp =
+                    weatherInfoList.find { it.category == "TMP" && it.fcstTime == fcstTime }?.value?.let { "$it°C" }
+                        ?: temperature
+                val forecastHumidity =
+                    weatherInfoList.find { it.category == "REH" && it.fcstTime == fcstTime }?.value?.let { "$it%" }
+                        ?: humidity
 
                 val forecastIcon = when (forecastPrecip) {
                     0 -> when (forecastSky) {
@@ -499,6 +515,7 @@ class GeneralWeatherService(
                         4 -> "cloudy"
                         else -> "sun"
                     }
+
                     1 -> "rain"
                     2 -> "sleet"
                     3 -> "snow"
@@ -511,7 +528,7 @@ class GeneralWeatherService(
         logger.info("hourlyForecast 크기: ${hourlyForecast.size}")
         logger.info("hourlyForecast 내용: $hourlyForecast")
 
-        val uvIndex = createDefaultUVIndex()  // 기본 UVIndex 생성
+        val uvIndex = createDefaultUVIndex()
 
         return Weather(
             date = date,
@@ -522,12 +539,57 @@ class GeneralWeatherService(
             weatherCondition = weatherCondition,
             windSpeed = windSpeed,
             airQuality = airQuality,
-            uvIndex = uvIndex,  // 기본값 사용
+            uvIndex = uvIndex,
             hourlyForecast = hourlyForecast
         )
     }
 
-    // 기본 UVIndex 생성
+    fun getHourlyTemperature(areaNo: String, time: String): Map<String, Any> {
+        val (baseDate, baseTime) = DateTimeUtils.getBaseDateTimeForShortTerm()
+        val params = WeatherRequestParams(baseDate, baseTime, 60, 127) // 기본 좌표 사용
+        val weatherClient = WeatherApiClient()
+
+        return when (val result = ApiClientUtility.makeApiRequest(weatherClient, params) { response ->
+            Either.Right(response)
+        }) {
+            is ApiResult.Success -> {
+                val items = result.data.response?.body?.items?.filter { it.category == "TMP" } ?: emptyList()
+                logger.info("시간별 온도 데이터 항목: $items")
+
+                val temperatures = mutableMapOf<String, String>()
+                items.forEachIndexed { index, item ->
+                    val hour = (index + 1).toString()
+                    temperatures["h$hour"] = item.fcstValue ?: "0"
+                }
+
+                // 72시간 데이터가 부족할 경우 더미 데이터로 채움
+                for (i in 1..72) {
+                    if (!temperatures.containsKey("h$i")) {
+                        temperatures["h$i"] = "15" // 기본값
+                    }
+                }
+
+                mapOf(
+                    "code" to "A41",
+                    "areaNo" to areaNo,
+                    "date" to baseDate + baseTime,
+                    *temperatures.entries.map { it.key to it.value }.toTypedArray()
+                )
+            }
+
+            is ApiResult.Error -> {
+                logger.error("시간별 온도 데이터 가져오기 실패: ${result.message}")
+                val defaultTemps = (1..72).associate { "h$it" to "15" }
+                mapOf(
+                    "code" to "A41",
+                    "areaNo" to areaNo,
+                    "date" to baseDate + baseTime,
+                    *defaultTemps.entries.map { it.key to it.value }.toTypedArray()
+                )
+            }
+        }
+    }
+
     private fun createDefaultUVIndex(): UVIndex {
         return UVIndex(
             title = "자외선 지수",
@@ -538,7 +600,6 @@ class GeneralWeatherService(
         )
     }
 
-    // 기본 미세먼지 데이터 생성
     private fun createDefaultAirQuality(): AirQuality =
         AirQuality(
             title = "미세먼지",
@@ -552,7 +613,6 @@ class GeneralWeatherService(
             measurement2 = "㎍/㎥"
         )
 
-    // 카테고리별 단위 반환
     private fun getUnitForCategory(category: String?): String =
         when (category) {
             "TMP", "TMN", "TMX" -> "°C"
@@ -563,12 +623,10 @@ class GeneralWeatherService(
             else -> ""
         }
 
-    // 초기화 블록에서 설정값 검증
     init {
         validateConfiguration()
     }
 
-    // 설정값 검증
     private fun validateConfiguration() {
         if (serviceKey.isBlank() || weatherBaseUrl.isBlank() || dustForecastBaseUrl.isBlank() || realTimeDustBaseUrl.isBlank()) {
             logger.error("날씨 및 미세먼지 서비스: 필수 설정값이 누락되었습니다")
@@ -576,7 +634,6 @@ class GeneralWeatherService(
         }
     }
 
-    // 강수량 데이터 가져오기
     fun getPrecipitationData(areaNo: String, time: String): List<PrecipitationInfo> {
         val (baseDate, baseTime) = DateTimeUtils.getBaseDateTimeForShortTerm()
         val params = WeatherRequestParams(baseDate, baseTime, 5, 127)
@@ -608,6 +665,7 @@ class GeneralWeatherService(
                 logger.info("최종 강수량 데이터: $values")
                 listOf(PrecipitationInfo(baseDate, values))
             }
+
             is ApiResult.Error -> {
                 logger.error("강수량 데이터 가져오기 실패: ${result.message}")
                 val defaultValues = (0..23).associate { "h$it" to 0f }
