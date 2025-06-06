@@ -92,6 +92,17 @@ class WeatherController(
             logger.error("자외선 지수 데이터 가져오기 실패: ${e.message}", e)
             emptyList()
         }
+
+        // 추가: getHourlyTemperatureData 구현
+        override fun getHourlyTemperatureData(areaNo: String, time: String): Map<String, Any> = try {
+            // GeneralWeatherService를 통해 시간별 온도 데이터 가져오기
+            val hourlyTemps = generalWeatherService.getHourlyTemperature(areaNo, time)
+            hourlyTemps.mapValues { it.value.toString() } // Map<String, String>을 Map<String, Any>로 변환
+        } catch (e: Exception) {
+            logger.error("시간별 온도 데이터 가져오기 실패: ${e.message}", e)
+            // 기본 데이터 반환
+            (1..72).associate { "h$it" to "15" } // Map<String, String>을 반환
+        }
     }
 
     @GetMapping("/")

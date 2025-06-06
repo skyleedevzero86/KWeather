@@ -39,7 +39,7 @@
     <!-- 날씨 상세 정보 -->
     <section class="weather-details" aria-label="날씨 상세 정보">
         <div class="dust-buttons-container">
-            <button class="forecast-btn" onclick="showHourlyForecast()">시간별 온도보기</button>
+            <button class="forecast-btn" onclick="openHourlyTemperaturePopup()">시간별 온도보기</button>
             <button class="forecast-btn" onclick="showWeatherStats()">날씨 통계</button>
             <button class="dust-forecast-btn" onclick="openDustForecastPopup()" aria-label="미세먼지 예보 보기">미세먼지 예보 보기</button>
             <button class="real-time-dust-btn" onclick="openRealTimeDustPopup()" aria-label="실시간 미세먼지 보기">실시간 미세먼지 보기</button>
@@ -77,6 +77,23 @@
         </div>
     </section>
 
+    <div id="hourlyTemperaturePopup" class="popup">
+        <div class="popup-content">
+            <button class="close-btn" onclick="closeHourlyTemperaturePopup()">×</button>
+            <h2>🌡️ 시간별 온도 예보</h2>
+            <p>72시간 상세 온도 변화 분석</p>
+            <div class="chart-section">
+                <h3 class="section-title">온도 변화 차트</h3>
+                <div class="chart-container">
+                    <canvas id="temperatureChart"></canvas>
+                </div>
+            </div>
+            <div id="hourlyData">
+                <!-- 시간별 상세 데이터가 동적으로 생성됩니다 -->
+            </div>
+        </div>
+    </div>
+
     <!-- 여름철 체감온도 예보 -->
     <section class="senta-index-forecast-section" aria-label="여름철 체감온도 예보">
         <h3>여름철 체감온도 예보 (5월~9월)</h3>
@@ -102,7 +119,7 @@
                 </tbody>
             </table>
             <div class="chart-container" style="display: none;">
-                <canvas id="temperatureChart"></canvas>
+                <canvas id="sentaTemperatureChart"></canvas> <!-- ID 변경 -->
             </div>
             <button class="chart-btn" onclick="toggleChart(this)" aria-label="차트 보기"><span>대시보드</span></button>
         </div>
