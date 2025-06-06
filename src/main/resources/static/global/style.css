@@ -1125,3 +1125,152 @@ canvas {
         padding: 8px 15px;
     }
 }
+
+/* style.css에 추가 */
+
+/* 시간별 온도 팝업 스타일 */
+#hourlyTemperaturePopup {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+#hourlyTemperaturePopup .popup-content {
+    position: relative;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    border-radius: 15px;
+    max-width: 95%;
+    max-height: 95vh;
+    overflow: auto;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#hourlyTemperaturePopup h2 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+#hourlyTemperaturePopup p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 20px;
+}
+
+.chart-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+    width: 100%;
+    max-width: 1200px;
+}
+
+.chart-container {
+    position: relative;
+    height: 400px;
+    margin-top: 20px;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.section-title::before {
+    content: "📈";
+    margin-right: 10px;
+    font-size: 1.2rem;
+}
+
+.hourly-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.hour-card {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.hour-card:hover {
+    border-color: #667eea;
+    transform: scale(1.05);
+}
+
+.hour-card.current {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.hour-time {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.hour-card.current .hour-time {
+    color: rgba(255,255,255,0.8);
+}
+
+.hour-temp {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.hour-card.current .hour-temp {
+    color: white;
+}
+
+.day-section {
+    margin-bottom: 30px;
+}
+
+.day-header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px 10px 0 0;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.day-content {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 0 0 10px 10px;
+    padding: 20px;
+}
+
+@media (max-width: 768px) {
+    .chart-container {
+        height: 300px;
+    }
+
+    .hourly-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+}

@@ -1,7 +1,8 @@
 let currentSlide = 0;
-let chart = null;
+let chart = null; // 여름철 체감온도 차트용 변수
 let airStagnationChart = null;
 let precipitationChart = null;
+let temperatureChart = null; // 시간별 온도 예보 차트용 변수
 
 // 슬라이더 관련 함수
 function updateSlidePosition() {
@@ -157,6 +158,7 @@ async function fetchChartData() {
         const response = await fetch('/api/chart/temperature');
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
+        console.log('체감온도 차트 데이터:', data); // 디버깅 로그 추가
         return data;
     } catch (error) {
         console.error('체감온도 차트 데이터 가져오기 실패:', error);
@@ -176,7 +178,19 @@ function getCurrentDateTimeFormatted() {
     return `${yyyy}${MM}${dd}${HH}`;
 }
 
-function createChart(startDate, temperatures) {
+function createChart(button, startDate, temperatures) {
+    const chartContainer = button.parentElement.querySelector('.chart-container');
+    if (!chartContainer) {
+        console.error('chartContainer를 찾을 수 없습니다.');
+        return null;
+    }
+
+    const ctx = chartContainer.querySelector('#sentaTemperatureChart')?.getContext('2d');
+    if (!ctx) {
+        console.error('sentaTemperatureChart 캔버스를 찾을 수 없습니다.');
+        return null;
+    }
+
     const year = parseInt(startDate.substring(0, 4));
     const month = parseInt(startDate.substring(4, 6)) - 1;
     const day = parseInt(startDate.substring(6, 8));
@@ -188,11 +202,7 @@ function createChart(startDate, temperatures) {
         const label = `${time.getMonth() + 1}/${time.getDate()} ${time.getHours()}:00`;
         labels.push(label);
     }
-    const ctx = document.getElementById('temperatureChart')?.getContext('2d');
-    if (!ctx) {
-        console.error('temperatureChart 캔버스를 찾을 수 없습니다.');
-        return null;
-    }
+
     if (chart) chart.destroy();
     chart = new Chart(ctx, {
         type: 'line',
@@ -249,18 +259,23 @@ function createChart(startDate, temperatures) {
                 },
                 title: {
                     display: true,
-                    text: '여름철 체감온도 예보 (5월~9월)',
+                    text: '여름철 체감온도 예보 (2025년 6월 7일 기준)', // 현재 날짜 반영
                     font: { size: 20 }
                 }
             }
         }
     });
+    console.log('체감온도 차트 생성 완료'); // 디버깅 로그 추가
     return chart;
 }
 
 async function toggleChart(button) {
-    const chartContainer = document.querySelector('.chart-container');
-    if (!chartContainer) return;
+    console.log('toggleChart 함수 호출됨'); // 디버깅 로그 추가
+    const chartContainer = button.parentElement.querySelector('.chart-container');
+    if (!chartContainer) {
+        console.error('chartContainer를 찾을 수 없습니다.');
+        return;
+    }
 
     button.classList.toggle('clicked');
     if (button.classList.contains('clicked')) {
@@ -268,8 +283,9 @@ async function toggleChart(button) {
         if (!chart) {
             try {
                 const chartData = await fetchChartData();
-                chart = createChart(chartData.startDate, chartData.temperatures);
+                chart = createChart(button, chartData.startDate, chartData.temperatures);
                 if (!chart) {
+                    console.error('차트 생성 실패');
                     chartContainer.style.display = 'none';
                     button.classList.remove('clicked');
                 }
@@ -285,6 +301,7 @@ async function toggleChart(button) {
         if (chart) {
             chart.destroy();
             chart = null;
+            console.log('체감온도 차트 제거됨'); // 디버깅 로그 추가
         }
     }
 }
@@ -379,7 +396,7 @@ function createAirStagnationChart(startDate, indices) {
                 },
                 title: {
                     display: true,
-                    text: '대기정체지수 예보 (2025년 5월 27일 - 5월 31일)',
+                    text: '대기정체지수 예보 (2025년 6월 7일 기준)', // 현재 날짜 반영
                     font: { size: 20 }
                 }
             }
@@ -426,7 +443,7 @@ async function fetchPrecipitationData() {
     } catch (error) {
         console.error('강수량 데이터 가져오기 실패:', error);
         return {
-            labels: ['5/30 11:00', '5/30 12:00', '5/30 13:00', '5/30 14:00', '5/30 15:00'],
+            labels: ['6/7 0:00', '6/7 1:00', '6/7 2:00', '6/7 3:00', '6/7 4:00'], // 현재 날짜 반영
             precipitations: [0.0, 0.5, 1.0, 0.5, 0.0]
         };
     }
@@ -439,13 +456,12 @@ function createPrecipitationChart(labels, precipitations) {
         return null;
     }
 
-    // 데이터가 모두 0인지 확인
     const allZero = precipitations.every(value => value === 0);
-    const maxPrecipitation = Math.max(...precipitations, 1); // 최소 1mm로 설정
+    const maxPrecipitation = Math.max(...precipitations, 1);
 
     if (precipitationChart) precipitationChart.destroy();
     precipitationChart = new Chart(ctx, {
-        type: 'bar', // 막대그래프로 설정 (꺾은선 그래프를 원하면 'line'으로 변경)
+        type: 'bar',
         data: {
             labels: labels,
             datasets: [{
@@ -474,7 +490,7 @@ function createPrecipitationChart(labels, precipitations) {
                         font: { size: 14 }
                     },
                     beginAtZero: true,
-                    max: allZero ? 1 : Math.ceil(maxPrecipitation * 1.2), // 동적 스케일 조정
+                    max: allZero ? 1 : Math.ceil(maxPrecipitation * 1.2),
                     ticks: {
                         stepSize: allZero ? 0.2 : Math.ceil(maxPrecipitation * 1.2) / 5
                     }
@@ -487,7 +503,7 @@ function createPrecipitationChart(labels, precipitations) {
                 },
                 title: {
                     display: true,
-                    text: allZero ? '강수량 예보 (5월 30일, 2025) - 강수 없음' : '강수량 예보 (5월 30일, 2025)',
+                    text: allZero ? '강수량 예보 (2025년 6월 7일) - 강수 없음' : '강수량 예보 (2025년 6월 7일)', // 현재 날짜 반영
                     font: { size: 18 }
                 }
             }
@@ -516,17 +532,14 @@ function closePrecipitationChartPopup() {
 
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
-    // 텍스트 처리
     const overallTexts = document.querySelectorAll('.overall-text');
     overallTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
     const causeTexts = document.querySelectorAll('.cause-text');
     causeTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
 
-    // 위치 기본값 설정
     const locationTitle = document.getElementById('locationTitle');
     if (!locationTitle.textContent.trim()) locationTitle.textContent = '청진동 (종로구)';
 
-    // 지역 선택 초기화
     const sidoSelect = document.getElementById('sido');
     const selectedSido = /*[[${selectedSido}]]*/ '';
     if (selectedSido && selectedSido !== '') {
@@ -545,9 +558,229 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 추가 기능 버튼 이벤트
     const extraButton = document.querySelector('.dust-buttons-container .dust-forecast-btn:first-child');
     if (extraButton) {
         extraButton.addEventListener('click', () => alert('안녕 디지몬'));
     }
 });
+
+// 온도에 따른 색상 결정
+function getTempColor(temp) {
+    if (temp >= 25) return '#e74c3c';
+    if (temp >= 20) return '#f39c12';
+    if (temp >= 15) return '#f1c40f';
+    if (temp >= 10) return '#3498db';
+    return '#9b59b6';
+}
+
+// 온도에 따른 아이콘 결정
+function getTempIcon(temp) {
+    if (temp >= 30) return '🔥';
+    if (temp >= 25) return '☀️';
+    if (temp >= 20) return '🌤️';
+    if (temp >= 15) return '⛅';
+    if (temp >= 10) return '☁️';
+    if (temp >= 5) return '🌥️';
+    return '❄️';
+}
+
+// 날짜 포맷팅
+function formatDate(dateStr) {
+    const year = dateStr.substr(0, 4);
+    const month = dateStr.substr(4, 2);
+    const day = dateStr.substr(6, 2);
+    const date = new Date(year, month - 1, day);
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    return `${month}월 ${day}일 (${days[date.getDay()]})`;
+}
+
+// 시간 포맷팅
+function formatHourly(hour) {
+    if (hour <= 12) {
+        return hour === 0 ? '12AM' : `${hour}AM`;
+    } else {
+        return hour === 12 ? '12PM' : `${hour - 12}PM`;
+    }
+}
+
+async function openHourlyTemperaturePopup() {
+    const popup = document.getElementById('hourlyTemperaturePopup');
+    popup.style.display = 'flex';
+
+    try {
+        const response = await fetch('/api/hourly-temperature');
+        if (!response.ok) throw new Error('시간별 온도 데이터를 가져오지 못했습니다.');
+        const data = await response.json();
+
+        displayTemperatureChart(data);
+        displayHourlyData(data);
+    } catch (error) {
+        console.error('시간별 온도 데이터 로드 실패:', error);
+        alert('시간별 온도 데이터를 로드하는 데 실패했습니다.');
+        closeHourlyTemperaturePopup();
+    }
+}
+
+function closeHourlyTemperaturePopup() {
+    document.getElementById('hourlyTemperaturePopup').style.display = 'none';
+    if (temperatureChart) {
+        temperatureChart.destroy();
+        temperatureChart = null;
+    }
+}
+
+function displayTemperatureChart(data) {
+    const ctx = document.getElementById('temperatureChart').getContext('2d');
+
+    if (temperatureChart) {
+        temperatureChart.destroy();
+    }
+
+    const labels = [];
+    const temperatures = [];
+    const backgroundColors = [];
+
+    const baseDate = new Date(
+        data.date.substr(0, 4),
+        data.date.substr(4, 2) - 1,
+        data.date.substr(6, 2)
+    );
+
+    for (let i = 1; i <= 72; i++) {
+        const temp = data.temperatures[`h${i}`];
+        if (temp && temp !== '') {
+            const tempValue = parseFloat(temp);
+            const currentDate = new Date(baseDate);
+            currentDate.setHours(currentDate.getHours() + i);
+
+            labels.push(i <= 24 ? `${i}시` : `${Math.floor((i-1)/24)+1}일차 ${((i-1)%24)+1}시`);
+            temperatures.push(tempValue);
+            backgroundColors.push(getTempColor(tempValue));
+        }
+    }
+
+    temperatureChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '온도 (°C)',
+                data: temperatures,
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: backgroundColors,
+                pointBorderColor: backgroundColors,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `온도: ${context.parsed.y}°C`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '°C';
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function displayHourlyData(data) {
+    const hourlyContainer = document.getElementById('hourlyData');
+    const baseDate = new Date(
+        data.date.substr(0, 4),
+        data.date.substr(4, 2) - 1,
+        data.date.substr(6, 2)
+    );
+
+    let daysHTML = '';
+    let currentDayHTML = '';
+    let currentDay = '';
+    let hourCardsHTML = '';
+
+    for (let i = 1; i <= 72; i++) {
+        const temp = data.temperatures[`h${i}`];
+        if (temp && temp !== '') {
+            const tempValue = parseFloat(temp);
+            const currentDate = new Date(baseDate);
+            currentDate.setHours(currentDate.getHours() + i);
+
+            const dayStr = formatDate(
+                currentDate.getFullYear().toString() +
+                (currentDate.getMonth() + 1).toString().padStart(2, '0') +
+                currentDate.getDate().toString().padStart(2, '0')
+            );
+
+            if (dayStr !== currentDay) {
+                if (currentDay !== '') {
+                    currentDayHTML += `
+                                <div class="day-content">
+                                    <div class="hourly-grid">${hourCardsHTML}</div>
+                                </div>
+                            `;
+                    daysHTML += currentDayHTML;
+                }
+
+                currentDay = dayStr;
+                currentDayHTML = `
+                            <div class="day-section">
+                                <div class="day-header">${dayStr}</div>
+                        `;
+                hourCardsHTML = '';
+            }
+
+            const hour = currentDate.getHours();
+            const isCurrentHour = i === 1;
+
+            hourCardsHTML += `
+                        <div class="hour-card ${isCurrentHour ? 'current' : ''}">
+                            <div class="hour-time">${formatHourly(hour)}</div>
+                            <div class="hour-temp" style="color: ${isCurrentHour ? 'white' : getTempColor(tempValue)}">
+                                ${getTempIcon(tempValue)} ${tempValue}°C
+                            </div>
+                        </div>
+                    `;
+        }
+    }
+
+    if (currentDay !== '') {
+        currentDayHTML += `
+                    <div class="day-content">
+                        <div class="hourly-grid">${hourCardsHTML}</div>
+                    </div>
+                </div>
+                `;
+        daysHTML += currentDayHTML;
+    }
+
+    hourlyContainer.innerHTML = daysHTML;
+}
