@@ -39,8 +39,9 @@ class HourlyRestController(
                 temperatures = temperatures
             )
         } catch (e: Exception) {
-            logger.error("시간별 온도 데이터 가져오기 실패: ${e.message}", e)
             // 오류 발생 시 기본 데이터 반환
+            logger.error("시간별 온도 데이터 가져오기 실패: ${e.message}", e)
+
             HourlyTemperatureResponse(
                 date = "20250526",
                 temperatures = (1..72).associate { "h$it" to "15" }
