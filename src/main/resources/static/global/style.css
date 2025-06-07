@@ -1,4 +1,4 @@
-/* 기본 스타일 */
+/* 기존 CSS 내용 유지 */
 body {
     background-color: #003087;
     color: white;
@@ -50,7 +50,7 @@ body {
 }
 
 .current-temp {
-    display:  flex;
+    display: flex;
     flex-direction: column;
     align-items: center;
 }
@@ -59,15 +59,6 @@ body {
     font-size: 6em;
     font-weight: bold;
     margin: 0;
-}
-
-.moon-icon::before {
-    content: "\f186";
-    font-family: "Font Awesome 5 Free";
-    font-weight: 900;
-    font-size: 2.5em;
-    color: #4a90e2;
-    margin-bottom: 15px;
 }
 
 .temp-range {
@@ -94,7 +85,6 @@ body {
     gap: 20px;
 }
 
-/* 버튼 컨테이너 */
 .dust-buttons-container {
     display: flex;
     justify-content: right;
@@ -102,7 +92,21 @@ body {
     margin-bottom: 20px;
 }
 
-/* 공기질 정보 컨테이너 */
+.dust-buttons-container button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s;
+}
+
+.dust-buttons-container button:hover {
+    background: linear-gradient(135deg, #5b6bcb 0%, #65438a 100%);
+}
+
 .air-quality-container {
     display: flex;
     justify-content: space-between;
@@ -110,8 +114,7 @@ body {
     width: 100%;
 }
 
-.air-quality,
-.uv-index {
+.air-quality {
     flex: 1;
     text-align: center;
     padding: 10px;
@@ -145,10 +148,286 @@ body {
     margin: 5px 0;
 }
 
-.forecast-section,
-.senta-index-forecast-section,
-.air-stagnation-index-forecast-section,
-.precipitation-forecast-section {
+/* 시간별 날씨 데이터 스타일링 */
+#hourlyData {
+    margin-top: 20px;
+}
+
+.day-section {
+    margin-bottom: 30px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.day-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 15px;
+    font-size: 1.3em;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.day-content {
+    padding: 10px;
+}
+
+.hour-card {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.hour-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.hour-card.current {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: 2px solid #fff;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+}
+
+.hour-card.current .hour-time {
+    color: white;
+    font-weight: bold;
+}
+
+.hour-card.current .hour-temp {
+    color: white !important;
+}
+
+.hour-time {
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.hour-temp {
+    font-size: 1.2em;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+/* 온도 통계 카드 스타일 - 가로 배치로 수정 */
+.temperature-stats-section {
+    background: #667eea;
+    border-radius: 20px;
+    padding: 25px;
+    margin-bottom: 25px;
+    color: white;
+}
+
+.temperature-stats-section h3 {
+    color: white;
+    font-size: 1.5em;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.temp-stats-grid {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.temp-stat-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    color: #333;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+    flex: 1;
+    min-width: 200px;
+}
+
+.temp-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.temp-stat-icon {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.temp-stat-card .temp-stat-icon.thermometer::before {
+    content: "🌡️";
+}
+
+.temp-stat-card .temp-stat-icon.arrow-up::before {
+    content: "🔺";
+    color: #ff6b6b;
+}
+
+.temp-stat-card .temp-stat-icon.arrow-down::before {
+    content: "🔻";
+    color: #4ecdc4;
+}
+
+.temp-stat-card .temp-stat-icon.chart::before {
+    content: "📊";
+    color: #45b7d1;
+}
+
+.temp-stat-label {
+    font-size: 1em;
+    color: #666;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.temp-stat-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: #333;
+    margin: 0;
+}
+
+.temp-stat-value.current {
+    color: #ff9500;
+}
+
+.temp-stat-value.high {
+    color: #ff6b6b;
+}
+
+.temp-stat-value.low {
+    color: #4ecdc4;
+}
+
+.temp-stat-value.average {
+    color: #45b7d1;
+}
+
+/* 차트 섹션 스타일 */
+.chart-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 25px;
+    margin-top: 20px;
+    color: #333;
+}
+
+.section-title {
+    color: #333;
+    font-size: 1.3em;
+    margin-bottom: 15px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.section-title::before {
+    content: "📈";
+    font-size: 1.2em;
+}
+
+/* 모바일 반응형 - 작은 화면에서는 세로 배치 */
+@media (max-width: 768px) {
+    .temp-stats-grid {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .temp-stat-card {
+        min-width: unset;
+        padding: 15px;
+    }
+
+    .temp-stat-value {
+        font-size: 1.5em;
+    }
+
+    .hourly-grid {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 10px;
+    }
+
+    .hour-card {
+        padding: 12px;
+    }
+
+    .hour-time {
+        font-size: 1em;
+    }
+
+    .hour-temp {
+        font-size: 1.1em;
+    }
+
+    .day-header {
+        font-size: 1.2em;
+        padding: 12px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .temp-stats-grid {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .temp-stat-card {
+        padding: 12px;
+        min-width: unset;
+    }
+
+    .temp-stat-value {
+        font-size: 1.3em;
+    }
+
+    .temp-stat-icon {
+        font-size: 2em;
+    }
+
+    .hourly-grid {
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        gap: 8px;
+    }
+
+    .hour-card {
+        padding: 10px;
+    }
+
+    .hour-time {
+        font-size: 0.9em;
+    }
+
+    .hour-temp {
+        font-size: 1em;
+    }
+
+    .day-header {
+        font-size: 1.1em;
+        padding: 10px 15px;
+    }
+}
+
+/* 기존 스타일 계속 유지 */
+.forecast-section {
     text-align: center;
     padding: 20px;
     background: white;
@@ -160,27 +439,31 @@ body {
     overflow: hidden;
 }
 
-.forecast-section h3,
-.senta-index-forecast-section h3,
-.air-stagnation-index-forecast-section h3,
-.precipitation-forecast-section h3 {
+.forecast-section h3 {
     font-size: 1.5em;
     margin-bottom: 20px;
     color: black;
 }
 
+.forecast-row-container {
+    position: relative;
+    width: 100%;
+}
+
 .forecast-row {
     display: flex;
-    justify-content: space-around;
-    gap: 15px;
+    transition: transform 0.5s ease-in-out;
+    width: 100%;
 }
 
 .forecast-item {
+    flex: 0 0 16.66%;
     padding: 15px;
     background: rgba(0, 0, 0, 0.05);
     border-radius: 15px;
-    flex: 1;
     text-align: center;
+    box-sizing: border-box;
+    min-width: 120px;
 }
 
 .time {
@@ -205,10 +488,64 @@ body {
     color: #4a90e2;
 }
 
-/* 미세먼지 예보 및 실시간 미세먼지 버튼 스타일 */
+.slider-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    font-size: 1.5em;
+    border-radius: 5px;
+    z-index: 10;
+}
+
+.slider-btn:hover {
+    background: linear-gradient(135deg, #5b6bcb 0%, #65438a 100%);
+}
+
+.slider-btn.prev {
+    left: 10px;
+}
+
+.slider-btn.next {
+    right: 10px;
+}
+
+.slider-btn:disabled {
+    background: rgba(0, 0, 0, 0.2);
+    cursor: not-allowed;
+}
+
+.senta-index-forecast-section,
+.air-stagnation-index-forecast-section,
+.precipitation-forecast-section {
+    text-align: center;
+    padding: 20px;
+    background: white;
+    border-radius: 20px;
+    color: black;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.senta-index-forecast-section h3,
+.air-stagnation-index-forecast-section h3,
+.precipitation-forecast-section h3 {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+    color: black;
+}
+
 .dust-forecast-btn,
-.real-time-dust-btn {
-    background: #4a90e2;
+.real-time-dust-btn,
+.forecast-btn,
+.chart-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
     padding: 12px 24px;
@@ -222,8 +559,10 @@ body {
 }
 
 .dust-forecast-btn:hover,
-.real-time-dust-btn:hover {
-    background: #357abd;
+.real-time-dust-btn:hover,
+.forecast-btn:hover,
+.chart-btn:hover {
+    background: linear-gradient(135deg, #5b6bcb 0%, #65438a 100%);
 }
 
 .dust-forecast-btn::before {
@@ -238,7 +577,6 @@ body {
     font-weight: 900;
 }
 
-/* 미세먼지 예보 슬라이드 스타일 */
 .dust-forecast-section {
     text-align: center;
     background: white;
@@ -301,35 +639,6 @@ body {
     padding: 5px;
 }
 
-/* 슬라이드 버튼 스타일 */
-.slider-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    border: none;
-    padding: 10px;
-    cursor: pointer;
-    font-size: 1.5em;
-    border-radius: 5px;
-    z-index: 10;
-}
-
-.slider-btn.prev {
-    left: 10px;
-}
-
-.slider-btn.next {
-    right: 10px;
-}
-
-.slider-btn:disabled {
-    background: rgba(0, 0, 0, 0.2);
-    cursor: not-allowed;
-}
-
-/* 등급 스타일 */
 .grade-section {
     text-align: center;
     margin: 10px 0;
@@ -378,7 +687,6 @@ body {
     font-size: 0.9em;
 }
 
-/* 실시간 미세먼지 섹션 스타일 */
 .real-time-dust-section {
     text-align: center;
     padding: 20px;
@@ -417,7 +725,6 @@ body {
     font-size: 1em;
 }
 
-/* 자외선 지수, 체감온도, 대기정체지수, 강수량 테이블 스타일 */
 .forecast-table {
     width: 100%;
     border-collapse: collapse;
@@ -445,7 +752,6 @@ body {
     padding: 10px;
 }
 
-/* 등급 색상 스타일 */
 .grade-good {
     color: #0000FF;
     -webkit-text-stroke: 0.03em black;
@@ -466,7 +772,6 @@ body {
     -webkit-text-stroke: 0.03em black;
 }
 
-/* 아이콘 스타일 */
 .yellow-smiley::before {
     content: "\f118";
     font-family: "Font Awesome 5 Free";
@@ -474,7 +779,6 @@ body {
     color: #FFD700;
 }
 
-/* 팝업 스타일 */
 .popup {
     display: none;
     position: fixed;
@@ -507,7 +811,6 @@ body {
     max-height: 70vh;
 }
 
-/* 차트 팝업 스타일 */
 .air-stagnation-chart-section {
     text-align: center;
     background: white;
@@ -527,16 +830,15 @@ body {
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     margin: 20px auto;
-    height: 500px; /* 고정 높이 설정 */
+    height: 500px;
 }
 
 canvas {
     width: 100% !important;
-    height: 100% !important; /* 캔버스 높이를 컨테이너에 맞춤 */
-    max-height: 450px; /* 최대 높이 제한 */
+    height: 100% !important;
+    max-height: 450px;
 }
 
-/* Updated close button styling */
 .close-btn {
     position: absolute;
     top: 15px;
@@ -572,31 +874,53 @@ canvas {
     background-color: rgba(255, 0, 0, 0.1);
 }
 
-/* 스플래시 스타일 */
-.splash-icon {
-    font-size: 50px;
-    margin-bottom: 20px;
-    animation: spin 2s linear infinite;
+.location-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: 1px solid #4a90e2;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 10px;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+.location-btn:hover {
+    background: linear-gradient(135deg, #5b6bcb 0%, #65438a 100%);
 }
 
-.splash-text {
-    color: #000000;
-    font-size: 24px;
-    text-align: center;
+#locationPopupContent {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    color: black;
+    position: relative;
+    width: 300px;
 }
 
-/* 기타 유틸리티 스타일 */
-.na-message {
-    color: #888;
-    font-style: italic;
+.select-group {
+    margin-bottom: 10px;
 }
 
-/* 반응형 디자인 */
+.select-group select {
+    width: 100%;
+    padding: 5px;
+    margin-top: 5px;
+}
+
+#confirmBtn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+}
+
+#confirmBtn:hover {
+    background: linear-gradient(135deg, #5b6bcb 0%, #65438a 100%);
+}
+
 @media (max-width: 1024px) {
     .weather-container {
         width: 95%;
@@ -611,23 +935,11 @@ canvas {
         font-size: 1.8em;
     }
 
-    .forecast-images img {
-        max-width: 15%;
-    }
-
-    .forecast-table th,
-    .forecast-table td {
-        padding: 4px;
-        min-width: 50px;
-    }
-
-    .grade-table th,
-    .grade-table td {
-        max-width: 120px;
-    }
-
-    .chart-container {
-        height: 400px;
+    /* 태블릿 크기에서 2개씩 배치 */
+    .temp-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
     }
 }
 
@@ -651,80 +963,14 @@ canvas {
         gap: 10px;
     }
 
-    .weather-details {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 20px;
-    }
-
     .air-quality-container {
         flex-direction: column;
         width: 100%;
     }
 
-    .air-quality,
-    .uv-index {
-        margin-bottom: 10px;
-        margin: 10px 0;
-    }
-
-    .forecast-row {
-        flex-direction: column;
-    }
-
-    .forecast-item {
-        margin: 5px 0;
-    }
-
-    .forecast-table {
-        font-size: 0.9em;
-    }
-
-    .forecast-table th,
-    .forecast-table td {
-        padding: 3px;
-        min-width: 40px;
-    }
-
-    .grade-table th,
-    .grade-table td {
-        padding: 5px;
-        font-size: 0.9em;
-        max-width: 100px;
-    }
-
-    .grade-table th {
-        font-size: 1.1em;
-    }
-
-    .real-time-dust-table th,
-    .real-time-dust-table td {
-        padding: 5px;
-        font-size: 0.9em;
-    }
-
-    .real-time-dust-table th {
-        font-size: 1em;
-    }
-
-    .forecast-images img {
-        max-width: 25%;
-    }
-
-    .dust-forecast-btn,
-    .real-time-dust-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
     .dust-buttons-container {
         flex-direction: column;
         width: 100%;
-    }
-
-    .chart-container {
-        height: 350px;
     }
 }
 
@@ -741,582 +987,12 @@ canvas {
     .weather-header h1 {
         font-size: 1.5em;
     }
-
-    .weather-info {
-        gap: 8px;
-    }
-
-    .forecast-table {
-        font-size: 0.8em;
-    }
-
-    .forecast-table th,
-    .forecast-table td {
-        padding: 2px;
-        min-width: 30px;
-    }
-
-    .grade-table th,
-    .grade-table td {
-        padding: 3px;
-        font-size: 0.8em;
-        max-width: 80px;
-    }
-
-    .grade-table th {
-        font-size: 1em;
-    }
-
-    .real-time-dust-table th,
-    .real-time-dust-table td {
-        padding: 3px;
-        font-size: 0.8em;
-    }
-
-    .real-time-dust-table th {
-        font-size: 0.9em;
-    }
-
-    .slider-btn {
-        padding: 5px;
-        font-size: 1.2em;
-    }
-
-    .forecast-images img {
-        max-width: 30%;
-    }
-
-    .dust-forecast-btn,
-    .real-time-dust-btn {
-        font-size: 0.9em;
-        padding: 8px 15px;
-    }
-
-    .air-quality-container {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .air-quality {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-
-    .chart-container {
-        height: 300px;
-    }
-}
-
-/* 위치 관련 스타일 */
-.location-btn {
-    background: none;
-    border: 1px solid #4a90e2;
-    color: #4a90e2;
-    padding: 5px 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-left: 10px;
-}
-
-.location-btn:hover {
-    background: #4a90e2;
-    color: white;
-}
-
-#locationPopup {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-#locationPopupContent {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 10px;
-    color: black;
-    position: relative;
-    width: 300px;
-}
-
-.select-group {
-    margin-bottom: 10px;
-}
-
-.select-group select {
-    width: 100%;
-    padding: 5px;
-    margin-top: 5px;
-}
-
-#confirmBtn {
-    background: #4a90e2;
-    color: white;
-    border: none;
-    padding: 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    width: 100%;
-}
-
-#confirmBtn:hover {
-    background: #357abd;
-}
-
-.weather-header .location-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.precipitation-forecast-section table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 2px;
-    margin-top: 10px;
-}
-
-.precipitation-forecast-section th,
-.precipitation-forecast-section td {
-    border: 1px solid #ddd;
-    padding: 12px;
-    text-align: center;
-}
-
-.precipitation-forecast-section th {
-    background-color: #f2f2f2;
-}
-
-.chart-btn {
-    background: #4a90e2;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1em;
-    margin-top: 10px;
-    transition: background-color 0.3s;
-}
-
-.chart-btn.clicked {
-    background-color: #ff0000;
-}
-
-.chart-btn:hover {
-    background: #357abd;
-}
-
-/* 기존 style.css에 추가 */
-.precipitation-forecast-section {
-    text-align: center;
-    padding: 20px;
-    background: white;
-    border-radius: 20px;
-    color: black;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-}
-
-.chart-btn {
-    background: #4a90e2;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1em;
-    margin-top: 10px;
-    transition: background-color 0.3s;
-}
-
-.chart-btn:hover {
-    background: #357abd;
-}
-
-.popup {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.popup-content {
-    position: relative;
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 10px;
-    max-width: 95%;
-    max-height: 95vh;
-    overflow: auto;
-    color: black;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.chart-container {
-    width: 100%;
-    max-width: 1200px;
-    padding: 20px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    margin: 20px auto;
-    height: 500px;
-}
-
-canvas {
-    width: 100% !important;
-    height: 100% !important;
-    max-height: 450px;
-}
-
-.close-btn {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    font-size: 2.5em;
-    cursor: pointer;
-    color: #000;
-    background: none;
-    border: none;
-    padding: 15px 20px;
-    border-radius: 5px;
-    transition: background-color 0.3s;
-    z-index: 1001;
-}
-
-.close-btn:hover {
-    color: #ff0000;
-    background-color: rgba(255, 0, 0, 0.1);
-}
-
-/* 강수량 데이터가 없을 때 표시할 스타일 */
-.no-precipitation-message {
-    font-size: 1.2em;
-    color: #888;
-    margin-top: 10px;
-    font-style: italic;
-    text-align: center;
-}
-
-/* 시간대별 날씨 섹션 스타일 */
-.forecast-section {
-    text-align: center;
-    padding: 20px;
-    background: #003087; /* 파란 배경 */
-    border-radius: 20px;
-    color: white;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    position: relative;
-    overflow: hidden;
-}
-
-.forecast-section h3 {
-    font-size: 1.5em;
-    margin-bottom: 15px;
-    color: white;
-}
-
-.forecast-controls {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.forecast-btn {
-    background: #4a90e2; /* 버튼 배경색 */
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 1em;
-    transition: background-color 0.3s;
-}
-
-.forecast-btn:hover {
-    background: #357abd; /* 호버 시 색상 변화 */
-}
-
-.forecast-row {
-    display: flex;
-    justify-content: space-around;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.forecast-item {
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.2); /* 반투명 흰색 배경 */
-    border-radius: 10px;
-    flex: 1;
-    min-width: 100px;
-    text-align: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.time {
-    font-size: 1.1em;
-    margin-bottom: 5px;
-    color: #e6f0fa;
-}
-
-.temp {
-    font-size: 1.3em;
-    font-weight: bold;
-    color: #fff;
-}
-
-.humid {
-    font-size: 1em;
-    color: #ffcc00;
-}
-
-.icon.sun::before {
-    content: "\f185";
-    font-family: "Font Awesome 5 Free";
-    font-weight: 900;
-    color: #4a90e2;
-}
-
-/* 반응형 디자인 */
-@media (max-width: 768px) {
-    .forecast-controls {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .forecast-btn {
-        width: 100%;
-    }
-
-    .forecast-row {
-        flex-direction: column;
-    }
-
-    .forecast-item {
-        margin: 5px 0;
-    }
-}
-
-@media (max-width: 480px) {
-    .forecast-item {
-        min-width: 80px;
-    }
-
-    .forecast-btn {
-        font-size: 0.9em;
-        padding: 8px 15px;
-    }
-}
-
-/* 시간별 온도 팝업 스타일 */
-#hourlyTemperaturePopup {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-#hourlyTemperaturePopup .popup-content {
-    position: relative;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 20px;
-    border-radius: 15px;
-    max-width: 95%;
-    max-height: 95vh;
-    overflow: auto;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-#hourlyTemperaturePopup h2 {
-    font-size: 2rem;
-    margin-bottom: 10px;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-}
-
-#hourlyTemperaturePopup h2::before {
-    content: "🌡️";
-    margin-right: 10px;
-}
-
-#hourlyTemperaturePopup p {
-    font-size: 1.1rem;
-    opacity: 0.9;
-    margin-bottom: 20px;
-}
-
-.chart-section {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 1200px;
-}
-
-.chart-container {
-    position: relative;
-    height: 400px;
-    width: 100%;
-    margin-top: 20px;
-}
-
-.section-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-}
-
-.section-title::before {
-    content: "📈";
-    margin-right: 10px;
-    font-size: 1.2rem;
-}
-
-.day-section {
-    margin-bottom: 30px;
-    width: 100%;
-}
-
-.day-header {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    padding: 15px 20px;
-    border-radius: 10px 10px 0 0;
-    font-weight: 600;
-    font-size: 1.1rem;
-    text-align: left;
-}
-
-.day-content {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 0 0 10px 10px;
-    padding: 20px;
 }
 
 .hourly-grid {
-    display: flex;
-    overflow-x: auto;
-    gap: 10px;
-    padding: 10px 0;
-}
-
-.hour-card {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 10px;
-    padding: 15px;
-    text-align: center;
-    border: 2px solid transparent;
-    transition: all 0.3s ease;
-    min-width: 100px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.hour-card:hover {
-    border-color: #667eea;
-    transform: scale(1.05);
-}
-
-.hour-card.current {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
-
-.hour-time {
-    font-size: 0.9rem;
-    color: #666;
-    margin-bottom: 8px;
-}
-
-.hour-card.current .hour-time {
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.hour-temp {
-    font-size: 1.4rem;
-    font-weight: bold;
-    color: #2c3e50;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-}
-
-.hour-card.current .hour-temp {
-    color: white;
-}
-
-@media (max-width: 768px) {
-    .chart-container {
-        height: 300px;
-    }
-
-    .hourly-grid {
-        gap: 8px;
-    }
-
-    .hour-card {
-        min-width: 90px;
-        padding: 10px;
-    }
-
-    .hour-temp {
-        font-size: 1.2rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .chart-container {
-        height: 250px;
-    }
-
-    .hour-card {
-        min-width: 80px;
-        padding: 8px;
-    }
-
-    .hour-temp {
-        font-size: 1rem;
-    }
-
-    #hourlyTemperaturePopup h2 {
-        font-size: 1.5rem;
-    }
-
-    #hourlyTemperaturePopup p {
-        font-size: 0.9rem;
-    }
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 15px;
+    max-width: 100%;
+    margin: 0 auto;
 }
