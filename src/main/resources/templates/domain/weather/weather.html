@@ -29,9 +29,9 @@
             </div>
             <div class="weather-info">
                 <div class="weather-condition" th:text="${weather?.weatherCondition ?: '상태 없음'}"></div>
-                <div class="humidity" th:text="${weather?.hourlyForecast != null and not #lists.isEmpty(weather.hourlyForecast) ? '습도 ' + weather.hourlyForecast[0].humidity : '습도 없음'}"></div>
-                <div class="pm-value" th:text="${weather?.airQuality != null ? '미세먼지 ' + weather.airQuality.value + ' ' + weather.airQuality.measurement : '미세먼지 없음'}"></div>
-                <div class="pm25-value" th:text="'날씨정보상세보기'"></div>
+                <div class="humidity" th:text="${weather?.hourlyForecast != null and not #lists.isEmpty(weather.hourlyForecast) ? '습도 ' + weather.hourlyForecast[0].humidity + '%' : '습도 없음'}"></div>
+                <div class="pm-value" th:text="${weather?.airQuality != null ? '미세먼지 ' + weather.airQuality.value + ' μg/m³' : '미세먼지 없음'}"></div>
+                <div class="pm25-value"><button onclick="openWeatherDetailPopup()">날씨정보상세보기</button></div>
             </div>
         </div>
     </section>
@@ -220,6 +220,40 @@
     </div>
 </div>
 
+<!-- 날씨 상세 정보 팝업 -->
+<div id="weatherDetailPopup" class="popup" role="dialog" aria-label="날씨 상세 정보 팝업">
+    <div class="popup-content">
+        <button class="close-btn" onclick="closeWeatherDetailPopup()" aria-label="팝업 닫기">X</button>
+        <div class="weather-detail-container">
+            <h2>상세 데이터</h2>
+            <div class="weather-main">
+                <div class="current-temp">
+                    <span class="temp-value" th:text="${weather?.currentTemperature ?: '온도 없음'}"></span>
+                </div>
+                <div class="weather-info">
+                    <div class="weather-condition" th:text="${weather?.weatherCondition ?: '상태 없음'}"></div>
+                    <div class="humidity" th:text="${weather?.hourlyForecast != null and not #lists.isEmpty(weather.hourlyForecast) ? '습도 ' + weather.hourlyForecast[0].humidity + '%' : '습도 없음'}"></div>
+                    <div class="pm-value" th:text="${weather?.airQuality != null ? '미세먼지 ' + weather.airQuality.value + ' μg/m³' : '미세먼지 없음'}"></div>
+                </div>
+            </div>
+            <table class="weather-data-table">
+                <thead>
+                <tr>
+                    <th>예보날짜</th>
+                    <th>항목</th>
+                    <th>값</th>
+                    <th>위치 (x,y)</th>
+                    <th>기준시간</th>
+                </tr>
+                </thead>
+                <tbody id="weatherDataBody">
+                <!-- 데이터는 JavaScript에서 동적으로 삽입 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <!-- 미세먼지 예보 팝업 -->
 <div id="dustForecastPopup" class="popup" role="dialog" aria-label="미세먼지 예보 팝업">
     <div class="popup-content">
@@ -361,6 +395,7 @@
     </div>
 </div>
 
+<!-- 시간별 온도 예보 팝업 -->
 <div id="hourlyTemperaturePopup" class="popup">
     <div class="popup-content">
         <button class="close-btn" onclick="closeHourlyTemperaturePopup()">×</button>

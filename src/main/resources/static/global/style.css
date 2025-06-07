@@ -77,6 +77,10 @@ body {
 .humidity,
 .pm-value {
     font-size: 1.2em;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 5px 10px;
+    border-radius: 5px;
 }
 
 .weather-details {
@@ -799,7 +803,7 @@ body {
     border-radius: 10px;
     max-width: 95%;
     max-height: 95vh;
-    overflow: auto;
+    overflow-y: auto;
     color: black;
     display: flex;
     flex-direction: column;
@@ -871,7 +875,6 @@ canvas {
 
 .close-btn:hover {
     color: #ff0000;
-    background-color: rgba(255, 0, 0, 0.1);
 }
 
 .location-btn {
@@ -996,18 +999,24 @@ canvas {
     max-width: 100%;
     margin: 0 auto;
 }
-/* 기존 CSS 유지... */
 
+/* 날씨 상세 정보 팝업 스타일 */
 .weather-detail-container {
-    width: 90%;
-    max-width: 1400px;
+    width: 100%;
+    max-width: 800px;
     background: #fff;
-    border-radius: 20px;
-    padding: 30px;
+    border-radius: 10px;
+    padding: 20px;
     color: #000;
     display: flex;
     flex-direction: column;
-    gap: 30px;
+    gap: 20px;
+}
+
+.weather-detail-container h2 {
+    font-size: 1.5em;
+    text-align: center;
+    margin-bottom: 15px;
 }
 
 .weather-detail-container .weather-main {
@@ -1045,4 +1054,60 @@ canvas {
 .weather-detail-container table th {
     background-color: #f0f0f0;
     font-weight: bold;
+}
+
+.weather-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.weather-data-table th,
+.weather-data-table td {
+    padding: 10px;
+    text-align: center;
+    border: 1px solid #ddd;
+}
+
+.weather-data-table th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+    color: #333;
+}
+
+.weather-data-table td {
+    color: #000;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .weather-data-table {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .weather-data-table {
+        font-size: 10px;
+    }
+}
+
+/* 이미지 스타일 반영 */
+.pm25-value button {
+    background: #fff;
+    color: #003087;
+    border: 1px solid #fff;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.pm25-value button:hover {
+    background: #e0e0e0;
+    color: #000;
 }
