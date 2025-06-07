@@ -996,3 +996,53 @@ canvas {
     max-width: 100%;
     margin: 0 auto;
 }
+/* 기존 CSS 유지... */
+
+.weather-detail-container {
+    width: 90%;
+    max-width: 1400px;
+    background: #fff;
+    border-radius: 20px;
+    padding: 30px;
+    color: #000;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.weather-detail-container .weather-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    gap: 20px;
+}
+
+.weather-detail-container .current-temp .temp-value {
+    font-size: 4em;
+    font-weight: bold;
+}
+
+.weather-detail-container .weather-info {
+    text-align: right;
+}
+
+.weather-detail-container table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.weather-detail-container table th,
+.weather-detail-container table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+}
+
+.weather-detail-container table th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+}
