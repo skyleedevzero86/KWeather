@@ -29,9 +29,9 @@
             </div>
             <div class="weather-info">
                 <div class="weather-condition" th:text="${weather?.weatherCondition ?: '상태 없음'}"></div>
-                <div class="humidity" th:text="${weather?.hourlyForecast != null and not #lists.isEmpty(weather.hourlyForecast) ? '습도 ' + weather.hourlyForecast[0].humidity : '습도 없음'}"></div>
-                <div class="pm-value" th:text="${weather?.airQuality != null ? '미세먼지 ' + weather.airQuality.value + ' ' + weather.airQuality.measurement : '미세먼지 없음'}"></div>
-                <div class="pm25-value" th:text="'날씨정보상세보기'"></div>
+                <div class="humidity" th:text="${weather?.hourlyForecast != null and not #lists.isEmpty(weather.hourlyForecast) ? '습도 ' + weather.hourlyForecast[0].humidity + '%' : '습도 없음'}"></div>
+                <div class="pm-value" th:text="${weather?.airQuality != null ? '미세먼지 ' + weather.airQuality.value + ' μg/m³' : '미세먼지 없음'}"></div>
+                <div class="pm25-value"><button onclick="openWeatherDetailPopup()">날씨정보상세보기</button></div>
             </div>
         </div>
     </section>
@@ -63,36 +63,22 @@
     <!-- 시간대별 날씨 예보 -->
     <section class="forecast-section" aria-label="시간대별 날씨 예보">
         <h3>시간대별 날씨</h3>
-        <div class="forecast-row">
-            <!-- 수정: 데이터가 없을 경우 메시지 표시 -->
-            <div th:if="${#lists.isEmpty(weather?.hourlyForecast)}">
-                <p>시간대별 날씨 데이터가 없습니다.</p>
-            </div>
-            <div th:each="forecast : ${weather?.hourlyForecast ?: {}}" class="forecast-item">
-                <span class="time" th:text="${forecast?.time ?: '시간 없음'}"></span><br/><br/>
-                <span class="temp" th:text="${forecast?.temperature ?: '온도 없음'}"></span><br/><br/>
-                <span class="icon" th:classappend="${forecast?.icon ?: ''}" aria-hidden="true"></span><br/><br/>
-                <span class="humid" th:text="${forecast?.humidity ?: '습도 없음'}"></span>
-            </div>
-        </div>
-    </section>
-
-    <div id="hourlyTemperaturePopup" class="popup">
-        <div class="popup-content">
-            <button class="close-btn" onclick="closeHourlyTemperaturePopup()">×</button>
-            <h2>🌡️ 시간별 온도 예보</h2>
-            <p>72시간 상세 온도 변화 분석</p>
-            <div class="chart-section">
-                <h3 class="section-title">온도 변화 차트</h3>
-                <div class="chart-container">
-                    <canvas id="temperatureChart"></canvas>
+        <div class="forecast-row-container">
+            <button class="slider-btn prev" onclick="moveForecastSlide(-1)" aria-label="이전 시간대">❮</button>
+            <div class="forecast-row" id="forecastSlider">
+                <div th:if="${#lists.isEmpty(weather?.hourlyForecast)}">
+                    <p>시간대별 날씨 데이터가 없습니다.</p>
+                </div>
+                <div th:each="forecast : ${weather?.hourlyForecast ?: {}}" class="forecast-item">
+                    <span class="time" th:text="${forecast?.time ?: '시간 없음'}"></span><br/><br/>
+                    <span class="temp" th:text="${forecast?.temperature ?: '온도 없음'}"></span><br/><br/>
+                    <span class="icon" th:classappend="${forecast?.icon ?: ''}" aria-hidden="true"></span><br/><br/>
+                    <span class="humid" th:text="${forecast?.humidity ?: '습도 없음'}"></span>
                 </div>
             </div>
-            <div id="hourlyData">
-                <!-- 시간별 상세 데이터가 동적으로 생성됩니다 -->
-            </div>
+            <button class="slider-btn next" onclick="moveForecastSlide(1)" aria-label="다음 시간대">❯</button>
         </div>
-    </div>
+    </section>
 
     <!-- 여름철 체감온도 예보 -->
     <section class="senta-index-forecast-section" aria-label="여름철 체감온도 예보">
@@ -119,7 +105,7 @@
                 </tbody>
             </table>
             <div class="chart-container" style="display: none;">
-                <canvas id="sentaTemperatureChart"></canvas> <!-- ID 변경 -->
+                <canvas id="sentaTemperatureChart"></canvas>
             </div>
             <button class="chart-btn" onclick="toggleChart(this)" aria-label="차트 보기"><span>대시보드</span></button>
         </div>
@@ -231,6 +217,40 @@
             </select>
         </div>
         <button id="confirmBtn" onclick="confirmSelection()" aria-label="위치 확인">확인</button>
+    </div>
+</div>
+
+<!-- 날씨 상세 정보 팝업 -->
+<div id="weatherDetailPopup" class="popup" role="dialog" aria-label="날씨 상세 정보 팝업">
+    <div class="popup-content">
+        <button class="close-btn" onclick="closeWeatherDetailPopup()" aria-label="팝업 닫기">X</button>
+        <div class="weather-detail-container">
+            <h2>상세 데이터</h2>
+            <div class="weather-main">
+                <div class="current-temp">
+                    <span class="temp-value" th:text="${weather?.currentTemperature ?: '온도 없음'}"></span>
+                </div>
+                <div class="weather-info">
+                    <div class="weather-condition" th:text="${weather?.weatherCondition ?: '상태 없음'}"></div>
+                    <div class="humidity" th:text="${weather?.hourlyForecast != null and not #lists.isEmpty(weather.hourlyForecast) ? '습도 ' + weather.hourlyForecast[0].humidity + '%' : '습도 없음'}"></div>
+                    <div class="pm-value" th:text="${weather?.airQuality != null ? '미세먼지 ' + weather.airQuality.value + ' μg/m³' : '미세먼지 없음'}"></div>
+                </div>
+            </div>
+            <table class="weather-data-table">
+                <thead>
+                <tr>
+                    <th>예보날짜</th>
+                    <th>항목</th>
+                    <th>값</th>
+                    <th>위치 (x,y)</th>
+                    <th>기준시간</th>
+                </tr>
+                </thead>
+                <tbody id="weatherDataBody">
+                <!-- 데이터는 JavaScript에서 동적으로 삽입 -->
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -371,6 +391,49 @@
         <button class="close-btn" onclick="closePrecipitationChartPopup()" aria-label="팝업 닫기">×</button>
         <div class="chart-container">
             <canvas id="precipitationChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- 시간별 온도 예보 팝업 -->
+<div id="hourlyTemperaturePopup" class="popup">
+    <div class="popup-content">
+        <button class="close-btn" onclick="closeHourlyTemperaturePopup()">×</button>
+        <h2>🌡️ 시간별 온도 예보</h2>
+        <p>72시간 상세 온도 변화 분석</p>
+        <section class="temperature-stats-section">
+            <h3>온도 통계</h3>
+            <div class="temp-stats-grid">
+                <div class="temp-stat-card">
+                    <span class="temp-stat-icon thermometer"></span>
+                    <div class="temp-stat-label">현재 온도</div>
+                    <div class="temp-stat-value current" id="currentTemp">21°C</div>
+                </div>
+                <div class="temp-stat-card">
+                    <span class="temp-stat-icon arrow-up"></span>
+                    <div class="temp-stat-label">최고 온도</div>
+                    <div class="temp-stat-value high" id="maxTemp">29°C</div>
+                </div>
+                <div class="temp-stat-card">
+                    <span class="temp-stat-icon arrow-down"></span>
+                    <div class="temp-stat-label">최저 온도</div>
+                    <div class="temp-stat-value low" id="minTemp">19°C</div>
+                </div>
+                <div class="temp-stat-card">
+                    <span class="temp-stat-icon chart"></span>
+                    <div class="temp-stat-label">평균 온도</div>
+                    <div class="temp-stat-value average" id="avgTemp">24.2°C</div>
+                </div>
+            </div>
+        </section>
+        <div class="chart-section">
+            <h3 class="section-title">온도 변화 차트</h3>
+            <div class="chart-container">
+                <canvas id="temperatureChart"></canvas>
+            </div>
+        </div>
+        <div id="hourlyData">
+            <!-- 시간별 상세 데이터가 동적으로 생성됩니다 -->
         </div>
     </div>
 </div>

@@ -784,3 +784,103 @@ function displayHourlyData(data) {
 
     hourlyContainer.innerHTML = daysHTML;
 }
+
+async function fetchWeatherData(nx, ny) {
+    try {
+        const response = await fetch(`/api/weather?nx=${nx}&ny=${ny}`);
+        if (!response.ok) throw new Error('날씨 데이터 가져오기 실패');
+        return await response.json();
+    } catch (error) {
+        console.error('날씨 데이터 요청 오류:', error);
+        return null;
+    }
+}
+
+async function fetchHourlyTemperature(areaNo, time) {
+    try {
+        const response = await fetch(`/api/hourly-temperature?areaNo=${areaNo}&time=${time}`);
+        if (!response.ok) throw new Error('시간별 온도 데이터 가져오기 실패');
+        return await response.json();
+    } catch (error) {
+        console.error('시간별 온도 데이터 요청 오류:', error);
+        return { date: '', temperatures: {} };
+    }
+}
+
+async function openWeatherDetailPopup() {
+    // weatherDetailPopup 요소를 가져오거나 생성
+    let popup = document.getElementById('weatherDetailPopup');
+    if (!popup) {
+        const popupHtml = `
+            <div id="weatherDetailPopup" class="popup" role="dialog" aria-label="날씨 상세 정보 팝업">
+                <div class="popup-content">
+                    <button class="close-btn" onclick="closeWeatherDetailPopup()" aria-label="팝업 닫기">X</button>
+                    <div class="weather-detail-container"></div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', popupHtml);
+        popup = document.getElementById('weatherDetailPopup'); // 새로 생성된 요소를 다시 가져옴
+    }
+
+    // 팝업 표시
+    popup.style.display = 'flex';
+
+    // 좌표 설정 (예시 값)
+    const nx = 60; // 예시 좌표
+    const ny = 127; // 예시 좌표
+
+    // 날씨 데이터와 시간별 데이터를 비동기적으로 가져옴
+    const weatherData = await fetchWeatherData(nx, ny);
+    const hourlyData = await fetchHourlyTemperature('A41', 'now');
+
+    // 데이터가 유효한지 확인 후 UI 업데이트
+    const container = document.querySelector('#weatherDetailPopup .weather-detail-container');
+    if (weatherData?.response?.body?.items && hourlyData?.temperatures) {
+        const items = weatherData.response.body.items;
+        const hourlyItems = hourlyData.temperatures;
+
+        container.innerHTML = `
+            <div class="weather-main">
+                <div class="current-temp">
+                    <span class="temp-value">${items.find(i => i.category === 'TMP')?.value || 14}°C</span>
+                    <div class="temp-range">최저 ${items.find(i => i.category === 'TMN')?.value || -2}°C / 최고 ${items.find(i => i.category === 'TMX')?.value || 2}°C</div>
+                </div>
+                <div class="weather-info">
+                    <div class="weather-condition">${items.find(i => i.category === 'SKY')?.value || '맑음'}</div>
+                    <div class="humidity">${items.find(i => i.category === 'REH')?.value || 50}%</div>
+                    <div class="pm-value">풍속 ${items.find(i => i.category === 'WSD')?.value || 3.1}m/s</div>
+                </div>
+            </div>
+            <div class="weather-details">
+                <table>
+                    <tr><th>예보시간</th><th>항목</th><th>값</th><th>단위</th></tr>
+                    ${Object.entries(hourlyItems).map(([key, value]) => `
+                        <tr>
+                            <td>${key.replace('h', '')}:00</td>
+                            <td>TMP</td>
+                            <td>${value}</td>
+                            <td>°C</td>
+                        </tr>
+                    `).join('')}
+                </table>
+            </div>
+        `;
+    } else {
+        container.innerHTML = '<p>데이터를 불러올 수 없습니다.</p>';
+    }
+}
+
+function closeWeatherDetailPopup() {
+    const popup = document.getElementById('weatherDetailPopup');
+    if (popup) popup.style.display = 'none';
+}
+
+// 페이지 로드 시 초기화에 "날씨정보상세보기" 버튼 이벤트 추가
+document.addEventListener('DOMContentLoaded', () => {
+    // 기존 초기화 코드 유지...
+    const pm25Value = document.querySelector('.pm25-value');
+    if (pm25Value) {
+        pm25Value.innerHTML = '<button onclick="openWeatherDetailPopup()">날씨정보상세보기</button>';
+    }
+});
