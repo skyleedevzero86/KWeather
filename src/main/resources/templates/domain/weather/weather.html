@@ -438,6 +438,62 @@
     </div>
 </div>
 
+<!-- 날씨 통계 팝업 -->
+<div id="weatherStatsPopup" class="popup" role="dialog" aria-label="날씨 통계 팝업">
+    <div class="popup-content weather-dashboard">
+        <button class="close-btn" onclick="closeWeatherStatsPopup()" aria-label="팝업 닫기">×</button>
+        <div class="header">
+            <h2><span class="icon">🌡️</span> 날씨 기상 대시보드</h2>
+            <p>3일간 시간별 체감온도 예보</p>
+            <div class="current-time" id="currentTime"></div>
+        </div>
+        <div class="day-tabs" id="dayTabs">
+            <button class="day-tab active" data-day="0">오늘</button>
+            <button class="day-tab" data-day="1">내일</button>
+            <button class="day-tab" data-day="2">모레</button>
+        </div>
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <span class="stat-icon">🌡️</span>
+                <p class="stat-label">최저 온도</p>
+                <p class="stat-value" id="minTemp">--°C</p>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">🔥</span>
+                <p class="stat-label">최고 온도</p>
+                <p class="stat-value" id="maxTemp">--°C</p>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">📊</span>
+                <p class="stat-label">평균 온도</p>
+                <p class="stat-value" id="avgTemp">--°C</p>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon" id="trendIcon">➖</span>
+                <p class="stat-label">온도 추세</p>
+                <p class="stat-value" id="trendValue">안정</p>
+            </div>
+        </div>
+        <div class="charts">
+            <div class="chart-section">
+                <h3 class="section-title">시간별 온도 변화</h3>
+                <div class="chart-container">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-section">
+                <h3 class="section-title">3일간 온도 트렌드</h3>
+                <div class="chart-container">
+                    <canvas id="threeDayChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="hourly-details" id="hourlyDetails">
+            <!-- 시간별 상세 정보가 동적으로 생성됩니다 -->
+        </div>
+    </div>
+</div>
+
 <script type="text/javascript" th:src="@{/static/global/global.js}"></script>
 </body>
 </html>

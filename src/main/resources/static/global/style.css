@@ -1111,3 +1111,150 @@ canvas {
     background: #e0e0e0;
     color: #000;
 }
+
+.weather-dashboard {
+    background: linear-gradient(to bottom right, #eff6ff, #e0e7ff);
+    padding: 20px;
+    border-radius: 15px;
+    max-width: 1200px;
+    width: 100%;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.header h2 {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #1f2937;
+}
+
+.header p {
+    color: #6b7280;
+}
+
+.current-time {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-top: 10px;
+}
+
+.day-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.day-tab {
+    background: #fff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.day-tab.active {
+    background: #3b82f6;
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: #fff;
+    padding: 15px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border: 1px solid #e5e7eb;
+}
+
+.stat-icon {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #1f2937;
+}
+
+.charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.chart-section {
+    background: #fff;
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.chart-container {
+    height: 300px;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 10px;
+}
+
+.hourly-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 15px;
+}
+
+.hour-card {
+    background: linear-gradient(to bottom right, #eff6ff, #dbeafe);
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid #dbeafe;
+    transition: all 0.3s;
+}
+
+.hour-card:hover {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.hour-icon {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+
+.hour-time {
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.hour-temp {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #1f2937;
+}
+
+.hour-desc {
+    font-size: 0.8rem;
+    color: #6b7280;
+}
