@@ -3,6 +3,7 @@ let chart = null; // 여름철 체감온도 차트용 변수
 let airStagnationChart = null;
 let precipitationChart = null;
 let temperatureChart = null; // 시간별 온도 예보 차트용 변수
+let weatherStatsChart = null; // 날씨 통계 차트용 변수
 
 // 슬라이더 관련 함수
 function updateSlidePosition() {
@@ -300,7 +301,7 @@ async function toggleChart(button) {
         chartContainer.style.display = 'none';
         if (chart) {
             chart.destroy();
-            chart = null;
+            chart电站 = null;
             console.log('체감온도 차트 제거됨'); // 디버깅 로그 추가
         }
     }
@@ -529,40 +530,6 @@ function closePrecipitationChartPopup() {
         precipitationChart = null;
     }
 }
-
-// 페이지 로드 시 초기화
-document.addEventListener('DOMContentLoaded', () => {
-    const overallTexts = document.querySelectorAll('.overall-text');
-    overallTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
-    const causeTexts = document.querySelectorAll('.cause-text');
-    causeTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
-
-    const locationTitle = document.getElementById('locationTitle');
-    if (!locationTitle.textContent.trim()) locationTitle.textContent = '청진동 (종로구)';
-
-    const sidoSelect = document.getElementById('sido');
-    const selectedSido = /*[[${selectedSido}]]*/ '';
-    if (selectedSido && selectedSido !== '') {
-        sidoSelect.value = selectedSido;
-        updateSggs().then(() => {
-            const sggSelect = document.getElementById('sgg');
-            const selectedSgg = /*[[${selectedSgg}]]*/ '';
-            if (selectedSgg && selectedSgg !== '') {
-                sggSelect.value = selectedSgg;
-                updateUmds().then(() => {
-                    const umdSelect = document.getElementById('umd');
-                    const selectedUmd = /*[[${selectedUmd}]]*/ '';
-                    if (selectedUmd && selectedUmd !== '') umdSelect.value = selectedUmd;
-                });
-            }
-        });
-    }
-
-    const extraButton = document.querySelector('.dust-buttons-container .dust-forecast-btn:first-child');
-    if (extraButton) {
-        extraButton.addEventListener('click', () => alert('안녕 디지몬'));
-    }
-});
 
 // 온도에 따른 색상 결정
 function getTempColor(temp) {
@@ -808,7 +775,6 @@ async function fetchHourlyTemperature(areaNo, time) {
 }
 
 async function openWeatherDetailPopup() {
-    // weatherDetailPopup 요소를 가져오거나 생성
     let popup = document.getElementById('weatherDetailPopup');
     if (!popup) {
         const popupHtml = `
@@ -820,21 +786,17 @@ async function openWeatherDetailPopup() {
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', popupHtml);
-        popup = document.getElementById('weatherDetailPopup'); // 새로 생성된 요소를 다시 가져옴
+        popup = document.getElementById('weatherDetailPopup');
     }
 
-    // 팝업 표시
     popup.style.display = 'flex';
 
-    // 좌표 설정 (예시 값)
-    const nx = 60; // 예시 좌표
-    const ny = 127; // 예시 좌표
+    const nx = 60;
+    const ny = 127;
 
-    // 날씨 데이터와 시간별 데이터를 비동기적으로 가져옴
     const weatherData = await fetchWeatherData(nx, ny);
     const hourlyData = await fetchHourlyTemperature('A41', 'now');
 
-    // 데이터가 유효한지 확인 후 UI 업데이트
     const container = document.querySelector('#weatherDetailPopup .weather-detail-container');
     if (weatherData?.response?.body?.items && hourlyData?.temperatures) {
         const items = weatherData.response.body.items;
@@ -876,11 +838,388 @@ function closeWeatherDetailPopup() {
     if (popup) popup.style.display = 'none';
 }
 
-// 페이지 로드 시 초기화에 "날씨정보상세보기" 버튼 이벤트 추가
+// 날씨 통계 팝업 관련 함수
+async function showWeatherStats() {
+    const popup = document.getElementById('weatherStatsPopup');
+    popup.style.display = 'flex';
+
+    try {
+        const response = await fetch('/api/hourly-temperature');
+        if (!response.ok) throw new Error('시간별 온도 데이터를 가져오지 못했습니다.');
+        const data = await response.json();
+
+        // 온도 통계 계산 및 표시
+        const temperatures = Object.values(data.temperatures)
+            .filter(temp => temp && temp !== '')
+            .map(parseFloat);
+        const currentTemp = temperatures[0] || 0;
+        const maxTemp = Math.max(...temperatures);
+        const minTemp = Math.min(...temperatures);
+        const avgTemp = (temperatures.reduce((sum, temp) => sum + temp, 0) / temperatures.length).toFixed(1);
+
+        document.getElementById('statsCurrentTemp').textContent = `${currentTemp}°C`;
+        document.getElementById('statsMaxTemp').textContent = `${maxTemp}°C`;
+        document.getElementById('statsMinTemp').textContent = `${minTemp}°C`;
+        document.getElementById('statsAvgTemp').textContent = `${avgTemp}°C`;
+
+        // 차트 생성
+        if (weatherStatsChart) weatherStatsChart.destroy();
+        weatherStatsChart = createWeatherStatsChart(data);
+    } catch (error) {
+        console.error('날씨 통계 데이터 로드 실패:', error);
+        alert('날씨 통계 데이터를 로드하는 데 실패했습니다.');
+        closeWeatherStatsPopup();
+    }
+}
+
+function closeWeatherStatsPopup() {
+    document.getElementById('weatherStatsPopup').style.display = 'none';
+    if (weatherStatsChart) {
+        weatherStatsChart.destroy();
+        weatherStatsChart = null;
+    }
+}
+
+function createWeatherStatsChart(data) {
+    const ctx = document.getElementById('weatherStatsChart').getContext('2d');
+    const baseDate = new Date(
+        data.date.substr(0, 4),
+        data.date.substr(4, 2) - 1,
+        data.date.substr(6, 2)
+    );
+
+    const labels = [];
+    const temperatures = [];
+
+    for (let i = 1; i <= 72; i++) {
+        const temp = data.temperatures[`h${i}`];
+        if (temp && temp !== '') {
+            const tempValue = parseFloat(temp);
+            const currentDate = new Date(baseDate);
+            currentDate.setHours(currentDate.getHours() + i);
+
+            labels.push(`${Math.floor((i-1)/24)+1}일차 ${((i-1)%24)+1}시`);
+            temperatures.push(tempValue);
+        }
+    }
+
+    return new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '체감 온도 (°C)',
+                data: temperatures,
+                borderColor: '#8b5cf6',
+                backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: '시간',
+                        font: { size: 14 }
+                    },
+                    ticks: {
+                        maxTicksLimit: 12,
+                        autoSkip: true,
+                        font: { size: 12 }
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: '온도 (°C)',
+                        font: { size: 14 }
+                    },
+                    ticks: {
+                        font: { size: 12 }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        font: { size: 14 }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: '3일간 온도 트렌드',
+                    font: { size: 18 }
+                }
+            }
+        }
+    });
+}
+
+// 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
-    // 기존 초기화 코드 유지...
+    const overallTexts = document.querySelectorAll('.overall-text');
+    overallTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
+    const causeTexts = document.querySelectorAll('.cause-text');
+    causeTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
+
+    const locationTitle = document.getElementById('locationTitle');
+    if (!locationTitle.textContent.trim()) locationTitle.textContent = '청진동 (종로구)';
+
+    const sidoSelect = document.getElementById('sido');
+    const selectedSido = /*[[${selectedSido}]]*/ '';
+    if (selectedSido && selectedSido !== '') {
+        sidoSelect.value = selectedSido;
+        updateSggs().then(() => {
+            const sggSelect = document.getElementById('sgg');
+            const selectedSgg = /*[[${selectedSgg}]]*/ '';
+            if (selectedSgg && selectedSgg !== '') {
+                sggSelect.value = selectedSgg;
+                updateUmds().then(() => {
+                    const umdSelect = document.getElementById('umd');
+                    const selectedUmd = /*[[${selectedUmd}]]*/ '';
+                    if (selectedUmd && selectedUmd !== '') umdSelect.value = selectedUmd;
+                });
+            }
+        });
+    }
+
+    const extraButton = document.querySelector('.dust-buttons-container .dust-forecast-btn:first-child');
+    if (extraButton) {
+        extraButton.addEventListener('click', () => alert('안녕 디지몬'));
+    }
+
     const pm25Value = document.querySelector('.pm25-value');
     if (pm25Value) {
         pm25Value.innerHTML = '<button onclick="openWeatherDetailPopup()">날씨정보상세보기</button>';
     }
 });
+
+// 전역 변수
+let dailyChart = null;
+let threeDayChart = null;
+let selectedDay = 0;
+let weatherData = null;
+
+// 팝업 열기
+function showWeatherStats() {
+    const popup = document.getElementById('weatherStatsPopup');
+    popup.style.display = 'flex';
+    loadWeatherStats();
+}
+
+// 팝업 닫기
+function closeWeatherStatsPopup() {
+    const popup = document.getElementById('weatherStatsPopup');
+    popup.style.display = 'none';
+    if (dailyChart) dailyChart.destroy();
+    if (threeDayChart) threeDayChart.destroy();
+}
+
+// 데이터 로드
+async function loadWeatherStats() {
+    try {
+        const response = await fetch('/api/hourly-temperature');
+        if (!response.ok) throw new Error('데이터 로드 실패');
+        weatherData = await response.json();
+        const { hourlyData, days } = parseWeatherData(weatherData);
+        updateCurrentTime();
+        setInterval(updateCurrentTime, 1000);
+        setupDayTabs(days);
+        updateDashboard(days);
+    } catch (error) {
+        console.error('Error:', error);
+        alert('날씨 데이터를 불러오지 못했습니다.');
+        closeWeatherStatsPopup();
+    }
+}
+
+// 현재 시간 업데이트
+function updateCurrentTime() {
+    const currentTime = document.getElementById('currentTime');
+    currentTime.textContent = new Date().toLocaleString('ko-KR');
+}
+
+// 데이터 파싱 (더미 코드 기반)
+function parseWeatherData(data) {
+    const item = data.response.body.items.item[0];
+    const baseDate = new Date(
+        item.date.substr(0, 4),
+        item.date.substr(4, 2) - 1,
+        item.date.substr(6, 2)
+    );
+    const hourlyData = [];
+    const days = [[], [], []];
+
+    for (let i = 1; i <= 72; i++) {
+        const temp = item[`h${i}`];
+        if (temp && temp !== '') {
+            const hour = (i - 1) % 24;
+            const day = Math.floor((i - 1) / 24);
+            const currentDate = new Date(baseDate);
+            currentDate.setDate(baseDate.getDate() + day);
+            currentDate.setHours(hour, 0, 0, 0);
+
+            const dataPoint = {
+                hour: hour,
+                time: `${hour.toString().padStart(2, '0')}:00`,
+                temp: parseInt(temp),
+                fullTime: currentDate,
+                day: day
+            };
+
+            hourlyData.push(dataPoint);
+            if (day < 3) days[day].push(dataPoint);
+        }
+    }
+    return { hourlyData, days };
+}
+
+// 탭 설정
+function setupDayTabs(days) {
+    const tabs = document.querySelectorAll('.day-tab');
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => {
+            selectedDay = index;
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            updateDashboard(days);
+        });
+        if (index === 0) tab.classList.add('active');
+    });
+}
+
+// 대시보드 업데이트
+function updateDashboard(days) {
+    const dayData = days[selectedDay];
+    updateStats(dayData);
+    updateDailyChart(dayData);
+    updateThreeDayChart(days.flat());
+    updateHourlyDetails(dayData);
+}
+
+// 통계 업데이트
+function updateStats(dayData) {
+    const stats = getDayStats(dayData);
+    const trend = getTempTrend(dayData);
+    document.getElementById('minTemp').textContent = `${stats.min}°C`;
+    document.getElementById('maxTemp').textContent = `${stats.max}°C`;
+    document.getElementById('avgTemp').textContent = `${stats.avg}°C`;
+    document.getElementById('trendValue').textContent = trend === 'up' ? '상승' : trend === 'down' ? '하강' : '안정';
+    document.getElementById('trendIcon').textContent = trend === 'up' ? '🔺' : trend === 'down' ? '🔻' : '➖';
+}
+
+// 통계 계산
+function getDayStats(dayData) {
+    if (!dayData.length) return { min: 0, max: 0, avg: 0 };
+    const temps = dayData.map(d => d.temp);
+    return {
+        min: Math.min(...temps),
+        max: Math.max(...temps),
+        avg: Math.round(temps.reduce((a, b) => a + b, 0) / temps.length)
+    };
+}
+
+// 온도 추세 계산
+function getTempTrend(dayData) {
+    if (dayData.length < 2) return 'stable';
+    const first = dayData[0].temp;
+    const last = dayData[dayData.length - 1].temp;
+    return last > first + 2 ? 'up' : last < first - 2 ? 'down' : 'stable';
+}
+
+// 일별 차트
+function updateDailyChart(dayData) {
+    const ctx = document.getElementById('dailyChart').getContext('2d');
+    if (dailyChart) dailyChart.destroy();
+    dailyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dayData.map(d => d.time),
+            datasets: [{
+                label: '체감 온도 (°C)',
+                data: dayData.map(d => d.temp),
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { title: { display: true, text: '시간' } },
+                y: { title: { display: true, text: '온도 (°C)' } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+// 3일간 차트
+function updateThreeDayChart(hourlyData) {
+    const ctx = document.getElementById('threeDayChart').getContext('2d');
+    if (threeDayChart) threeDayChart.destroy();
+    threeDayChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: hourlyData.map(d => `${d.day + 1}일 ${d.time}`),
+            datasets: [{
+                label: '체감 온도 (°C)',
+                data: hourlyData.map(d => d.temp),
+                borderColor: '#8b5cf6',
+                backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { title: { display: true, text: '시간' }, ticks: { maxTicksLimit: 12 } },
+                y: { title: { display: true, text: '온도 (°C)' } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+// 시간별 상세 정보
+function updateHourlyDetails(dayData) {
+    const container = document.getElementById('hourlyDetails');
+    container.innerHTML = dayData.map(data => `
+        <div class="hour-card">
+            <div class="hour-icon">${getWeatherIcon(data.temp)}</div>
+            <p class="hour-time">${data.time}</p>
+            <p class="hour-temp">${data.temp}°C</p>
+            <p class="hour-desc">${getTempDescription(data.temp)}</p>
+        </div>
+    `).join('');
+}
+
+// 날씨 아이콘
+function getWeatherIcon(temp) {
+    if (temp >= 25) return '☀️';
+    if (temp >= 20) return '⛅';
+    return '🌧️';
+}
+
+// 온도 설명
+function getTempDescription(temp) {
+    if (temp >= 25) return '덥다';
+    if (temp >= 20) return '따뜻';
+    if (temp >= 15) return '선선';
+    return '쌀쌀';
+}
