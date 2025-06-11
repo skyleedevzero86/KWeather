@@ -263,7 +263,9 @@
                             </table>
                         </div>
                         <div class="forecast-images">
-                            <img src="/static/images/default-weather.png" alt="예보 이미지" onclick="openPopup(this.src)" onerror="this.src='/static/images/fallback.png'" />
+                            <img src="/static/images/default-weather.png" alt="예보 이미지"
+                                 onclick="openPopup(this.src)"
+                                 onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<span>이미지 없음</span>'; console.log('Image load failed, replaced with placeholder');" />
                         </div>
                     </div>
                 </div>
@@ -272,6 +274,7 @@
         </section>
     </div>
 </div>
+
 <!-- Real-Time Dust Popup -->
 <div id="realTimeDustPopup" class="popup" role="dialog" aria-label="실시간 미세먼지 팝업">
     <div class="popup-content">
