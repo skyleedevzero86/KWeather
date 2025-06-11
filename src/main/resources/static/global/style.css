@@ -1278,3 +1278,14 @@ canvas {
     color: #666;
     background: #f5f5f5;
 }
+
+.forecast-images .image-placeholder {
+    display: inline-block;
+    width: 100px;
+    height: 100px;
+    line-height: 100px;
+    text-align: center;
+    color: #666;
+    background: #f5f5f5;
+    border-radius: 5px;
+}
