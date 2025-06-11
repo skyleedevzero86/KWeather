@@ -9,7 +9,6 @@ let threeDayChart = null;
 let selectedDay = 0;
 let weatherData = null;
 
-// Slider functions
 function updateSlidePosition() {
     const slider = document.getElementById('dustSlider');
     if (!slider) return;
