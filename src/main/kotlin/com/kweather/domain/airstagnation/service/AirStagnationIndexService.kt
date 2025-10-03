@@ -29,18 +29,24 @@ class AirStagnationIndexService(
                     "&areaNo=${params.areaNo}" +
                     "&time=${params.time}" +
                     (params.requestCode?.let { "&requestCode=$it" } ?: "")
+            logger.info("대기정체지수 API 요청 URL: $url")
             return url
         }
 
         override fun parseResponse(response: String): Either<String, AirStagnationIndexResponse> =
             runCatching {
                 if (response.trim().equals("Error", ignoreCase = true)) {
+                    logger.warn("대기정체지수 API에서 Error 응답을 받았습니다: $response")
                     return Either.Left("API에서 Error 응답을 반환했습니다")
                 }
+
                 ApiClientUtility.getObjectMapper().readValue(response, AirStagnationIndexResponse::class.java)
             }.fold(
                 onSuccess = { Either.Right(it) },
-                onFailure = { Either.Left("대기정체지수 응답 파싱 실패: ${it.message}") }
+                onFailure = {
+                    logger.error("대기정체지수 응답 파싱 실패. 응답 내용: $response")
+                    Either.Left("대기정체지수 응답 파싱 실패: ${it.message}")
+                }
             )
     }
 
@@ -50,40 +56,51 @@ class AirStagnationIndexService(
         repeat(3) { attempt ->
             val params = AirStagnationIndexRequestParams(areaNo, currentTime, 1, 10, "json")
             when (val result = ApiClientUtility.makeApiRequest(airStagnationIndexClient, params) { response ->
+                logger.info("대기정체지수 API 응답: $response")
+
                 if (response == null) {
+                    logger.warn("대기정체지수 API 응답이 null입니다")
                     Either.Left("API 응답이 null입니다")
                 } else if (response.response?.header?.resultCode == "03" && attempt < 2) {
+                    logger.info("대기정체지수 데이터 없음 (resultCode: 03), 시도 ${attempt + 1}")
                     Either.Left("NO_DATA")
                 } else {
                     val items = response.response?.body?.items?.item
                     if (items.isNullOrEmpty()) {
+                        logger.warn("대기정체지수 데이터가 비어 있습니다: $response")
                         Either.Right(emptyList())
                     } else {
                         val infos = items.mapNotNull { parseAirStagnationIndexItem(it) }
+                        logger.info("파싱된 대기정체지수 데이터: $infos")
                         Either.Right(infos)
                     }
                 }
             }) {
                 is ApiResult.Success -> return result.data
                 is ApiResult.Error -> {
+                    logger.error("API 요청 실패 (시도 ${attempt + 1}): ${result.message}")
                     if (result.message.contains("NO_DATA")) {
                         currentTime = LocalDateTime.parse(currentTime, DateTimeFormatter.ofPattern("yyyyMMddHH"))
                             .minusHours(1)
                             .format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
                     } else if (result.message.contains("Error 응답을 반환했습니다") ||
                         result.message.contains("응답 파싱 실패")) {
+                        logger.warn("API에서 오류 응답을 받았습니다. 빈 목록을 반환합니다.")
                         return emptyList()
                     } else {
+                        logger.warn("알 수 없는 오류가 발생했습니다. 빈 목록을 반환합니다.")
                         return emptyList()
                     }
                 }
             }
         }
+        logger.warn("모든 시도 후에도 대기정체지수 데이터가 없음")
         return emptyList()
     }
 
     private fun parseAirStagnationIndexItem(item: AirStagnationIndexItem): AirStagnationIndexInfo? =
         runCatching {
+            logger.debug("파싱 전 AirStagnationIndexItem: $item")
             val values = mutableMapOf<String, String>()
             with(item) {
                 listOf(
@@ -97,13 +114,18 @@ class AirStagnationIndexService(
                 ).forEach { (key, value) -> value?.takeIf { it.isNotEmpty() }?.let { values[key] = it } }
             }
             if (values.isEmpty()) {
+                logger.warn("파싱된 values가 비어 있습니다: $item")
                 return null
             }
             AirStagnationIndexInfo(
-                date = item.date ?: return null,
+                date = item.date ?: run {
+                    logger.warn("date 필드가 null입니다: $item")
+                    return null
+                },
                 values = values
             )
         }.onFailure { e ->
+            logger.warn("대기정체지수 항목 파싱 실패: ${e.message}", e)
         }.getOrNull()
 
     init {
@@ -112,6 +134,7 @@ class AirStagnationIndexService(
 
     private fun validateConfiguration() {
         if (serviceKey.isBlank() || airStagnationIndexBaseUrl.isBlank()) {
+            logger.error("대기정체지수 서비스: 필수 설정값이 누락되었습니다")
         }
     }
 }

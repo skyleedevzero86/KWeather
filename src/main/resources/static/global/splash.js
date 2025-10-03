@@ -4,7 +4,7 @@ class SplashScreen {
     this.isAnimating = false;
     this.messageIndex = 0;
     this.iconIndex = 0;
-    
+
     this.splashIcon = document.getElementById("splashIcon");
     this.splashText = document.getElementById("splashText");
     this.tapHint = document.getElementById("tapHint");
@@ -29,7 +29,7 @@ class SplashScreen {
       "❄️",
       "🌨️",
     ];
-    
+
     this.loadingMessages = [
       "날씨 정보를 불러오는 중...",
       "위치 정보를 확인하는 중...",
@@ -139,7 +139,7 @@ class SplashScreen {
       this.splashIcon.style.animation = "none";
       this.splashIcon.style.transform = "scale(1.2)";
       this.splashIcon.style.filter =
-        "drop-shadow(0 0 20px rgba(255, 255, 255, 0.8))";
+          "drop-shadow(0 0 20px rgba(255, 255, 255, 0.8))";
     } else if (this.tapCount === 5) {
       this.splashText.textContent = "이제 진짜 날씨를 보러 가볼까요? ✨";
       this.splashIcon.style.animation = "bounce 0.5s infinite";
@@ -166,7 +166,7 @@ class SplashScreen {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("DOM이 로드되었습니다, 스플래시 화면을 초기화합니다...");
+  console.log("DOM 로드 완료, 스플래시 화면을 초기화합니다...");
   console.log("스플래시 아이콘 요소:", document.getElementById("splashIcon"));
   console.log("스플래시 텍스트 요소:", document.getElementById("splashText"));
   console.log("탭 힌트 요소:", document.getElementById("tapHint"));
