@@ -13,17 +13,20 @@ class RegionService(private val regionRepository: RegionRepository) {
     fun getAllSidos(): List<String> {
         logger.info("모든 시도 조회 시작")
         return try {
-            val sidos = regionRepository.findDistinctSidoNames()
+            val dbSidos = regionRepository.findDistinctSidoNames()
                 .mapNotNull { it?.split(" ")?.getOrNull(0) }
                 .distinct()
                 .sorted()
 
-            if (sidos.isEmpty()) {
-                logger.warn("데이터베이스에서 시/도 데이터를 찾을 수 없습니다. 기본 데이터를 반환합니다.")
-                getDefaultSidos()
+            val defaultSidos = getDefaultSidos()
+            
+            if (dbSidos.isEmpty() || dbSidos.size < 10) {
+                logger.warn("데이터베이스에서 시/도 데이터가 부족합니다. 기본 전국 데이터를 반환합니다.")
+                defaultSidos
             } else {
-                logger.info("조회된 시도 목록: $sidos")
-                sidos
+                val combinedSidos = (dbSidos + defaultSidos).distinct().sorted()
+                logger.info("조회된 시도 목록: $combinedSidos")
+                combinedSidos
             }
         } catch (e: Exception) {
             logger.error("시/도 데이터 조회 중 오류 발생: ${e.message}", e)
@@ -35,17 +38,20 @@ class RegionService(private val regionRepository: RegionRepository) {
         logger.info("시군구 조회 시작 - 시도: $sidoName")
         return try {
             val normalizedSido = normalizeSido(sidoName)
-            val sggs = regionRepository.findSggsBySido(normalizedSido)
+            val dbSggs = regionRepository.findSggsBySido(normalizedSido)
                 .mapNotNull { it?.split(" ")?.getOrNull(1) }
                 .distinct()
                 .sorted()
 
-            if (sggs.isEmpty()) {
+            val defaultSggs = getDefaultSggs(normalizedSido)
+            
+            if (dbSggs.isEmpty()) {
                 logger.warn("데이터베이스에서 시/군/구 데이터를 찾을 수 없습니다. 기본 데이터를 반환합니다.")
-                getDefaultSggs(normalizedSido)
+                defaultSggs
             } else {
-                logger.info("조회된 시군구 목록: $sggs")
-                sggs
+                val combinedSggs = (dbSggs + defaultSggs).distinct().sorted()
+                logger.info("조회된 시군구 목록: $combinedSggs")
+                combinedSggs
             }
         } catch (e: Exception) {
             logger.error("시/군/구 데이터 조회 중 오류 발생: ${e.message}", e)
@@ -57,17 +63,20 @@ class RegionService(private val regionRepository: RegionRepository) {
         logger.info("읍면동 조회 시작 - 시도: $sidoName, 시군구: $sggName")
         return try {
             val normalizedSido = normalizeSido(sidoName)
-            val umds = regionRepository.findUmdsBySidoAndSgg("$normalizedSido $sggName")
+            val dbUmds = regionRepository.findUmdsBySidoAndSgg("$normalizedSido $sggName")
                 .mapNotNull { it.locallowNm }
                 .distinct()
                 .sorted()
 
-            if (umds.isEmpty()) {
+            val defaultUmds = getDefaultUmds(normalizedSido, sggName)
+            
+            if (dbUmds.isEmpty()) {
                 logger.warn("데이터베이스에서 읍/면/동 데이터를 찾을 수 없습니다. 기본 데이터를 반환합니다.")
-                getDefaultUmds(normalizedSido, sggName)
+                defaultUmds
             } else {
-                logger.info("조회된 읍면동 목록: $umds")
-                umds
+                val combinedUmds = (dbUmds + defaultUmds).distinct().sorted()
+                logger.info("조회된 읍면동 목록: $combinedUmds")
+                combinedUmds
             }
         } catch (e: Exception) {
             logger.error("읍/면/동 데이터 조회 중 오류 발생: ${e.message}", e)
