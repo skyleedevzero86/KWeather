@@ -44,21 +44,18 @@ class WeatherController(
         override fun getWeatherData(date: String, time: String): Weather = try {
             generalWeatherService.buildWeatherEntity(defaultNx, defaultNy, defaultSido)
         } catch (e: Exception) {
-            logger.error("실시간 날씨 데이터 가져오기 실패: ${e.message}", e)
             createDefaultWeatherData(date, time)
         }
 
         override fun getDustForecastData(date: String, informCode: String): List<ForecastInfo> = try {
             generalWeatherService.getDustForecast(date, informCode)
         } catch (e: Exception) {
-            logger.error("미세먼지 예보 데이터 가져오기 실패: ${e.message}", e)
             emptyList()
         }
 
         override fun getRealTimeDustData(sidoName: String): List<RealTimeDustInfo> = try {
             generalWeatherService.getRealTimeDust(sidoName)
         } catch (e: Exception) {
-            logger.error("실시간 미세먼지 데이터 가져오기 실패: ${e.message}", e)
             emptyList()
         }
 
@@ -66,14 +63,12 @@ class WeatherController(
             val currentMonth = LocalDateTime.now(ZoneId.of("Asia/Seoul")).monthValue
             if (currentMonth in 5..9) senTaIndexService.getSenTaIndex(areaNo, time) else emptyList()
         } catch (e: Exception) {
-            logger.error("체감온도 데이터 가져오기 실패: ${e.message}", e)
             emptyList()
         }
 
         override fun getAirStagnationIndexData(areaNo: String, time: String): List<AirStagnationIndexInfo> = try {
             airStagnationIndexService.getAirStagnationIndex(areaNo, time)
         } catch (e: Exception) {
-            logger.error("대기정체지수 데이터 가져오기 실패: ${e.message}", e)
             emptyList()
         }
 
@@ -89,19 +84,14 @@ class WeatherController(
             val convertedValues = rawValues.mapValues { it.value.toFloatOrNull() ?: 0.0f }
             listOf(UVIndexInfo(date = today, values = convertedValues))
         } catch (e: Exception) {
-            logger.error("자외선 지수 데이터 가져오기 실패: ${e.message}", e)
             emptyList()
         }
 
-        // 추가: getHourlyTemperatureData 구현
         override fun getHourlyTemperatureData(areaNo: String, time: String): Map<String, Any> = try {
-            // GeneralWeatherService를 통해 시간별 온도 데이터 가져오기
             val hourlyTemps = generalWeatherService.getHourlyTemperature(areaNo, time)
-            hourlyTemps.mapValues { it.value.toString() } // Map<String, String>을 Map<String, Any>로 변환
+            hourlyTemps.mapValues { it.value.toString() }
         } catch (e: Exception) {
-            logger.error("시간별 온도 데이터 가져오기 실패: ${e.message}", e)
-            // 기본 데이터 반환
-            (1..72).associate { "h$it" to "15" } // Map<String, String>을 반환
+            (1..72).associate { "h$it" to "15" }
         }
     }
 
@@ -124,13 +114,8 @@ class WeatherController(
             val weatherData = try {
                 generalWeatherService.buildWeatherEntity(defaultNx, defaultNy, finalSido)
             } catch (e: Exception) {
-                logger.error("날씨 데이터 생성 실패: ${e.message}", e)
                 createDefaultWeatherData(dateTime[0], dateTime[1])
             }
-
-            // 수정: 모델 데이터 확인용 로그 추가
-            logger.info("weatherData: $weatherData")
-            logger.info("hourlyForecast size: ${weatherData.hourlyForecast.size}")
 
             val currentDate = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
             val apiTime = now.format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
@@ -178,7 +163,6 @@ class WeatherController(
             val sidos = try {
                 restTemplate.getForObject("http://localhost:8090/api/regions/sidos", List::class.java) as? List<String> ?: emptyList()
             } catch (e: Exception) {
-                logger.error("시도 목록 조회 실패: ${e.message}", e)
                 listOf(finalSido)
             }
 
@@ -187,7 +171,6 @@ class WeatherController(
                     restTemplate.getForObject("http://localhost:8090/api/regions/sggs?sido=$finalSido", List::class.java) as? List<String> ?: emptyList()
                 } else emptyList()
             } catch (e: Exception) {
-                logger.error("시군구 목록 조회 실패: ${e.message}", e)
                 listOf(finalSgg)
             }
 
@@ -196,7 +179,6 @@ class WeatherController(
                     restTemplate.getForObject("http://localhost:8090/api/regions/umds?sido=$finalSido&sgg=$finalSgg", List::class.java) as? List<String> ?: emptyList()
                 } else emptyList()
             } catch (e: Exception) {
-                logger.error("읍면동 목록 조회 실패: ${e.message}", e)
                 listOf(finalUmd)
             }
 
@@ -220,7 +202,6 @@ class WeatherController(
 
             "domain/weather/weather"
         } catch (e: Exception) {
-            logger.error("날씨 페이지 처리 중 오류 발생: ${e.message}", e)
             model.addAttribute("errorMessage", "날씨 정보를 불러오는 중 오류가 발생했습니다.")
             "error"
         }
@@ -275,10 +256,9 @@ class WeatherController(
                 humidity = "50%"
             )
         },
-        uvIndex = createDefaultUVIndex() // 기본 UVIndex 객체 사용
+        uvIndex = createDefaultUVIndex()
     )
 
-    // 기본 UVIndex 객체를 생성하는 헬퍼 함수
     private fun createDefaultUVIndex(): UVIndex {
         return UVIndex(
             title = "자외선 지수",

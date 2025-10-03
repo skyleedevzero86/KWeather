@@ -29,7 +29,6 @@ class UVIndexService(
                     "&dataType=${params.dataType}" +
                     "&areaNo=${params.areaNo}" +
                     "&time=${params.time}"
-            logger.info("생성된 자외선 지수 API URL: $url")
             return url
         }
 
@@ -50,10 +49,8 @@ class UVIndexService(
         val uvIndexClient = UVIndexApiClient()
 
         return when (val result = ApiClientUtility.makeApiRequest(uvIndexClient, params) { response ->
-            logger.info("자외선 지수 API 원시 응답: $response")
             val items = response.response?.body?.items?.item
             if (items.isNullOrEmpty() || response.response?.header?.resultCode == "03") {
-                logger.info("자외선 지수 데이터 없음, 이전 시간으로 재시도")
                 val previousTime = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
                     .minusHours(2)
                     .format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
@@ -74,7 +71,6 @@ class UVIndexService(
         }) {
             is ApiResult.Success -> result.data
             is ApiResult.Error -> {
-                logger.error("자외선 지수 API 요청 실패: ${result.message}")
                 emptyList()
             }
         }
@@ -82,7 +78,6 @@ class UVIndexService(
 
     private fun parseUVIndexItem(item: UVIndexItem): UVIndexInfo? =
         runCatching {
-            logger.debug("파싱 전 UVIndexItem: $item")
             val values = mutableMapOf<String, Float>().apply {
                 put("h0", item.h0?.toFloatOrNull() ?: 0.0f)
                 put("h3", item.h3?.toFloatOrNull() ?: 0.0f)
@@ -112,18 +107,13 @@ class UVIndexService(
                 put("h75", item.h75?.toFloatOrNull() ?: 0.0f)
             }
             if (values.isEmpty()) {
-                logger.warn("파싱된 values가 비어 있습니다: $values")
                 return null
             }
             UVIndexInfo(
-                date = item.date ?: run {
-                    logger.warn("date 필드가 null입니다")
-                    return null
-                },
-                values = values.toMap() // MutableMap을 Map으로 변환
+                date = item.date ?: return null,
+                values = values.toMap()
             )
         }.onFailure { e ->
-            logger.warn("자외선 지수 항목 파싱 실패: ${e.message}")
         }.getOrNull()
 
     init {
@@ -132,7 +122,6 @@ class UVIndexService(
 
     private fun validateConfiguration() {
         if (serviceKey.isBlank() || uvIndexBaseUrl.isBlank()) {
-            logger.error("자외선 지수 서비스: 필수 설정값이 누락되었습니다")
         }
     }
 }

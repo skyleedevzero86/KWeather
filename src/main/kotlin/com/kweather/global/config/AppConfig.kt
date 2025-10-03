@@ -8,18 +8,6 @@ import io.swagger.v3.oas.annotations.servers.Server
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
 
-/**
- * KotlinWeather 애플리케이션의 핵심 설정을 담당하는 구성 클래스
- *
- * 이 클래스는 다음과 같은 주요 기능을 제공합니다:
- * - 설정 클래스들을 통합 관리
- * - OpenAPI 문서화 설정
- * - 모듈별 설정 Import
- *
- * @author kylee (궁금하면 500원)
- * @version 1.0
- * @since 2025-05-24
- */
 @Configuration
 @Import(
     JacksonConfig::class,

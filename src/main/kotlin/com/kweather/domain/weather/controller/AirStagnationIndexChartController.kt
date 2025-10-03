@@ -19,7 +19,7 @@ class AirStagnationIndexChartController {
     fun getAirStagnationChartData(): Map<String, Any> {
         return try {
             val currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
-            val areaNo = "1100000000" // 서울 지역 번호
+            val areaNo = "1100000000"
 
             val dataList = airStagnationIndexService.getAirStagnationIndex(areaNo, currentTime)
                 ?: return mapOf(
@@ -48,7 +48,6 @@ class AirStagnationIndexChartController {
                 "indices" to indices
             )
         } catch (e: Exception) {
-            // 예외 발생 시 기본 데이터 반환
             mapOf(
                 "startDate" to LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHH")),
                 "indices" to listOf(50.0, 55.0, 60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 90.0, 95.0)

@@ -25,27 +25,18 @@ class GeoUtil(
     private val logger = LoggerFactory.getLogger(GeoUtil::class.java)
     private val objectMapper = jacksonObjectMapper()
 
-    // Strategy Pattern을 위한 인터페이스
     interface ApiKeyProvider {
         fun getApiKey(): String
     }
 
-    // 설정에서 API 키를 가져오는 전략
     private val apiKeyProvider = object : ApiKeyProvider {
         override fun getApiKey(): String = kakaoApiKey
     }
 
     fun fetchGeoCoordinates(address: String): Either<String, Pair<String, String>> {
-        logger.info("주소 좌표 조회 시작: $address")
-
         val result = createHttpRequest(address)
             .flatMap { request -> executeRequest(request) }
             .flatMap { jsonResponse -> parseCoordinates(jsonResponse) }
-
-        result.fold(
-            { error -> logger.error("좌표 조회 실패: $error") },
-            { (lat, lng) -> logger.info("좌표 조회 성공 - 위도: $lat, 경도: $lng") }
-        )
 
         return result
     }
@@ -59,10 +50,8 @@ class GeoUtil(
             addHeader("Authorization", apiKey)
         }
 
-        logger.info("HTTP 요청 생성 완료: $url")
         request.right()
     } catch (e: Exception) {
-        logger.error("HTTP 요청 생성 실패: ${e.message}", e)
         "HTTP 요청 생성 실패: ${e.message}".left()
     }
 
@@ -74,13 +63,11 @@ class GeoUtil(
                     "HTTP 응답 오류: $statusCode".left()
                 } else {
                     val json = EntityUtils.toString(response.entity)
-                    logger.info("API 응답 수신 완료")
                     json.right()
                 }
             }
         }
     } catch (e: Exception) {
-        logger.error("HTTP 요청 실행 실패: ${e.message}", e)
         "HTTP 요청 실행 실패: ${e.message}".left()
     }
 
@@ -94,7 +81,6 @@ class GeoUtil(
             else -> extractCoordinatesFromDocument(documents[0])
         }
     } catch (e: Exception) {
-        logger.error("JSON 파싱 실패: ${e.message}", e)
         "JSON 파싱 실패: ${e.message}".left()
     }
 
@@ -104,10 +90,9 @@ class GeoUtil(
 
         when {
             x.isNullOrBlank() || y.isNullOrBlank() -> "좌표 데이터 누락".left()
-            else -> Pair(y, x).right() // Kakao API에서 x는 경도, y는 위도
+            else -> Pair(y, x).right()
         }
     } catch (e: Exception) {
-        logger.error("좌표 추출 실패: ${e.message}", e)
         "좌표 추출 실패: ${e.message}".left()
     }
 }

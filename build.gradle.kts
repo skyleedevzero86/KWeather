@@ -12,7 +12,7 @@ version = "0.0.1-SNAPSHOT"
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(19)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -23,7 +23,13 @@ repositories {
 extra["hikariVersion"] = "5.0.0"
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-web") {
+        exclude(group = "org.apache.httpcomponents", module = "httpclient")
+    }
+
+    implementation("org.apache.httpcomponents.client5:httpclient5:5.3.1")
+    implementation("org.apache.httpcomponents.core5:httpcore5:5.2.4")
+    implementation("org.apache.httpcomponents.core5:httpcore5-h2:5.2.1")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.3")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.18.3")
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
@@ -52,24 +58,11 @@ dependencies {
     implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
     kapt("com.querydsl:querydsl-apt:5.1.0:jakarta")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
-
-    // Spring Batch 의존성 수정
     implementation("org.springframework.boot:spring-boot-starter-batch")
-
-    // HikariCP
     implementation("com.zaxxer:HikariCP:${property("hikariVersion")}")
-
-    // HTTP Client 설정
-    implementation("org.springframework.boot:spring-boot-starter-web") {
-        exclude(group = "org.apache.httpcomponents.client5")
-    }
-    implementation("org.apache.httpcomponents.client5:httpclient5:5.2.1")
-    implementation("org.apache.httpcomponents.core5:httpcore5:5.2.1")
-    implementation("org.apache.httpcomponents.core5:httpcore5-h2:5.2.1")
-
     implementation("io.arrow-kt:arrow-core:1.2.4")
-    implementation ("org.springframework.retry:spring-retry:2.0.6")
-    implementation ("org.springframework:spring-aspects:6.1.12")
+    implementation("org.springframework.retry:spring-retry:2.0.6")
+    implementation("org.springframework:spring-aspects:6.1.12")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8")
 }
 

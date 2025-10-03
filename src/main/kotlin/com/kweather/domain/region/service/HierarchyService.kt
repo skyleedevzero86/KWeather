@@ -21,10 +21,8 @@ class HierarchyService(
     private val riCache = mutableMapOf<String, Ri>()
 
     fun loadHierarchyData(regions: List<com.kweather.domain.region.dto.RegionDto>) {
-        logger.info("계층 데이터 로드 시작, 지역 수: ${regions.size}")
         val validRegions = regions.filter { it.isValid() }
         if (validRegions.isEmpty()) {
-            logger.warn("유효한 지역 데이터 없음")
             return
         }
 
@@ -33,31 +31,22 @@ class HierarchyService(
         val umdCodes = validRegions.mapNotNull { it.umdCd }.toSet()
         val riCodes = validRegions.mapNotNull { it.riCd }.toSet()
 
-        logger.debug("캐시 로드: 시도 {}, 시군구 {}, 읍면동 {}, 리 {}", sidoCodes.size, sggCodes.size, umdCodes.size, riCodes.size)
-
-        // 기존 데이터 로드
         try {
             val sidos = sidoRepository.findAllBySidoCdIn(sidoCodes)
             sidos.forEach { sidoCache[it.sidoCd] = it }
-            logger.info("로드된 시도 데이터: ${sidos.map { it.sidoCd }}")
 
             val sggs = sggRepository.findAllBySggCdIn(sggCodes)
             sggs.forEach { sggCache[it.sggCd] = it }
-            logger.info("로드된 시군구 데이터: ${sggs.map { it.sggCd }}")
 
             val umds = umdRepository.findAllByUmdCdIn(umdCodes)
             umds.forEach { umdCache[it.umdCd] = it }
-            logger.info("로드된 읍면동 데이터: ${umds.map { it.umdCd }}")
 
             val ris = riRepository.findAllByRiCdIn(riCodes)
             ris.forEach { riCache[it.riCd] = it }
-            logger.info("로드된 리 데이터: ${ris.map { it.riCd }}")
         } catch (e: Exception) {
-            logger.error("데이터베이스에서 기존 데이터 로드 중 오류: ${e.message}", e)
             throw e
         }
 
-        // 누락된 데이터 생성 및 저장
         createMissingHierarchyData(validRegions)
     }
 
@@ -101,26 +90,20 @@ class HierarchyService(
             }
         }
 
-        // 배치로 저장
         try {
             if (newSidos.isNotEmpty()) {
-                logger.info("신규 시도 저장: ${newSidos.size}")
                 sidoRepository.saveAll(newSidos)
             }
             if (newSggs.isNotEmpty()) {
-                logger.info("신규 시군구 저장: ${newSggs.size}")
                 sggRepository.saveAll(newSggs)
             }
             if (newUmds.isNotEmpty()) {
-                logger.info("신규 읍면동 저장: ${newUmds.size}")
                 umdRepository.saveAll(newUmds)
             }
             if (newRis.isNotEmpty()) {
-                logger.info("신규 리 저장: ${newRis.size}")
                 riRepository.saveAll(newRis)
             }
         } catch (e: Exception) {
-            logger.error("데이터베이스 저장 중 오류: ${e.message}", e)
             throw e
         }
     }
@@ -135,6 +118,5 @@ class HierarchyService(
         sggCache.clear()
         umdCache.clear()
         riCache.clear()
-        logger.info("캐시 정리 완료")
     }
 }

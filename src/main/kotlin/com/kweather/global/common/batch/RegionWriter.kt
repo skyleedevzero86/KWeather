@@ -20,25 +20,19 @@ class RegionWriter(
     override fun write(chunk: Chunk<out Region>) {
         try {
             val items = chunk.items.filterNotNull()
-            logger.info("저장할 지역 데이터 {} 건", items.size)
 
             if (items.isNotEmpty()) {
-                // 중복 체크 후 저장
                 val existingRegionCodes = regionRepository.findAllByRegionCdIn(
-                    items.map { it.regionCd } // List<String> 유지
+                    items.map { it.regionCd }
                 ).map { it.regionCd }.toSet()
 
                 val newRegions = items.filter { it.regionCd !in existingRegionCodes }
 
                 if (newRegions.isNotEmpty()) {
                     regionRepository.saveAll(newRegions)
-                    logger.info(BatchConstants.LogMessages.DATA_SAVE_SUCCESS, newRegions.size)
-                } else {
-                    logger.info("저장할 신규 데이터가 없습니다")
                 }
             }
         } catch (e: Exception) {
-            logger.error("${BatchConstants.LogMessages.DATA_SAVE_FAILED}, error=${e.message}", e)
             throw e
         }
     }
