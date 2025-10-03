@@ -1,33 +1,35 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>날씨 예보</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    />
     <link rel="stylesheet" th:href="@{/static/global/global.css}" />
     <link rel="stylesheet" th:href="@{/static/global/style.css}" />
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #00aaff;
-            flex-direction: column;
-        }
+      body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #00aaff;
+        flex-direction: column;
+      }
     </style>
-</head>
-    <body>
+  </head>
+  <body>
     <div class="splash-icon">🌤️</div>
     <div class="splash-text" th:text="'현재 정보 업데이트 중...'"></div>
     <script>
-        // 3초 후 /weather로 리다이렉트
-        setTimeout(function() {
-            window.location.href = "/weather";
-        }, 3000);
+      setTimeout(function () {
+        window.location.href = "/weather";
+      }, 3000);
     </script>
-    </body>
+  </body>
 </html>

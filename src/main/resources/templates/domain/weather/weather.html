@@ -1,431 +1,577 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>날씨 예보</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="/static/global/style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>날씨 예보</title>
+  <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+  />
+  <link rel="stylesheet" href="/static/global/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <div class="weather-container" role="main">
-    <!-- Weather Header -->
-    <section class="weather-header" aria-label="현재 날씨 정보">
-        <p class="datetime">
-            <span class="date">2025-06-11</span>
-            <span class="time">23:31</span>
-            <span class="timeofday">밤</span>
-        </p>
-        <div class="location-row">
-            <h1 id="locationTitle">청진동 (종로구)</h1>
-            <button class="location-btn" onclick="openLocationPopup()" aria-label="위치 변경">변경</button>
+  <section class="weather-header" aria-label="현재 날씨 정보">
+    <p class="datetime">
+      <span class="date">2025-06-11</span>
+      <span class="time">23:31</span>
+      <span class="timeofday">밤</span>
+    </p>
+    <div class="location-row">
+      <h1 id="locationTitle">청진동 (종로구)</h1>
+      <button
+              class="location-btn unified-btn"
+              onclick="openLocationPopup()"
+              aria-label="위치 변경"
+      >
+        변경
+      </button>
+    </div>
+    <div class="weather-main">
+      <div class="current-temp">
+        <span class="weather-icon" aria-hidden="true">☀️</span>
+        <span class="temp-value">21°C</span>
+        <div class="temp-range">최저 -2°C / 최고 2°C</div>
+      </div>
+      <div class="weather-info">
+        <div class="weather-condition">맑음</div>
+        <div class="humidity">습도 50%</div>
+        <div class="pm-value">미세먼지 25 μg/m³</div>
+        <div class="pm25-value">
+          <button class="unified-btn" onclick="openWeatherDetailPopup()">
+            날씨정보상세보기
+          </button>
         </div>
-        <div class="weather-main">
-            <div class="current-temp">
-                <span class="weather-icon" aria-hidden="true">☀️</span>
-                <span class="temp-value">21°C</span>
-                <div class="temp-range">최저 -2°C / 최고 2°C</div>
-            </div>
-            <div class="weather-info">
-                <div class="weather-condition">맑음</div>
-                <div class="humidity">습도 50%</div>
-                <div class="pm-value">미세먼지 25 μg/m³</div>
-                <div class="pm25-value"><button onclick="openWeatherDetailPopup()">날씨정보상세보기</button></div>
-            </div>
+      </div>
+    </div>
+  </section>
+  <section class="weather-details" aria-label="날씨 상세 정보">
+    <div class="dust-buttons-container">
+      <button
+              class="forecast-btn unified-btn"
+              onclick="openHourlyTemperaturePopup()"
+      >
+        시간별 온도보기
+      </button>
+      <button class="forecast-btn unified-btn" onclick="showWeatherStats()">
+        날씨 통계
+      </button>
+      <button
+              class="dust-forecast-btn unified-btn"
+              onclick="openDustForecastPopup()"
+              aria-label="미세먼지 예보 보기"
+      >
+        미세먼지 예보 보기
+      </button>
+      <button
+              class="real-time-dust-btn unified-btn"
+              onclick="openRealTimeDustPopup()"
+              aria-label="실시간 미세먼지 보기"
+      >
+        실시간 미세먼지 보기
+      </button>
+    </div>
+    <div class="air-quality-container">
+      <div class="air-quality">
+        <h3>미세먼지(PM10)</h3>
+        <span class="icon" aria-hidden="true">🌫️</span>
+        <p class="status">보통</p>
+        <p>25 μg/m³</p>
+      </div>
+      <div class="air-quality">
+        <h3>초미세먼지(PM2.5)</h3>
+        <span class="icon" aria-hidden="true">🌫️</span>
+        <p class="status">보통</p>
+        <p>15 μg/m³</p>
+      </div>
+    </div>
+  </section>
+  <section class="forecast-section" aria-label="시간대별 날씨 예보">
+    <h3>시간대별 날씨</h3>
+    <div class="forecast-row-container">
+      <button
+              class="slider-btn prev unified-btn"
+              onclick="moveForecastSlide(-1)"
+              aria-label="이전 시간대"
+      >
+        ❮
+      </button>
+      <div class="forecast-row" id="forecastSlider">
+        <div class="forecast-item">
+          <span class="time">00:00</span><br /><br />
+          <span class="temp">21°C</span><br /><br />
+          <span class="icon" aria-hidden="true">☀️</span><br /><br />
+          <span class="humid">50%</span>
         </div>
+        <div class="forecast-item">
+          <span class="time">01:00</span><br /><br />
+          <span class="temp">20°C</span><br /><br />
+          <span class="icon" aria-hidden="true">🌤</span><br /><br />
+          <span class="humid">55%</span>
+        </div>
+      </div>
+      <button
+              class="slider-btn next unified-btn"
+              onclick="moveForecastSlide(1)"
+              aria-label="다음 시간대"
+      >
+        ❯
+      </button>
+    </div>
+  </section>
+  <section
+          class="senta-index-forecast-section"
+          aria-label="여름철 체감온도 예보"
+  >
+    <h3>여름철 체감온도 예보 (5월~9월)</h3>
+    <div>
+      <table class="forecast-table">
+        <thead>
+        <tr>
+          <th>날짜</th>
+          <th>+0시간</th>
+          <th>+1시간</th>
+          <th>+2시간</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>2025-06-11</td>
+          <td>18°C</td>
+          <td>19°C</td>
+          <td>20°C</td>
+        </tr>
+        </tbody>
+      </table>
+      <div class="chart-container" style="display: none">
+        <canvas id="sentaTemperatureChart"></canvas>
+      </div>
+      <button
+              class="chart-btn unified-btn"
+              onclick="toggleChart(this)"
+              aria-label="차트 보기"
+      >
+        <span>대시보드</span>
+      </button>
+    </div>
+  </section>
+  <section
+          class="air-stagnation-index-forecast-section"
+          aria-label="대기정체지수 예보"
+  >
+    <h3>대기정체지수 예보</h3>
+    <div>
+      <table class="forecast-table">
+        <thead>
+        <tr>
+          <th>날짜</th>
+          <th>+0시간</th>
+          <th>+3시간</th>
+          <th>+6시간</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>2025-06-11</td>
+          <td>50</td>
+          <td>55</td>
+          <td>60</td>
+        </tr>
+        </tbody>
+      </table>
+      <button
+              class="chart-btn unified-btn"
+              onclick="openAirStagnationChartPopup()"
+              aria-label="차트 보기"
+      >
+        <span>차트 보기</span>
+      </button>
+    </div>
+  </section>
+  <section class="precipitation-forecast-section" aria-label="강수량 예보">
+    <h3>강수량 예보</h3>
+    <div>
+      <table class="forecast-table">
+        <thead>
+        <tr>
+          <th>날짜</th>
+          <th>+0시간</th>
+          <th>+1시간</th>
+          <th>+2시간</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>2025-06-11</td>
+          <td>0.0mm</td>
+          <td>0.5mm</td>
+          <td>1.0mm</td>
+        </tr>
+        </tbody>
+      </table>
+      <button
+              class="chart-btn unified-btn"
+              onclick="openPrecipitationChartPopup()"
+      >
+        차트 보기
+      </button>
+    </div>
+  </section>
+</div>
+<div
+        id="imagePopup"
+        class="popup"
+        role="dialog"
+        aria-label="이미지 확대 팝업"
+>
+  <div class="popup-content">
+    <button class="close-btn" onclick="closePopup()" aria-label="팝업 닫기">
+      X
+    </button>
+    <img id="popupImage" src="" alt="확대된 이미지" />
+  </div>
+</div>
+<div
+        id="locationPopup"
+        class="popup"
+        role="dialog"
+        aria-label="위치 선택 팝업"
+>
+  <div id="locationPopupContent">
+    <button
+            class="close-btn2"
+            onclick="closeLocationPopup()"
+            aria-label="팝업 닫기"
+    >
+      X
+    </button>
+    <div class="select-group">
+      <label for="sido">시/도:</label>
+      <select id="sido" onchange="updateSggs()" aria-label="시/도 선택">
+        <option value="">시/도를 선택하세요</option>
+      </select>
+    </div>
+    <div class="select-group">
+      <label for="sgg">시/군/구:</label>
+      <select id="sgg" onchange="updateUmds()" aria-label="시/군/구 선택">
+        <option value="">시/도를 먼저 선택하세요</option>
+      </select>
+    </div>
+    <div class="select-group">
+      <label for="umd">읍/면/동:</label>
+      <select id="umd" aria-label="읍/면/동 선택">
+        <option value="">시/군/구를 먼저 선택하세요</option>
+      </select>
+    </div>
+    <button
+            id="confirmBtn"
+            class="unified-btn"
+            onclick="confirmSelection()"
+            aria-label="위치 확인"
+    >
+      확인
+    </button>
+  </div>
+</div>
+<div
+        id="weatherDetailPopup"
+        class="popup"
+        role="dialog"
+        aria-label="날씨 상세 정보 팝업"
+>
+  <div class="popup-content">
+    <button
+            class="close-btn"
+            onclick="closeWeatherDetailPopup()"
+            aria-label="팝업 닫기"
+    >
+      X
+    </button>
+    <div class="weather-detail-container">
+      <h2>상세 데이터</h2>
+      <div class="weather-main">
+        <div class="current-temp">
+          <span class="temp-value">21°C</span>
+        </div>
+        <div class="weather-info">
+          <div class="weather-condition">맑음</div>
+          <div class="humidity">습도 50%</div>
+          <div class="pm-value">미세먼지 25 μg/m³</div>
+        </div>
+      </div>
+      <table class="weather-data-table">
+        <thead>
+        <tr>
+          <th>예보날짜</th>
+          <th>항목</th>
+          <th>값</th>
+          <th>위치 (x,y)</th>
+          <th>기준시간</th>
+        </tr>
+        </thead>
+        <tbody id="weatherDataBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div
+        id="dustForecastPopup"
+        class="popup"
+        role="dialog"
+        aria-label="미세먼지 예보 팝업"
+>
+  <div class="popup-content">
+    <button
+            class="close-btn"
+            onclick="closeDustForecastPopup()"
+            aria-label="팝업 닫기"
+    >
+      X
+    </button>
+    <section class="dust-forecast-section" aria-label="미세먼지 예보">
+      <h3>미세먼지 예보</h3>
+      <div>
+        <button
+                class="slider-btn prev unified-btn"
+                onclick="moveSlide(-1)"
+                aria-label="이전 슬라이드"
+        >
+          ❮
+        </button>
+        <div class="dust-slider" id="dustSlider">
+          <div class="dust-forecast-item">
+            <h4>2025-06-11 (PM10)</h4>
+            <p>시간: 23:00</p>
+            <p class="overall-text">보통</p>
+            <p class="cause-text">안정적</p>
+            <div class="grade-section">
+              <table class="grade-table">
+                <tr>
+                  <th class="grade-title good">좋음</th>
+                  <th class="grade-title moderate">보통</th>
+                  <th class="grade-title bad">나쁨</th>
+                </tr>
+                <tr>
+                  <td class="grade-cell good">서울</td>
+                  <td class="grade-cell moderate">경기</td>
+                  <td class="grade-cell bad">인천</td>
+                </tr>
+              </table>
+            </div>
+            <div class="forecast-images">
+              <span class="image-placeholder">!</span>
+            </div>
+          </div>
+        </div>
+        <button
+                class="slider-btn next unified-btn"
+                onclick="moveSlide(1)"
+                aria-label="다음 슬라이드"
+        >
+          ❯
+        </button>
+      </div>
     </section>
-
-    <!-- Weather Details -->
-    <section class="weather-details" aria-label="날씨 상세 정보">
-        <div class="dust-buttons-container">
-            <button class="forecast-btn" onclick="openHourlyTemperaturePopup()">시간별 온도보기</button>
-            <button class="forecast-btn" onclick="showWeatherStats()">날씨 통계</button>
-            <button class="dust-forecast-btn" onclick="openDustForecastPopup()" aria-label="미세먼지 예보 보기">미세먼지 예보 보기</button>
-            <button class="real-time-dust-btn" onclick="openRealTimeDustPopup()" aria-label="실시간 미세먼지 보기">실시간 미세먼지 보기</button>
-        </div>
-        <div class="air-quality-container">
-            <div class="air-quality">
-                <h3>미세먼지(PM10)</h3>
-                <span class="icon" aria-hidden="true">🌫️</span>
-                <p class="status">보통</p>
-                <p>25 μg/m³</p>
-            </div>
-            <div class="air-quality">
-                <h3>초미세먼지(PM2.5)</h3>
-                <span class="icon" aria-hidden="true">🌫️</span>
-                <p class="status">보통</p>
-                <p>15 μg/m³</p>
-            </div>
-        </div>
+  </div>
+</div>
+<div
+        id="realTimeDustPopup"
+        class="popup"
+        role="dialog"
+        aria-label="실시간 미세먼지 팝업"
+>
+  <div class="popup-content">
+    <button
+            class="close-btn"
+            onclick="closeRealTimeDustPopup()"
+            aria-label="팝업 닫기"
+    >
+      X
+    </button>
+    <section class="real-time-dust-section" aria-label="실시간 미세먼지">
+      <h3>실시간 미세먼지</h3>
+      <div>
+        <table class="real-time-dust-table">
+          <thead>
+          <tr>
+            <th>시도</th>
+            <th>측정소</th>
+            <th>측정 시간</th>
+            <th>미세먼지(PM10)</th>
+            <th>미세먼지 등급</th>
+            <th>초미세먼지(PM2.5)</th>
+            <th>초미세먼지 등급</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td>서울</td>
+            <td>종로구</td>
+            <td>23:00</td>
+            <td>25 μg/m³</td>
+            <td class="grade-cell">보통</td>
+            <td>15 μg/m³</td>
+            <td class="grade-cell">보통</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
-
-    <!-- Hourly Weather Forecast -->
-    <section class="forecast-section" aria-label="시간대별 날씨 예보">
-        <h3>시간대별 날씨</h3>
-        <div class="forecast-row-container">
-            <button class="slider-btn prev" onclick="moveForecastSlide(-1)" aria-label="이전 시간대">❮</button>
-            <div class="forecast-row" id="forecastSlider">
-                <div class="forecast-item">
-                    <span class="time">00:00</span><br/><br/>
-                    <span class="temp">21°C</span><br/><br/>
-                    <span class="icon" aria-hidden="true">☀️</span><br/><br/>
-                    <span class="humid">50%</span>
-                </div>
-                <div class="forecast-item">
-                    <span class="time">01:00</span><br/><br/>
-                    <span class="temp">20°C</span><br/><br/>
-                    <span class="icon" aria-hidden="true">🌤</span><br/><br/>
-                    <span class="humid">55%</span>
-                </div>
-            </div>
-            <button class="slider-btn next" onclick="moveForecastSlide(1)" aria-label="다음 시간대">❯</button>
-        </div>
+  </div>
+</div>
+<div
+        id="airStagnationChartPopup"
+        class="popup"
+        role="dialog"
+        aria-label="대기정체지수 차트 팝업"
+>
+  <div class="popup-content">
+    <button
+            class="close-btn"
+            onclick="closeAirStagnationChartPopup()"
+            aria-label="팝업 닫기"
+    >
+      X
+    </button>
+    <section
+            class="air-stagnation-chart-section"
+            aria-label="대기정체지수 차트"
+    >
+      <div class="chart-container">
+        <canvas id="airStagnationChart"></canvas>
+      </div>
     </section>
-
-    <!-- Summer Temperature Forecast -->
-    <section class="senta-index-forecast-section" aria-label="여름철 체감온도 예보">
-        <h3>여름철 체감온도 예보 (5월~9월)</h3>
-        <div>
-            <table class="forecast-table">
-                <thead>
-                <tr>
-                    <th>날짜</th>
-                    <th>+0시간</th>
-                    <th>+1시간</th>
-                    <th>+2시간</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <td>2025-06-11</td>
-                    <td>18°C</td>
-                    <td>19°C</td>
-                    <td>20°C</td>
-                </tr>
-                </tbody>
-            </table>
-            <div class="chart-container" style="display: none;">
-                <canvas id="sentaTemperatureChart"></canvas>
-            </div>
-            <button class="chart-btn" onclick="toggleChart(this)" aria-label="차트 보기"><span>대시보드</span></button>
-        </div>
-    </section>
-
-    <!-- Air Stagnation Index Forecast -->
-    <section class="air-stagnation-index-forecast-section" aria-label="대기정체지수 예보">
-        <h3>대기정체지수 예보</h3>
-        <div>
-            <table class="forecast-table">
-                <thead>
-                <tr>
-                    <th>날짜</th>
-                    <th>+0시간</th>
-                    <th>+3시간</th>
-                    <th>+6시간</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <td>2025-06-11</td>
-                    <td>50</td>
-                    <td>55</td>
-                    <td>60</td>
-                </tr>
-                </tbody>
-            </table>
-            <button class="chart-btn" onclick="openAirStagnationChartPopup()" aria-label="차트 보기"><span>차트 보기</span></button>
-        </div>
-    </section>
-
-    <!-- Precipitation Forecast -->
-    <section class="precipitation-forecast-section" aria-label="강수량 예보">
-        <h3>강수량 예보</h3>
-        <div>
-            <table class="forecast-table">
-                <thead>
-                <tr>
-                    <th>날짜</th>
-                    <th>+0시간</th>
-                    <th>+1시간</th>
-                    <th>+2시간</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <td>2025-06-11</td>
-                    <td>0.0mm</td>
-                    <td>0.5mm</td>
-                    <td>1.0mm</td>
-                </tr>
-                </tbody>
-            </table>
-            <button class="chart-btn" onclick="openPrecipitationChartPopup()">차트 보기</button>
-        </div>
-    </section>
+  </div>
 </div>
-
-<!-- Image Popup -->
-<div id="imagePopup" class="popup" role="dialog" aria-label="이미지 확대 팝업">
-    <div class="popup-content">
-        <button class="close-btn" onclick="closePopup()" aria-label="팝업 닫기">X</button>
-        <img id="popupImage" src="" alt="확대된 이미지">
+<div
+        id="precipitationChartPopup"
+        class="popup"
+        role="dialog"
+        aria-label="강수량 예보 차트 팝업"
+>
+  <div class="popup-content">
+    <button
+            class="close-btn"
+            onclick="closePrecipitationChartPopup()"
+            aria-label="팝업 닫기"
+    >
+      ×
+    </button>
+    <div class="chart-container">
+      <canvas id="precipitationChart"></canvas>
     </div>
+  </div>
 </div>
-
-<!-- Location Popup -->
-<div id="locationPopup" class="popup" role="dialog" aria-label="위치 선택 팝업">
-    <div id="locationPopupContent">
-        <button class="close-btn2" onclick="closeLocationPopup()" aria-label="팝업 닫기">X</button>
-        <div class="select-group">
-            <label for="sido">시/도:</label>
-            <select id="sido" onchange="updateSggs()" aria-label="시/도 선택">
-                <option value="">선택하세요</option>
-                <option value="서울특별시">서울특별시</option>
-                <option value="경기도">경기도</option>
-            </select>
-        </div>
-        <div class="select-group">
-            <label for="sgg">시/군/구:</label>
-            <select id="sgg" onchange="updateUmds()" aria-label="시/군/구 선택">
-                <option value="">먼저 시/도를 선택하세요</option>
-            </select>
-        </div>
-        <div class="select-group">
-            <label for="umd">읍/면/동:</label>
-            <select id="umd" aria-label="읍/면/동 선택">
-                <option value="">먼저 시/군/구를 선택하세요</option>
-            </select>
-        </div>
-        <button id="confirmBtn" onclick="confirmSelection()" aria-label="위치 확인">확인</button>
-    </div>
-</div>
-
-<!-- Weather Detail Popup -->
-<div id="weatherDetailPopup" class="popup" role="dialog" aria-label="날씨 상세 정보 팝업">
-    <div class="popup-content">
-        <button class="close-btn" onclick="closeWeatherDetailPopup()" aria-label="팝업 닫기">X</button>
-        <div class="weather-detail-container">
-            <h2>상세 데이터</h2>
-            <div class="weather-main">
-                <div class="current-temp">
-                    <span class="temp-value">21°C</span>
-                </div>
-                <div class="weather-info">
-                    <div class="weather-condition">맑음</div>
-                    <div class="humidity">습도 50%</div>
-                    <div class="pm-value">미세먼지 25 μg/m³</div>
-                </div>
-            </div>
-            <table class="weather-data-table">
-                <thead>
-                <tr>
-                    <th>예보날짜</th>
-                    <th>항목</th>
-                    <th>값</th>
-                    <th>위치 (x,y)</th>
-                    <th>기준시간</th>
-                </tr>
-                </thead>
-                <tbody id="weatherDataBody">
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Dust Forecast Popup -->
-<div id="dustForecastPopup" class="popup" role="dialog" aria-label="미세먼지 예보 팝업">
-    <div class="popup-content">
-        <button class="close-btn" onclick="closeDustForecastPopup()" aria-label="팝업 닫기">X</button>
-        <section class="dust-forecast-section" aria-label="미세먼지 예보">
-            <h3>미세먼지 예보</h3>
-            <div>
-                <button class="slider-btn prev" onclick="moveSlide(-1)" aria-label="이전 슬라이드">❮</button>
-                <div class="dust-slider" id="dustSlider">
-                    <div class="dust-forecast-item">
-                        <h4>2025-06-11 (PM10)</h4>
-                        <p>시간: 23:00</p>
-                        <p class="overall-text">보통</p>
-                        <p class="cause-text">안정적</p>
-                        <div class="grade-section">
-                            <table class="grade-table">
-                                <tr>
-                                    <th class="grade-title good">좋음</th>
-                                    <th class="grade-title moderate">보통</th>
-                                    <th class="grade-title bad">나쁨</th>
-                                </tr>
-                                <tr>
-                                    <td class="grade-cell good">서울</td>
-                                    <td class="grade-cell moderate">경기</td>
-                                    <td class="grade-cell bad">인천</td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="forecast-images">
-                            <span class="image-placeholder">!</span>
-                        </div>
-                    </div>
-                </div>
-                <button class="slider-btn next" onclick="moveSlide(1)" aria-label="다음 슬라이드">❯</button>
-            </div>
-        </section>
-    </div>
-</div>
-
-<!-- Real-Time Dust Popup -->
-<div id="realTimeDustPopup" class="popup" role="dialog" aria-label="실시간 미세먼지 팝업">
-    <div class="popup-content">
-        <button class="close-btn" onclick="closeRealTimeDustPopup()" aria-label="팝업 닫기">X</button>
-        <section class="real-time-dust-section" aria-label="실시간 미세먼지">
-            <h3>실시간 미세먼지</h3>
-            <div>
-                <table class="real-time-dust-table">
-                    <thead>
-                    <tr>
-                        <th>시도</th>
-                        <th>측정소</th>
-                        <th>측정 시간</th>
-                        <th>미세먼지(PM10)</th>
-                        <th>미세먼지 등급</th>
-                        <th>초미세먼지(PM2.5)</th>
-                        <th>초미세먼지 등급</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr>
-                        <td>서울</td>
-                        <td>종로구</td>
-                        <td>23:00</td>
-                        <td>25 μg/m³</td>
-                        <td class="grade-cell">보통</td>
-                        <td>15 μg/m³</td>
-                        <td class="grade-cell">보통</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </div>
-</div>
-
-<!-- Air Stagnation Chart Popup -->
-<div id="airStagnationChartPopup" class="popup" role="dialog" aria-label="대기정체지수 차트 팝업">
-    <div class="popup-content">
-        <button class="close-btn" onclick="closeAirStagnationChartPopup()" aria-label="팝업 닫기">X</button>
-        <section class="air-stagnation-chart-section" aria-label="대기정체지수 차트">
-            <div class="chart-container">
-                <canvas id="airStagnationChart"></canvas>
-            </div>
-        </section>
-    </div>
-</div>
-
-<!-- Precipitation Chart Popup -->
-<div id="precipitationChartPopup" class="popup" role="dialog" aria-label="강수량 예보 차트 팝업">
-    <div class="popup-content">
-        <button class="close-btn" onclick="closePrecipitationChartPopup()" aria-label="팝업 닫기">×</button>
-        <div class="chart-container">
-            <canvas id="precipitationChart"></canvas>
-        </div>
-    </div>
-</div>
-
-<!-- Hourly Temperature Popup -->
 <div id="hourlyTemperaturePopup" class="popup">
-    <div class="popup-content">
-        <button class="close-btn" onclick="closeHourlyTemperaturePopup()">×</button>
-        <h2>🌡️ 시간별 온도 예보</h2>
-        <p>72시간 상세 온도 변화 분석</p>
-        <section class="temperature-stats-section">
-            <h3>온도 통계</h3>
-            <div class="temp-stats-grid">
-                <div class="temp-stat-card">
-                    <span class="temp-stat-icon thermometer"></span>
-                    <div class="temp-stat-label">현재 온도</div>
-                    <div class="temp-stat-value current" id="statsCurrentTemp">21°C</div>
-                </div>
-                <div class="temp-stat-card">
-                    <span class="temp-stat-icon arrow-up"></span>
-                    <div class="temp-stat-label">최고 온도</div>
-                    <div class="temp-stat-value high" id="statsMaxTemp">29°C</div>
-                </div>
-                <div class="temp-stat-card">
-                    <span class="temp-stat-icon arrow-down"></span>
-                    <div class="temp-stat-label">최저 온도</div>
-                    <div class="temp-stat-value low" id="statsMinTemp">19°C</div>
-                </div>
-                <div class="temp-stat-card">
-                    <span class="temp-stat-icon chart"></span>
-                    <div class="temp-stat-label">평균 온도</div>
-                    <div class="temp-stat-value average" id="statsAvgTemp">24.2°C</div>
-                </div>
-            </div>
-        </section>
-        <div class="chart-section">
-            <h3 class="section-title">온도 변화 차트</h3>
-            <div class="chart-container">
-                <canvas id="temperatureChart"></canvas>
-            </div>
+  <div class="popup-content">
+    <button class="close-btn" onclick="closeHourlyTemperaturePopup()">
+      ×
+    </button>
+    <h2>🌡️ 시간별 온도 예보</h2>
+    <p>72시간 상세 온도 변화 분석</p>
+    <section class="temperature-stats-section">
+      <h3>온도 통계</h3>
+      <div class="temp-stats-grid">
+        <div class="temp-stat-card">
+          <span class="temp-stat-icon thermometer"></span>
+          <div class="temp-stat-label">현재 온도</div>
+          <div class="temp-stat-value current" id="statsCurrentTemp">
+            21°C
+          </div>
         </div>
-        <div id="hourlyData"></div>
+        <div class="temp-stat-card">
+          <span class="temp-stat-icon arrow-up"></span>
+          <div class="temp-stat-label">최고 온도</div>
+          <div class="temp-stat-value high" id="statsMaxTemp">29°C</div>
+        </div>
+        <div class="temp-stat-card">
+          <span class="temp-stat-icon arrow-down"></span>
+          <div class="temp-stat-label">최저 온도</div>
+          <div class="temp-stat-value low" id="statsMinTemp">19°C</div>
+        </div>
+        <div class="temp-stat-card">
+          <span class="temp-stat-icon chart"></span>
+          <div class="temp-stat-label">평균 온도</div>
+          <div class="temp-stat-value average" id="statsAvgTemp">
+            24.2°C
+          </div>
+        </div>
+      </div>
+    </section>
+    <div class="chart-section">
+      <h3 class="section-title">온도 변화 차트</h3>
+      <div class="chart-container">
+        <canvas id="temperatureChart"></canvas>
+      </div>
     </div>
+    <div id="hourlyData"></div>
+  </div>
 </div>
-
-<!-- Weather Stats Popup -->
-<div id="weatherStatsPopup" class="popup" role="dialog" aria-label="날씨 통계 팝업">
-    <div class="popup-content weather-dashboard">
-        <button class="close-btn" onclick="closeWeatherStatsPopup()" aria-label="팝업 닫기">×</button>
-        <div class="header">
-            <h2><span class="icon">🌡️</span> 날씨 기상 대시보드</h2>
-            <p>3일간 시간별 체감온도 예보</p>
-            <div class="current-time" id="currentTime"></div>
-        </div>
-        <div class="day-tabs" id="dayTabs">
-            <button class="day-tab active" data-day="0">오늘</button>
-            <button class="day-tab" data-day="1">내일</button>
-            <button class="day-tab" data-day="2">모레</button>
-        </div>
-        <div class="stats-grid" id="statsGrid">
-            <div class="stat-card">
-                <span class="stat-icon">🌡️</span>
-                <p class="stat-label">최저 온도</p>
-                <p class="stat-value" id="minTemp">--°C</p>
-            </div>
-            <div class="stat-card">
-                <span class="stat-icon">🔥</span>
-                <p class="stat-label">최고 온도</p>
-                <p class="stat-value" id="maxTemp">--°C</p>
-            </div>
-            <div class="stat-card">
-                <span class="stat-icon">📊</span>
-                <p class="stat-label">평균 온도</p>
-                <p class="stat-value" id="avgTemp">--°C</p>
-            </div>
-            <div class="stat-card">
-                <span class="stat-icon" id="trendIcon">➖</span>
-                <p class="stat-label">온도 추세</p>
-                <p class="stat-value" id="trendValue">안정</p>
-            </div>
-        </div>
-        <div class="charts">
-            <div class="chart-section">
-                <h3 class="section-title">시간별 온도 변화</h3>
-                <div class="chart-container">
-                    <canvas id="dailyChart"></canvas>
-                </div>
-            </div>
-            <div class="chart-section">
-                <h3 class="section-title">3일간 온도 트렌드</h3>
-                <div class="chart-container">
-                    <canvas id="threeDayChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="hourly-details" id="hourlyDetails"></div>
+<div
+        id="weatherStatsPopup"
+        class="popup"
+        role="dialog"
+        aria-label="날씨 통계 팝업"
+>
+  <div class="popup-content weather-dashboard">
+    <button
+            class="close-btn"
+            onclick="closeWeatherStatsPopup()"
+            aria-label="팝업 닫기"
+    >
+      ×
+    </button>
+    <div class="header">
+      <h2><span class="icon">🌡️</span> 날씨 기상 대시보드</h2>
+      <p>3일간 시간별 체감온도 예보</p>
+      <div class="current-time" id="currentTime"></div>
     </div>
+    <div class="day-tabs" id="dayTabs">
+      <button class="day-tab active unified-btn" data-day="0">오늘</button>
+      <button class="day-tab unified-btn" data-day="1">내일</button>
+      <button class="day-tab unified-btn" data-day="2">모레</button>
+    </div>
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <span class="stat-icon">🌡️</span>
+        <p class="stat-label">최저 온도</p>
+        <p class="stat-value" id="minTemp">--°C</p>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🔥</span>
+        <p class="stat-label">최고 온도</p>
+        <p class="stat-value" id="maxTemp">--°C</p>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">📊</span>
+        <p class="stat-label">평균 온도</p>
+        <p class="stat-value" id="avgTemp">--°C</p>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon" id="trendIcon">➖</span>
+        <p class="stat-label">온도 추세</p>
+        <p class="stat-value" id="trendValue">안정</p>
+      </div>
+    </div>
+    <div class="charts">
+      <div class="chart-section">
+        <h3 class="section-title">시간별 온도 변화</h3>
+        <div class="chart-container">
+          <canvas id="dailyChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-section">
+        <h3 class="section-title">3일간 온도 트렌드</h3>
+        <div class="chart-container">
+          <canvas id="threeDayChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="hourly-details" id="hourlyDetails"></div>
+  </div>
 </div>
-
 <script src="/static/global/global.js"></script>
 </body>
 </html>
