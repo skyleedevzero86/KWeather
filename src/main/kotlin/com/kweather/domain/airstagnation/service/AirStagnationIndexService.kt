@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @Service
@@ -21,7 +20,6 @@ class AirStagnationIndexService(
 ) {
     private val logger = LoggerFactory.getLogger(AirStagnationIndexService::class.java)
 
-    // API 클라이언트 구현
     private inner class AirStagnationIndexApiClient : ApiClientUtility.ApiClient<AirStagnationIndexRequestParams, AirStagnationIndexResponse> {
         override fun buildUrl(params: AirStagnationIndexRequestParams): String {
             val url = "${airStagnationIndexBaseUrl}?serviceKey=$serviceKey" +
@@ -44,11 +42,10 @@ class AirStagnationIndexService(
             )
     }
 
-    // 대기정체지수 데이터 가져오기
     fun getAirStagnationIndex(areaNo: String, time: String): List<AirStagnationIndexInfo> {
         val airStagnationIndexClient = AirStagnationIndexApiClient()
         var currentTime = time
-        repeat(3) { attempt -> // 최대 3번 시도
+        repeat(3) { attempt ->
             val params = AirStagnationIndexRequestParams(areaNo, currentTime, 1, 10, "json")
             when (val result = ApiClientUtility.makeApiRequest(airStagnationIndexClient, params) { response ->
                 logger.info("대기정체지수 API 응답: $response")
@@ -84,7 +81,6 @@ class AirStagnationIndexService(
         return emptyList()
     }
 
-    // 대기정체지수 항목 파싱
     private fun parseAirStagnationIndexItem(item: AirStagnationIndexItem): AirStagnationIndexInfo? =
         runCatching {
             logger.debug("파싱 전 AirStagnationIndexItem: $item")
@@ -119,7 +115,6 @@ class AirStagnationIndexService(
         validateConfiguration()
     }
 
-    // 설정값 검증
     private fun validateConfiguration() {
         if (serviceKey.isBlank() || airStagnationIndexBaseUrl.isBlank()) {
             logger.error("대기정체지수 서비스: 필수 설정값이 누락되었습니다")
