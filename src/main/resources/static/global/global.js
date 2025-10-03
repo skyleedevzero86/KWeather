@@ -26,10 +26,51 @@ function moveSlide(direction) {
     updateSlidePosition();
 }
 
-function openDustForecastPopup() {
+async function openDustForecastPopup() {
     const popup = document.getElementById('dustForecastPopup');
     popup.style.display = 'flex';
     currentSlide = 0;
+    
+    try {
+        const response = await fetch('/weather/dust-forecast?informCode=PM10');
+        console.log('미세먼지 예보 API 응답 상태:', response.status);
+        
+        if (response.status === 204) {
+            displayDustForecastError('미세먼지 예보 데이터가 없습니다. (204 No Content)');
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const responseText = await response.text();
+        console.log('미세먼지 예보 API 응답 텍스트:', responseText);
+        
+        if (!responseText || responseText.trim() === '') {
+            displayDustForecastError('빈 응답을 받았습니다.');
+            return;
+        }
+        
+        let forecastData;
+        try {
+            forecastData = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('JSON 파싱 오류:', parseError);
+            displayDustForecastError('응답을 JSON으로 파싱할 수 없습니다: ' + responseText.substring(0, 100));
+            return;
+        }
+        
+        if (forecastData && forecastData.length > 0) {
+            displayDustForecastData(forecastData);
+        } else {
+            displayDustForecastError('미세먼지 예보 데이터가 없습니다.');
+        }
+    } catch (error) {
+        console.error('미세먼지 예보 데이터 가져오기 실패:', error);
+        displayDustForecastError('미세먼지 예보 데이터를 불러올 수 없습니다: ' + error.message);
+    }
+    
     updateSlidePosition();
 }
 
@@ -37,12 +78,207 @@ function closeDustForecastPopup() {
     document.getElementById('dustForecastPopup').style.display = 'none';
 }
 
-function openRealTimeDustPopup() {
-    document.getElementById('realTimeDustPopup').style.display = 'flex';
+function displayDustForecastData(forecastData) {
+    const dustSlider = document.getElementById('dustSlider');
+    if (!dustSlider) return;
+    
+    dustSlider.innerHTML = '';
+    
+    forecastData.forEach((forecast, index) => {
+        const forecastItem = document.createElement('div');
+        forecastItem.className = 'dust-forecast-item';
+        
+        const date = forecast.date || 'N/A';
+        const type = forecast.type || 'PM10';
+        const overall = forecast.overall || 'N/A';
+        const cause = forecast.cause || 'N/A';
+        const grade = forecast.grade || 'N/A';
+        const dataTime = forecast.dataTime || 'N/A';
+        const imageUrls = forecast.imageUrls || [];
+        
+        const gradeTable = parseGradeTable(grade);
+        
+        forecastItem.innerHTML = `
+                <h4>${date} (${type})</h4>
+                <p>시간: ${dataTime}</p>
+                <p class="overall-text">${overall}</p>
+                <p class="cause-text">${cause}</p>
+                <div class="grade-section">
+                    <table class="grade-table">
+                        <tr>
+                            <th class="grade-title good">좋음</th>
+                            <th class="grade-title moderate">보통</th>
+                            <th class="grade-title bad">나쁨</th>
+                        </tr>
+                        <tr>
+                        <td class="grade-cell good">${gradeTable.good.join(', ')}</td>
+                        <td class="grade-cell moderate">${gradeTable.moderate.join(', ')}</td>
+                        <td class="grade-cell bad">${gradeTable.bad.join(', ')}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="forecast-images">
+                    ${imageUrls.length > 0 ? 
+                    imageUrls.map(url => `<img src="${url}" alt="미세먼지 예보 이미지" onclick="openPopup('${url}')" style="max-width: 100px; max-height: 100px; margin: 5px; cursor: pointer;">`).join('') :
+                        '<span class="image-placeholder">이미지 없음</span>'
+                    }
+            </div>
+        `;
+        
+        dustSlider.appendChild(forecastItem);
+    });
+}
+
+function displayDustForecastError(message) {
+    const dustSlider = document.getElementById('dustSlider');
+    if (!dustSlider) return;
+    
+    dustSlider.innerHTML = `
+        <div class="dust-forecast-item">
+            <h4>오류</h4>
+            <p style="color: red;">${message}</p>
+        </div>
+    `;
+}
+
+function parseGradeTable(gradeText) {
+    const result = {
+        good: [],
+        moderate: [],
+        bad: []
+    };
+    
+    if (!gradeText || gradeText === 'N/A') {
+        return result;
+    }
+    
+    try {
+    const gradeEntries = gradeText.split(',').map(entry => entry.trim());
+    gradeEntries.forEach(entry => {
+            const parts = entry.split(':').map(part => part.trim());
+            if (parts.length === 2) {
+                const [region, grade] = parts;
+                if (grade === '1') {
+                    result.good.push(region);
+                } else if (grade === '2') {
+                    result.moderate.push(region);
+                } else if (grade === '3') {
+                    result.bad.push(region);
+            }
+        }
+    });
+    } catch (error) {
+        console.error('등급 테이블 파싱 오류:', error);
+    }
+    
+    return result;
+}
+
+async function openRealTimeDustPopup() {
+    const popup = document.getElementById('realTimeDustPopup');
+    popup.style.display = 'flex';
+    
+    try {
+        const response = await fetch('/weather/real-time-dust?sidoName=서울');
+        console.log('실시간 미세먼지 API 응답 상태:', response.status);
+        
+        if (response.status === 204) {
+            displayRealTimeDustError('실시간 미세먼지 데이터가 없습니다. (204 No Content)');
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const responseText = await response.text();
+        console.log('실시간 미세먼지 API 응답 텍스트:', responseText);
+        
+        if (!responseText || responseText.trim() === '') {
+            displayRealTimeDustError('빈 응답을 받았습니다.');
+            return;
+        }
+        
+        let dustData;
+        try {
+            dustData = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('JSON 파싱 오류:', parseError);
+            displayRealTimeDustError('응답을 JSON으로 파싱할 수 없습니다: ' + responseText.substring(0, 100));
+            return;
+        }
+        
+        if (dustData && dustData.length > 0) {
+            displayRealTimeDustData(dustData);
+        } else {
+            displayRealTimeDustError('실시간 미세먼지 데이터가 없습니다.');
+        }
+    } catch (error) {
+        console.error('실시간 미세먼지 데이터 가져오기 실패:', error);
+        displayRealTimeDustError('실시간 미세먼지 데이터를 불러올 수 없습니다: ' + error.message);
+    }
 }
 
 function closeRealTimeDustPopup() {
     document.getElementById('realTimeDustPopup').style.display = 'none';
+}
+
+function displayRealTimeDustData(dustData) {
+    const tableBody = document.querySelector('#realTimeDustPopup tbody');
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = '';
+    
+    dustData.forEach(dust => {
+        const row = document.createElement('tr');
+        
+        const pm10Grade = getGradeClass(dust.pm10Grade);
+        const pm25Grade = getGradeClass(dust.pm25Grade);
+        
+        row.innerHTML = `
+            <td>${dust.sidoName || 'N/A'}</td>
+            <td>${dust.stationName || 'N/A'}</td>
+            <td>${dust.dataTime || 'N/A'}</td>
+            <td>${dust.pm10Value || 'N/A'} μg/m³</td>
+            <td class="grade-cell ${pm10Grade}">${dust.pm10Grade || 'N/A'}</td>
+            <td>${dust.pm25Value || 'N/A'} μg/m³</td>
+            <td class="grade-cell ${pm25Grade}">${dust.pm25Grade || 'N/A'}</td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+}
+
+function displayRealTimeDustError(message) {
+    const tableBody = document.querySelector('#realTimeDustPopup tbody');
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="7" style="color: red; text-align: center;">${message}</td>
+        </tr>
+    `;
+}
+
+function getGradeClass(grade) {
+    if (!grade) return '';
+    
+    switch (grade) {
+        case '1':
+        case '좋음':
+            return 'good';
+        case '2':
+        case '보통':
+            return 'moderate';
+        case '3':
+        case '나쁨':
+            return 'bad';
+        case '4':
+        case '매우나쁨':
+            return 'very-bad';
+        default:
+            return '';
+    }
 }
 
 function openPopup(imageUrl) {

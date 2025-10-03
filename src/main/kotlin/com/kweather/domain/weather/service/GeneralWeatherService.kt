@@ -90,12 +90,23 @@ class GeneralWeatherService(
                     "&pageNo=1" +
                     "&searchDate=${params.searchDate}" +
                     "&dataTerm=DAILY"
+            logger.info("미세먼지 예보 API URL: $urls")
             return urls
         }
 
         override fun parseResponse(response: String): Either<String, ForecastResponse> =
             runCatching {
+                logger.info("미세먼지 예보 API 응답: ${response.take(200)}...")
+                
+                if (response.trim().equals("Error", ignoreCase = true) || 
+                    response.trim().startsWith("Error", ignoreCase = true) ||
+                    response.trim().contains("Error forwarding request to backend server", ignoreCase = true)) {
+                    logger.warn("미세먼지 예보 API에서 Error 응답을 받았습니다: $response")
+                    throw IllegalStateException("API에서 Error 응답을 반환했습니다")
+                }
+                
                 if (response.trim().startsWith("<")) {
+                    logger.warn("미세먼지 예보 API에서 XML 오류 응답을 받았습니다")
                     val dbFactory = DocumentBuilderFactory.newInstance()
                     val dBuilder = dbFactory.newDocumentBuilder()
                     val doc = dBuilder.parse(response.byteInputStream())
@@ -105,15 +116,22 @@ class GeneralWeatherService(
                         ?: "알 수 없는 인증 오류"
                     throw IllegalStateException("API 오류: $errMsg - $returnAuthMsg")
                 }
+                
                 val forecastResponse =
                     ApiClientUtility.getObjectMapper().readValue(response, ForecastResponse::class.java)
+                
+                logger.info("미세먼지 예보 파싱 결과 - resultCode: ${forecastResponse.response?.header?.resultCode}, resultMsg: ${forecastResponse.response?.header?.resultMsg}")
+                
                 if (forecastResponse.response?.header?.resultCode != "00") {
                     throw IllegalStateException("API 오류: ${forecastResponse.response?.header?.resultCode} - ${forecastResponse.response?.header?.resultMsg}")
                 }
                 forecastResponse
             }.fold(
                 onSuccess = { Either.Right(it) },
-                onFailure = { Either.Left("미세먼지 예보 응답 파싱 실패: ${it.message}") }
+                onFailure = { 
+                    logger.error("미세먼지 예보 응답 파싱 실패: ${it.message}", it)
+                    Either.Left("미세먼지 예보 응답 파싱 실패: ${it.message}") 
+                }
             )
     }
 
@@ -132,7 +150,17 @@ class GeneralWeatherService(
 
         override fun parseResponse(response: String): Either<String, RealTimeDustResponse> {
             return try {
+                logger.info("실시간 미세먼지 API 응답: ${response.take(200)}...")
+                
+                if (response.trim().equals("Error", ignoreCase = true) || 
+                    response.trim().startsWith("Error", ignoreCase = true) ||
+                    response.trim().contains("Error forwarding request to backend server", ignoreCase = true)) {
+                    logger.warn("실시간 미세먼지 API에서 Error 응답을 받았습니다: $response")
+                    throw IllegalStateException("API에서 Error 응답을 반환했습니다")
+                }
+                
                 if (response.trim().startsWith("<")) {
+                    logger.warn("실시간 미세먼지 API에서 XML 오류 응답을 받았습니다")
                     val dbFactory = DocumentBuilderFactory.newInstance()
                     val dBuilder = dbFactory.newDocumentBuilder()
                     val doc = dBuilder.parse(response.byteInputStream())
@@ -149,9 +177,11 @@ class GeneralWeatherService(
                     }
                     Either.Right(dustResponse)
                 } else {
-                    throw IllegalStateException("알 수 없는 응답 형식")
+                    logger.warn("실시간 미세먼지 API에서 알 수 없는 응답 형식을 받았습니다: $response")
+                    throw IllegalStateException("알 수 없는 응답 형식: ${response.take(100)}")
                 }
             } catch (e: Exception) {
+                logger.error("실시간 미세먼지 응답 파싱 실패: ${e.message}", e)
                 Either.Left("실시간 미세먼지 응답 파싱 실패: ${e.message}")
             }
         }
@@ -181,15 +211,23 @@ class GeneralWeatherService(
     }
 
     fun getDustForecast(searchDate: String, informCode: String): List<ForecastInfo> {
+        logger.info("미세먼지 예보 요청 - searchDate: $searchDate, informCode: $informCode")
+        
         val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
         val currentHour = now.hour
         val targetDate =
             if (currentHour < 6) now.minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) else searchDate
+        
+        logger.info("미세먼지 예보 대상 날짜: $targetDate")
+        
         val params = DustForecastRequestParams(targetDate, informCode)
         val dustClient = DustForecastApiClient()
 
         return when (val result = ApiClientUtility.makeApiRequest(dustClient, params) { response ->
+            logger.info("미세먼지 예보 API 응답 - resultCode: ${response.response?.header?.resultCode}, resultMsg: ${response.response?.header?.resultMsg}")
+            
             if (response.response?.header?.resultCode == "03" && response.response.header.resultMsg == "NO_DATA") {
+                logger.info("미세먼지 예보 데이터 없음, 이전 날짜로 재시도")
                 val previousDate = LocalDate.parse(targetDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
                     .minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
                 val retryParams = DustForecastRequestParams(previousDate, informCode)
@@ -197,6 +235,7 @@ class GeneralWeatherService(
                     val forecastInfos =
                         retryResponse.response?.body?.items?.mapNotNull { item -> item?.let { parseForecastItem(it, informCode) } }
                             ?: emptyList()
+                    logger.info("미세먼지 예보 재시도 결과 - 데이터 개수: ${forecastInfos.size}")
                     Either.Right(forecastInfos)
                 }) {
                     is ApiResult.Success -> Either.Right(retryResult.data)
@@ -206,14 +245,24 @@ class GeneralWeatherService(
                 val forecastInfos =
                     response.response?.body?.items?.mapNotNull { item -> item?.let { parseForecastItem(it, informCode) } }
                         ?: emptyList()
+                logger.info("미세먼지 예보 결과 - 데이터 개수: ${forecastInfos.size}")
                 Either.Right(forecastInfos)
             }
-        }) {
-            is ApiResult.Success -> result.data
-            is ApiResult.Error -> {
-                emptyList()
+            }) {
+                is ApiResult.Success -> {
+                    logger.info("미세먼지 예보 성공 - 최종 데이터 개수: ${result.data.size}")
+                    result.data
+                }
+                is ApiResult.Error -> {
+                    logger.error("미세먼지 예보 실패: ${result.message}")
+                    if (result.message.contains("Error 응답을 반환했습니다")) {
+                        logger.warn("API에서 Error 응답을 받았습니다. 빈 목록을 반환합니다.")
+                        emptyList()
+                    } else {
+                        emptyList()
+                    }
+                }
             }
-        }
     }
 
     fun getRealTimeDust(sidoName: String): List<RealTimeDustInfo> {
@@ -233,6 +282,10 @@ class GeneralWeatherService(
         }) {
             is ApiResult.Success -> result.data
             is ApiResult.Error -> {
+                logger.error("실시간 미세먼지 실패: ${result.message}")
+                if (result.message.contains("Error 응답을 반환했습니다")) {
+                    logger.warn("API에서 Error 응답을 받았습니다. 빈 목록을 반환합니다.")
+                }
                 emptyList()
             }
         }

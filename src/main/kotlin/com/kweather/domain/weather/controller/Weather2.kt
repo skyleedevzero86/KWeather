@@ -65,6 +65,24 @@ class Weather2(
         is IllegalStateException -> 500
         else -> 500
     }
+    @GetMapping("/weather/real-time-dust")
+    fun getRealTimeDust(
+        @RequestParam("sidoName", defaultValue = "서울") sidoName: String
+    ): ResponseEntity<List<com.kweather.domain.realtime.dto.RealTimeDustInfo>> =
+        runCatching {
+            weatherService.getRealTimeDust(sidoName)
+        }.fold(
+            onSuccess = { dustList ->
+                if (dustList.isEmpty())
+                    ResponseEntity.noContent().build()
+                else
+                    ResponseEntity.ok(dustList)
+            },
+            onFailure = { ex -> ResponseEntity.status(500)
+                .body(emptyList())
+            }
+        )
+
     @GetMapping("/weather/geo")
     fun getGeoCoordinates(@RequestParam address: String): Map<String, String> {
         return geoService.getCoordinates(address).fold(
