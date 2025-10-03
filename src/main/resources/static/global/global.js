@@ -26,7 +26,6 @@ function moveSlide(direction) {
     updateSlidePosition();
 }
 
-// Popup functions
 function openDustForecastPopup() {
     const popup = document.getElementById('dustForecastPopup');
     popup.style.display = 'flex';
@@ -61,10 +60,62 @@ function closePopup() {
 
 function openLocationPopup() {
     document.getElementById('locationPopup').style.display = 'flex';
+    loadSidos();
 }
 
 function closeLocationPopup() {
     document.getElementById('locationPopup').style.display = 'none';
+}
+
+async function loadSidos() {
+    const sidoSelect = document.getElementById('sido');
+    const sggSelect = document.getElementById('sgg');
+    const umdSelect = document.getElementById('umd');
+
+    sggSelect.innerHTML = '<option value="">시/군/구를 먼저 선택하세요</option>';
+    umdSelect.innerHTML = '<option value="">읍/면/동을 먼저 선택하세요</option>';
+
+    const loadingOption = document.createElement('option');
+    loadingOption.value = '';
+    loadingOption.textContent = '시/도 데이터 로딩 중...';
+    sidoSelect.innerHTML = '';
+    sidoSelect.appendChild(loadingOption);
+
+    try {
+        const response = await fetch('/api/regions/sidos');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const sidos = await response.json();
+        
+        sidoSelect.innerHTML = '';
+        
+        if (sidos.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = '시/도 데이터 없음';
+            sidoSelect.appendChild(option);
+        } else {
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = '시/도를 선택하세요';
+            sidoSelect.appendChild(defaultOption);
+            
+            sidos.forEach(sido => {
+                const option = document.createElement('option');
+                option.value = sido;
+                option.textContent = sido;
+                sidoSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('시/도 데이터 가져오기 실패:', error);
+        sidoSelect.innerHTML = '';
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = '시/도 데이터를 불러올 수 없습니다';
+        sidoSelect.appendChild(option);
+    }
 }
 
 async function updateSggs() {
@@ -75,15 +126,29 @@ async function updateSggs() {
     sggSelect.innerHTML = '<option value="">선택하세요</option>';
     umdSelect.innerHTML = '<option value="">먼저 시/군/구를 선택하세요</option>';
 
-    if (!sido) return;
+    if (!sido) {
+        sggSelect.innerHTML = '<option value="">시/도를 먼저 선택하세요</option>';
+        return;
+    }
 
     try {
+        console.log(`시/군/구 데이터 요청: ${sido}`);
+        
+        sggSelect.innerHTML = '<option value="">시/군/구 데이터 로딩 중...</option>';
+        
         const response = await fetch(`/api/regions/sggs?sido=${encodeURIComponent(sido)}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const sggs = await response.json();
+        console.log(`시/군/구 데이터 응답:`, sggs);
+        
         if (sggs.length === 0) {
             sggSelect.innerHTML = '<option value="">시/군/구 데이터 없음</option>';
         } else {
+            sggSelect.innerHTML = '<option value="">선택하세요</option>';
             sggs.forEach(sgg => {
                 const option = document.createElement('option');
                 option.value = sgg;
@@ -92,7 +157,7 @@ async function updateSggs() {
             });
         }
     } catch (error) {
-        console.error('시군구 데이터 가져오기 실패:', error);
+        console.error('시/군/구 데이터 가져오기 실패:', error);
         sggSelect.innerHTML = '<option value="">시/군/구 데이터를 불러올 수 없습니다</option>';
     }
 }
@@ -104,15 +169,33 @@ async function updateUmds() {
 
     umdSelect.innerHTML = '<option value="">선택하세요</option>';
 
-    if (!sido || !sgg) return;
+    if (!sido || !sgg) {
+        if (!sido) {
+            umdSelect.innerHTML = '<option value="">시/도를 먼저 선택하세요</option>';
+        } else if (!sgg) {
+            umdSelect.innerHTML = '<option value="">시/군/구를 먼저 선택하세요</option>';
+        }
+        return;
+    }
 
     try {
+        console.log(`읍/면/동 데이터 요청: ${sido}, ${sgg}`);
+        
+        umdSelect.innerHTML = '<option value="">읍/면/동 데이터 로딩 중...</option>';
+        
         const response = await fetch(`/api/regions/umds?sido=${encodeURIComponent(sido)}&sgg=${encodeURIComponent(sgg)}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const umds = await response.json();
+        console.log(`읍/면/동 데이터 응답:`, umds);
+        
         if (umds.length === 0) {
             umdSelect.innerHTML = '<option value="">읍/면/동 데이터 없음</option>';
         } else {
+            umdSelect.innerHTML = '<option value="">선택하세요</option>';
             umds.forEach(umd => {
                 const option = document.createElement('option');
                 option.value = umd;
@@ -121,7 +204,7 @@ async function updateUmds() {
             });
         }
     } catch (error) {
-        console.error('읍면동 데이터 가져오기 실패:', error);
+        console.error('읍/면/동 데이터 가져오기 실패:', error);
         umdSelect.innerHTML = '<option value="">읍/면/동 데이터를 불러올 수 없습니다</option>';
     }
 }
@@ -136,20 +219,32 @@ function confirmSelection() {
         return;
     }
 
-    document.getElementById('locationTitle').textContent = `${umd} (${sgg})`;
-    closeLocationPopup();
+    const confirmBtn = document.getElementById('confirmBtn');
+    const originalText = confirmBtn.textContent;
+    confirmBtn.textContent = '로딩 중...';
+    confirmBtn.disabled = true;
+
+    const locationTitle = document.getElementById('locationTitle');
+    if (locationTitle) {
+        locationTitle.textContent = `${umd} (${sgg})`;
+    }
 
     fetch(`/weather?location=${encodeURIComponent(`${sido} ${sgg} ${umd}`)}`)
         .then(response => {
             if (response.ok) {
+                closeLocationPopup();
                 window.location.reload();
             } else {
-                alert('날씨 데이터 업데이트하는 데 실패했습니다.');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
         })
         .catch(error => {
             console.error('날씨 데이터 업데이트 실패:', error);
             alert('날씨 데이터를 업데이트하는 데 실패했습니다.');
+        })
+        .finally(() => {
+            confirmBtn.textContent = originalText;
+            confirmBtn.disabled = false;
         });
 }
 
@@ -157,7 +252,6 @@ function removeParentheses(text) {
     return text.replace(/\([^()]*\)/g, '').replace(/\[.*?\]/g, '').replace(/\./g, '').trim();
 }
 
-// Chart functions
 async function fetchChartData() {
     try {
         const response = await fetch('/api/chart/temperature');
@@ -720,7 +814,6 @@ function updateCurrentTime() {
     currentTime.textContent = new Date().toLocaleString('ko-KR');
 }
 
-
 function parseWeatherData(data) {
     let baseDate = new Date();
     let hourlyData = [];
@@ -880,7 +973,6 @@ function getTempDescription(temp) {
     return '쌀쌀';
 }
 
-// Page load initialization
 document.addEventListener('DOMContentLoaded', () => {
     const overallTexts = document.querySelectorAll('.overall-text');
     overallTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
@@ -912,5 +1004,5 @@ document.addEventListener('DOMContentLoaded', () => {
     if (extraButton) extraButton.addEventListener('click', () => alert('안녕 디지몬'));
 
     const pm25Value = document.querySelector('.pm25-value');
-    if (pm25Value) pm25Value.innerHTML = '<button onclick="openWeatherDetailPopup()">날씨정보상세보기</button>';
+    if (pm25Value) pm25Value.innerHTML = '<button class="unified-btn" onclick="openWeatherDetailPopup()">날씨정보상세보기</button>';
 });

@@ -1,4 +1,28 @@
-/* 기존 CSS 내용 유지 */
+.unified-btn {
+    background: #e0e0e0;
+    color: #333;
+    border: 1px solid #c0c0c0;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s, color 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-family: inherit;
+}
+
+.unified-btn:hover {
+    background: #d0d0d0;
+    color: #000;
+}
+
+.unified-btn:disabled {
+    background: #f0f0f0;
+    color: #999;
+    cursor: not-allowed;
+    border: 1px solid #ddd;
+}
+
 body {
     background-color: #003087;
     color: white;
@@ -97,18 +121,20 @@ body {
 }
 
 .dust-buttons-container button {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
+    background: #e0e0e0;
+    color: #333;
+    border: 1px solid #c0c0c0;
     padding: 12px 24px;
     border-radius: 8px;
     cursor: pointer;
     font-size: 1em;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, color 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .dust-buttons-container button:hover {
-    background: linear-gradient(135deg, #5b6bcb 0%, #65438a 100%);
+    background: #d0d0d0;
+    color: #000;
 }
 
 .air-quality-container {
@@ -152,7 +178,6 @@ body {
     margin: 5px 0;
 }
 
-/* 시간별 날씨 데이터 스타일링 */
 #hourlyData {
     margin-top: 20px;
 }
@@ -228,7 +253,6 @@ body {
     gap: 5px;
 }
 
-/* 온도 통계 카드 스타일 - 가로 배치로 수정 */
 .temperature-stats-section {
     background: #667eea;
     border-radius: 20px;
@@ -324,7 +348,6 @@ body {
     color: #45b7d1;
 }
 
-/* 차트 섹션 스타일 */
 .chart-section {
     background: rgba(255, 255, 255, 0.95);
     border-radius: 20px;
@@ -349,7 +372,6 @@ body {
     font-size: 1.2em;
 }
 
-/* 모바일 반응형 - 작은 화면에서는 세로 배치 */
 @media (max-width: 768px) {
     .temp-stats-grid {
         flex-direction: column;
@@ -430,7 +452,6 @@ body {
     }
 }
 
-/* 기존 스타일 계속 유지 */
 .forecast-section {
     text-align: center;
     padding: 20px;
@@ -496,18 +517,21 @@ body {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
+    background: #e0e0e0;
+    color: #333;
+    border: 1px solid #c0c0c0;
     padding: 10px;
     cursor: pointer;
     font-size: 1.5em;
     border-radius: 5px;
     z-index: 10;
+    transition: background-color 0.3s, color 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .slider-btn:hover {
-    background: linear-gradient(135deg, #5b6bcb 0%, #65438a 100%);
+    background: #d0d0d0;
+    color: #000;
 }
 
 .slider-btn.prev {
@@ -519,8 +543,10 @@ body {
 }
 
 .slider-btn:disabled {
-    background: rgba(0, 0, 0, 0.2);
+    background: #f0f0f0;
+    color: #999;
     cursor: not-allowed;
+    border: 1px solid #ddd;
 }
 
 .senta-index-forecast-section,
@@ -549,9 +575,9 @@ body {
 .real-time-dust-btn,
 .forecast-btn,
 .chart-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
+    background: #e0e0e0;
+    color: #333;
+    border: 1px solid #c0c0c0;
     padding: 12px 24px;
     border-radius: 8px;
     cursor: pointer;
@@ -559,14 +585,16 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, color 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .dust-forecast-btn:hover,
 .real-time-dust-btn:hover,
 .forecast-btn:hover,
 .chart-btn:hover {
-    background: linear-gradient(135deg, #5b6bcb 0%, #65438a 100%);
+    background: #d0d0d0;
+    color: #000;
 }
 
 .dust-forecast-btn::before {
@@ -878,17 +906,20 @@ canvas {
 }
 
 .location-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: 1px solid #4a90e2;
-    color: white;
+    background: #e0e0e0;
+    border: 1px solid #c0c0c0;
+    color: #333;
     padding: 5px 10px;
     border-radius: 5px;
     cursor: pointer;
     margin-left: 10px;
+    transition: background-color 0.3s, color 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .location-btn:hover {
-    background: linear-gradient(135deg, #5b6bcb 0%, #65438a 100%);
+    background: #d0d0d0;
+    color: #000;
 }
 
 #locationPopupContent {
@@ -911,17 +942,20 @@ canvas {
 }
 
 #confirmBtn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
+    background: #e0e0e0;
+    color: #333;
+    border: 1px solid #c0c0c0;
     padding: 10px;
     border-radius: 5px;
     cursor: pointer;
     width: 100%;
+    transition: background-color 0.3s, color 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 #confirmBtn:hover {
-    background: linear-gradient(135deg, #5b6bcb 0%, #65438a 100%);
+    background: #d0d0d0;
+    color: #000;
 }
 
 @media (max-width: 1024px) {
@@ -938,7 +972,6 @@ canvas {
         font-size: 1.8em;
     }
 
-    /* 태블릿 크기에서 2개씩 배치 */
     .temp-stats-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -1000,7 +1033,6 @@ canvas {
     margin: 0 auto;
 }
 
-/* 날씨 상세 정보 팝업 스타일 */
 .weather-detail-container {
     width: 100%;
     max-width: 800px;
@@ -1082,7 +1114,6 @@ canvas {
     color: #000;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
     .weather-data-table {
         font-size: 12px;
@@ -1095,20 +1126,20 @@ canvas {
     }
 }
 
-/* 이미지 스타일 반영 */
 .pm25-value button {
-    background: #fff;
-    color: #003087;
-    border: 1px solid #fff;
+    background: #e0e0e0;
+    color: #333;
+    border: 1px solid #c0c0c0;
     padding: 8px 16px;
     border-radius: 5px;
     cursor: pointer;
     font-size: 1em;
     transition: background-color 0.3s, color 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .pm25-value button:hover {
-    background: #e0e0e0;
+    background: #d0d0d0;
     color: #000;
 }
 
@@ -1149,17 +1180,21 @@ canvas {
 }
 
 .day-tab {
-    background: #fff;
+    background: #e0e0e0;
+    color: #333;
+    border: 1px solid #c0c0c0;
     padding: 10px 20px;
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .day-tab.active {
-    background: #3b82f6;
-    color: #fff;
+    background: #d0d0d0;
+    color: #000;
     transform: scale(1.05);
+    border: 1px solid #999;
 }
 
 .stats-grid {

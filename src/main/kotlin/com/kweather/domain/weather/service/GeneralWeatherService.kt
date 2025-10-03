@@ -259,6 +259,12 @@ class GeneralWeatherService(
         else -> sidoName
     }
 
+    private fun parseWeatherData(response: WeatherResponse): List<WeatherInfo> {
+        return response.response?.body?.items?.mapNotNull { item ->
+            parseWeatherItem(item)
+        } ?: emptyList()
+    }
+
     private fun parseWeatherItem(item: WeatherItem): WeatherInfo? =
         runCatching {
             WeatherInfo(
@@ -359,25 +365,25 @@ class GeneralWeatherService(
         val currentHour = DateTimeUtils.getCurrentHour()
 
         val forecastTimes =
-            weatherInfoList.mapNotNull { it.fcstTime?.substring(0, 2)?.toIntOrNull() }.distinct().sorted()
+            weatherInfoList.mapNotNull { weatherInfo -> weatherInfo.fcstTime?.substring(0, 2)?.toIntOrNull() }.distinct().sorted()
         val closestHour = forecastTimes.minByOrNull { Math.abs(it - currentHour) } ?: currentHour
 
         val closestFcstTime = String.format("%02d00", closestHour)
-        val temperature = weatherInfoList.find { it.category == "TMP" && it.fcstTime == closestFcstTime }?.value?.let { "$it°C" }
-            ?: weatherInfoList.find { it.category == "TMP" }?.value?.let { "$it°C" } ?: "0°C"
-        val humidity = weatherInfoList.find { it.category == "REH" && it.fcstTime == closestFcstTime }?.value?.let { "$it%" }
-            ?: weatherInfoList.find { it.category == "REH" }?.value?.let { "$it%" } ?: "50%"
-        val windSpeed = weatherInfoList.find { it.category == "WSD" && it.fcstTime == closestFcstTime }?.value?.let { "${it}m/s" }
-            ?: weatherInfoList.find { it.category == "WSD" }?.value?.let { "${it}m/s" } ?: "0 m/s"
+        val temperature = weatherInfoList.find { weatherInfo -> weatherInfo.category == "TMP" && weatherInfo.fcstTime == closestFcstTime }?.value?.let { "$it°C" }
+            ?: weatherInfoList.find { weatherInfo -> weatherInfo.category == "TMP" }?.value?.let { "$it°C" } ?: "0°C"
+        val humidity = weatherInfoList.find { weatherInfo -> weatherInfo.category == "REH" && weatherInfo.fcstTime == closestFcstTime }?.value?.let { "$it%" }
+            ?: weatherInfoList.find { weatherInfo -> weatherInfo.category == "REH" }?.value?.let { "$it%" } ?: "50%"
+        val windSpeed = weatherInfoList.find { weatherInfo -> weatherInfo.category == "WSD" && weatherInfo.fcstTime == closestFcstTime }?.value?.let { "${it}m/s" }
+            ?: weatherInfoList.find { weatherInfo -> weatherInfo.category == "WSD" }?.value?.let { "${it}m/s" } ?: "0 m/s"
         val skyCondition =
-            weatherInfoList.find { it.category == "SKY" && it.fcstTime == closestFcstTime }?.value?.toIntOrNull()
-                ?: weatherInfoList.find { it.category == "SKY" }?.value?.toIntOrNull() ?: 1
+            weatherInfoList.find { weatherInfo -> weatherInfo.category == "SKY" && weatherInfo.fcstTime == closestFcstTime }?.value?.toIntOrNull()
+                ?: weatherInfoList.find { weatherInfo -> weatherInfo.category == "SKY" }?.value?.toIntOrNull() ?: 1
         val precipitationType =
-            weatherInfoList.find { it.category == "PTY" && it.fcstTime == closestFcstTime }?.value?.toIntOrNull()
-                ?: weatherInfoList.find { it.category == "PTY" }?.value?.toIntOrNull() ?: 0
+            weatherInfoList.find { weatherInfo -> weatherInfo.category == "PTY" && weatherInfo.fcstTime == closestFcstTime }?.value?.toIntOrNull()
+                ?: weatherInfoList.find { weatherInfo -> weatherInfo.category == "PTY" }?.value?.toIntOrNull() ?: 0
 
-        val minTemp = weatherInfoList.find { it.category == "TMN" }?.value?.let { "$it°C" } ?: "-3°C"
-        val maxTemp = weatherInfoList.find { it.category == "TMX" }?.value?.let { "$it°C" } ?: "3°C"
+        val minTemp = weatherInfoList.find { weatherInfo -> weatherInfo.category == "TMN" }?.value?.let { "$it°C" } ?: "-3°C"
+        val maxTemp = weatherInfoList.find { weatherInfo -> weatherInfo.category == "TMX" }?.value?.let { "$it°C" } ?: "3°C"
         val highLowTemperature = "$minTemp / $maxTemp"
 
         val weatherCondition = when (precipitationType) {
@@ -393,16 +399,16 @@ class GeneralWeatherService(
             else -> "맑음"
         }
 
-        val airQuality = realTimeDust.firstOrNull()?.let {
+        val airQuality = realTimeDust.firstOrNull()?.let { dustInfo ->
             AirQuality(
                 title = "미세먼지",
                 icon = "yellow-smiley",
-                status = it.pm10Grade,
-                value = it.pm10Value,
+                status = dustInfo.pm10Grade,
+                value = dustInfo.pm10Value,
                 measurement = "㎍/㎥",
                 title2 = "초미세먼지",
-                status2 = it.pm25Grade,
-                value2 = it.pm25Value,
+                status2 = dustInfo.pm25Grade,
+                value2 = dustInfo.pm25Value,
                 measurement2 = "㎍/㎥"
             )
         } ?: createDefaultAirQuality()
@@ -433,16 +439,16 @@ class GeneralWeatherService(
                 val fcstTime = String.format("%02d00", hour)
                 val forecastTime = if (hour == currentHour) "지금" else "${hour}시"
                 val forecastSky =
-                    weatherInfoList.find { it.category == "SKY" && it.fcstTime == fcstTime }?.value?.toIntOrNull()
+                    weatherInfoList.find { weatherInfo -> weatherInfo.category == "SKY" && weatherInfo.fcstTime == fcstTime }?.value?.toIntOrNull()
                         ?: skyCondition
                 val forecastPrecip =
-                    weatherInfoList.find { it.category == "PTY" && it.fcstTime == fcstTime }?.value?.toIntOrNull()
+                    weatherInfoList.find { weatherInfo -> weatherInfo.category == "PTY" && weatherInfo.fcstTime == fcstTime }?.value?.toIntOrNull()
                         ?: precipitationType
                 val forecastTemp =
-                    weatherInfoList.find { it.category == "TMP" && it.fcstTime == fcstTime }?.value?.let { "$it°C" }
+                    weatherInfoList.find { weatherInfo -> weatherInfo.category == "TMP" && weatherInfo.fcstTime == fcstTime }?.value?.let { "$it°C" }
                         ?: temperature
                 val forecastHumidity =
-                    weatherInfoList.find { it.category == "REH" && it.fcstTime == fcstTime }?.value?.let { "$it%" }
+                    weatherInfoList.find { weatherInfo -> weatherInfo.category == "REH" && weatherInfo.fcstTime == fcstTime }?.value?.let { "$it%" }
                         ?: humidity
 
                 val forecastIcon = when (forecastPrecip) {
@@ -486,7 +492,7 @@ class GeneralWeatherService(
             Either.Right(response)
         }) {
             is ApiResult.Success -> {
-                val items = result.data.response?.body?.items?.filter { it.category == "TMP" } ?: emptyList()
+                val items = result.data.response?.body?.items?.filter { weatherItem -> weatherItem.category == "TMP" } ?: emptyList()
                 val temperatures = mutableMapOf<String, String>()
                 items.forEachIndexed { index, item ->
                     val hour = (index + 1).toString()
@@ -499,21 +505,27 @@ class GeneralWeatherService(
                     }
                 }
 
-                mapOf(
+                val resultMap = mutableMapOf<String, Any>(
                     "code" to "A41",
                     "areaNo" to areaNo,
-                    "date" to baseDate + baseTime,
-                    *temperatures.entries.map { it.key to it.value }.toTypedArray()
+                    "date" to (baseDate + baseTime)
                 )
+                temperatures.entries.forEach { (key, value) ->
+                    resultMap[key] = value
+                }
+                resultMap
             }
             is ApiResult.Error -> {
                 val defaultTemps = (1..72).associate { "h$it" to "15" }
-                mapOf(
+                val resultMap = mutableMapOf<String, Any>(
                     "code" to "A41",
                     "areaNo" to areaNo,
-                    "date" to baseDate + baseTime,
-                    *defaultTemps.entries.map { it.key to it.value }.toTypedArray()
+                    "date" to (baseDate + baseTime)
                 )
+                defaultTemps.entries.forEach { (key, value) ->
+                    resultMap[key] = value
+                }
+                resultMap
             }
         }
     }
@@ -570,7 +582,7 @@ class GeneralWeatherService(
             Either.Right(response)
         }) {
             is ApiResult.Success -> {
-                val items = result.data.response?.body?.items?.filter { it.category == "PCP" } ?: emptyList()
+                val items = result.data.response?.body?.items?.filter { weatherItem -> weatherItem.category == "PCP" } ?: emptyList()
                 val values = (0..23).associate { "h$it" to 0f }.toMutableMap()
 
                 items.forEach { item ->

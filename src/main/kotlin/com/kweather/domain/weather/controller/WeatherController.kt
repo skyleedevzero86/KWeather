@@ -160,27 +160,11 @@ class WeatherController(
                 else -> " ( 새벽 )"
             }
 
-            val sidos = try {
-                restTemplate.getForObject("http://localhost:8090/api/regions/sidos", List::class.java) as? List<String> ?: emptyList()
-            } catch (e: Exception) {
-                listOf(finalSido)
-            }
-
-            val sggs = try {
-                if (sidos.contains(finalSido)) {
-                    restTemplate.getForObject("http://localhost:8090/api/regions/sggs?sido=$finalSido", List::class.java) as? List<String> ?: emptyList()
-                } else emptyList()
-            } catch (e: Exception) {
-                listOf(finalSgg)
-            }
-
-            val umds = try {
-                if (sggs.contains(finalSgg)) {
-                    restTemplate.getForObject("http://localhost:8090/api/regions/umds?sido=$finalSido&sgg=$finalSgg", List::class.java) as? List<String> ?: emptyList()
-                } else emptyList()
-            } catch (e: Exception) {
-                listOf(finalUmd)
-            }
+            val sidos = listOf("서울특별시", "경기도", "인천광역시", "강원특별자치도", "충청북도", "충청남도",
+                "대전광역시", "세종특별자치시", "전북특별자치도", "전라남도", "광주광역시",
+                "경상북도", "경상남도", "대구광역시", "부산광역시", "울산광역시", "제주특별자치도")
+            val sggs = emptyList<String>()
+            val umds = emptyList<String>()
 
             model.addAllAttributes(mapOf(
                 "sidos" to sidos, "selectedSido" to finalSido,
