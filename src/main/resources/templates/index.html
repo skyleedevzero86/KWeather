@@ -3,33 +3,38 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>날씨 예보</title>
+    <title>KWeather - 날씨 예보</title>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
     />
-    <link rel="stylesheet" th:href="@{/static/global/global.css}" />
-    <link rel="stylesheet" th:href="@{/static/global/style.css}" />
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        background-color: #00aaff;
-        flex-direction: column;
-      }
-    </style>
+    <link rel="stylesheet" th:href="@{/static/global/splash.css}" />
   </head>
   <body>
-    <div class="splash-icon">🌤️</div>
-    <div class="splash-text" th:text="'현재 정보 업데이트 중...'"></div>
-    <script>
-      setTimeout(function () {
-        window.location.href = "/weather";
-      }, 3000);
-    </script>
+    <div class="floating-elements">
+      <div class="floating-cloud">☁️</div>
+      <div class="floating-cloud">🌤️</div>
+      <div class="floating-cloud">⛅</div>
+      <div class="floating-cloud">🌥️</div>
+    </div>
+
+    <div class="splash-container">
+      <div class="splash-icon" id="splashIcon">🌤️</div>
+      <div class="splash-text" id="splashText">날씨 정보를 불러오는 중...</div>
+
+      <div class="loading-dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-fill"></div>
+      </div>
+
+      <div class="tap-hint" id="tapHint">아이콘을 탭해보세요!</div>
+    </div>
+
+    <script th:src="@{/static/global/splash.js}"></script>
   </body>
 </html>

@@ -61,6 +61,12 @@ function closePopup() {
 function openLocationPopup() {
     document.getElementById('locationPopup').style.display = 'flex';
     loadSidos();
+    
+    const sggSelect = document.getElementById('sgg');
+    const umdSelect = document.getElementById('umd');
+    
+    sggSelect.innerHTML = '<option value="">시/군/구를 먼저 선택하세요</option>';
+    umdSelect.innerHTML = '<option value="">읍/면/동을 먼저 선택하세요</option>';
 }
 
 function closeLocationPopup() {
@@ -123,8 +129,8 @@ async function updateSggs() {
     const sggSelect = document.getElementById('sgg');
     const umdSelect = document.getElementById('umd');
 
-    sggSelect.innerHTML = '<option value="">선택하세요</option>';
-    umdSelect.innerHTML = '<option value="">먼저 시/군/구를 선택하세요</option>';
+    sggSelect.innerHTML = '<option value="">시/군/구 데이터 로딩 중...</option>';
+    umdSelect.innerHTML = '<option value="">시/군/구를 먼저 선택하세요</option>';
 
     if (!sido) {
         sggSelect.innerHTML = '<option value="">시/도를 먼저 선택하세요</option>';
@@ -133,8 +139,6 @@ async function updateSggs() {
 
     try {
         console.log(`시/군/구 데이터 요청: ${sido}`);
-        
-        sggSelect.innerHTML = '<option value="">시/군/구 데이터 로딩 중...</option>';
         
         const response = await fetch(`/api/regions/sggs?sido=${encodeURIComponent(sido)}`);
         
@@ -167,7 +171,7 @@ async function updateUmds() {
     const sgg = document.getElementById('sgg').value;
     const umdSelect = document.getElementById('umd');
 
-    umdSelect.innerHTML = '<option value="">선택하세요</option>';
+    umdSelect.innerHTML = '<option value="">읍/면/동 데이터 로딩 중...</option>';
 
     if (!sido || !sgg) {
         if (!sido) {
@@ -180,8 +184,6 @@ async function updateUmds() {
 
     try {
         console.log(`읍/면/동 데이터 요청: ${sido}, ${sgg}`);
-        
-        umdSelect.innerHTML = '<option value="">읍/면/동 데이터 로딩 중...</option>';
         
         const response = await fetch(`/api/regions/umds?sido=${encodeURIComponent(sido)}&sgg=${encodeURIComponent(sgg)}`);
         
@@ -229,9 +231,13 @@ function confirmSelection() {
         locationTitle.textContent = `${umd} (${sgg})`;
     }
 
-    fetch(`/weather?location=${encodeURIComponent(`${sido} ${sgg} ${umd}`)}`)
+    const fullLocation = `${sido} ${sgg} ${umd}`;
+    console.log('선택된 위치:', fullLocation);
+
+    fetch(`/weather?location=${encodeURIComponent(fullLocation)}`)
         .then(response => {
             if (response.ok) {
+                console.log('위치 변경 성공');
                 closeLocationPopup();
                 window.location.reload();
             } else {
@@ -240,7 +246,8 @@ function confirmSelection() {
         })
         .catch(error => {
             console.error('날씨 데이터 업데이트 실패:', error);
-            alert('날씨 데이터를 업데이트하는 데 실패했습니다.');
+            alert('날씨 데이터를 업데이트하는 데 실패했습니다. 페이지를 새로고침해 주세요.');
+            closeLocationPopup();
         })
         .finally(() => {
             confirmBtn.textContent = originalText;
@@ -973,6 +980,61 @@ function getTempDescription(temp) {
     return '쌀쌀';
 }
 
+function getAirQualityIcon(pmValue, isPM25 = false) {
+    const pm = parseInt(pmValue);
+    
+    if (isPM25) {
+        if (pm <= 15) return '😊';
+        if (pm <= 35) return '😐';
+        if (pm <= 75) return '😷';
+        return '🤢';
+    } else {
+        if (pm <= 30) return '😊';
+        if (pm <= 80) return '😐';
+        if (pm <= 150) return '😷';
+        return '🤢';
+    }
+}
+
+function updateAirQualityIcons() {
+    const pm10Container = document.querySelector('.air-quality:first-child');
+    const pm25Container = document.querySelector('.air-quality:last-child');
+    
+    if (pm10Container) {
+        const pm10Icon = pm10Container.querySelector('.icon');
+        const pm10ValueElement = pm10Container.querySelector('.value');
+        const pm10Value = pm10ValueElement ? pm10ValueElement.textContent : pm10Container.querySelector('p:last-child').textContent;
+        const pm10Match = pm10Value.match(/(\d+)/);
+        if (pm10Match) {
+            const pm10 = parseInt(pm10Match[1]);
+            pm10Icon.textContent = getAirQualityIcon(pm10Match[1], false);
+            
+            pm10Container.className = 'air-quality';
+            if (pm10 <= 30) pm10Container.classList.add('good');
+            else if (pm10 <= 80) pm10Container.classList.add('moderate');
+            else if (pm10 <= 150) pm10Container.classList.add('bad');
+            else pm10Container.classList.add('very-bad');
+        }
+    }
+    
+    if (pm25Container) {
+        const pm25Icon = pm25Container.querySelector('.icon');
+        const pm25ValueElement = pm25Container.querySelector('.value');
+        const pm25Value = pm25ValueElement ? pm25ValueElement.textContent : pm25Container.querySelector('p:last-child').textContent;
+        const pm25Match = pm25Value.match(/(\d+)/);
+        if (pm25Match) {
+            const pm25 = parseInt(pm25Match[1]);
+            pm25Icon.textContent = getAirQualityIcon(pm25Match[1], true);
+            
+            pm25Container.className = 'air-quality';
+            if (pm25 <= 15) pm25Container.classList.add('good');
+            else if (pm25 <= 35) pm25Container.classList.add('moderate');
+            else if (pm25 <= 75) pm25Container.classList.add('bad');
+            else pm25Container.classList.add('very-bad');
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const overallTexts = document.querySelectorAll('.overall-text');
     overallTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
@@ -980,25 +1042,11 @@ document.addEventListener('DOMContentLoaded', () => {
     causeTexts.forEach(element => element.textContent = removeParentheses(element.textContent));
 
     const locationTitle = document.getElementById('locationTitle');
-    if (!locationTitle.textContent.trim()) locationTitle.textContent = '청진동 (종로구)';
-
-    const sidoSelect = document.getElementById('sido');
-    const selectedSido = '';
-    if (selectedSido && selectedSido !== '') {
-        sidoSelect.value = selectedSido;
-        updateSggs().then(() => {
-            const sggSelect = document.getElementById('sgg');
-            const selectedSgg = '';
-            if (selectedSgg && selectedSgg !== '') {
-                sggSelect.value = selectedSgg;
-                updateUmds().then(() => {
-                    const umdSelect = document.getElementById('umd');
-                    const selectedUmd = '';
-                    if (selectedUmd && selectedUmd !== '') umdSelect.value = selectedUmd;
-                });
-            }
-        });
+    if (!locationTitle || !locationTitle.textContent.trim()) {
+        if (locationTitle) locationTitle.textContent = '청진동 (종로구)';
     }
+
+    updateAirQualityIcons();
 
     const extraButton = document.querySelector('.dust-buttons-container .dust-forecast-btn:first-child');
     if (extraButton) extraButton.addEventListener('click', () => alert('안녕 디지몬'));
